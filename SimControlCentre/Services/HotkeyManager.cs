@@ -95,6 +95,15 @@ public class HotkeyManager : IDisposable
     }
 
     /// <summary>
+    /// Temporarily unregister all hotkeys (e.g., during capture mode)
+    /// </summary>
+    public void TemporaryUnregisterAll()
+    {
+        _hotkeyService.UnregisterAll();
+        Console.WriteLine("[HotkeyManager] Temporarily unregistered all hotkeys");
+    }
+
+    /// <summary>
     /// Adjusts volume for a channel
     /// </summary>
     private async void AdjustVolume(string channel, bool increase)
