@@ -38,7 +38,12 @@ public partial class MainWindow : Window
         // Check connection on startup (but only if serial is configured)
         if (!string.IsNullOrWhiteSpace(_settings.General.SerialNumber))
         {
-            _ = CheckConnectionAsync();
+            // Delay to allow API warm-up from App.xaml.cs
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000); // Wait for warm-up
+                await Dispatcher.InvokeAsync(async () => await CheckConnectionAsync());
+            });
         }
         else
         {
@@ -63,8 +68,8 @@ public partial class MainWindow : Window
         ConnectionStatusText.Text = "Connection Status: Testing connection...";
         ConnectionStatusText.Foreground = System.Windows.Media.Brushes.Orange;
         
-        // Give service time to reinitialize - wait for API to be fully ready
-        await Task.Delay(10000);
+        // Brief delay to let UI update
+        await Task.Delay(500);
         
         // Test connection
         await CheckConnectionAsync();
@@ -95,11 +100,9 @@ public partial class MainWindow : Window
         // Update in-memory settings
         _settings.General.SerialNumber = currentSettings.General.SerialNumber;
         
-        // Reinitialize GoXLR service with new serial
-        _goXLRService.Reinitialize();
-        
-        // Give the service time to reinitialize - wait for API to be fully ready
-        await Task.Delay(10000);
+        // No need to Reinitialize - Settings object is shared, serial will be picked up automatically
+        // Brief delay to let UI update
+        await Task.Delay(500);
         
         // Test connection
         await CheckConnectionAsync();
@@ -201,11 +204,9 @@ public partial class MainWindow : Window
         // Update in-memory settings
         _settings.General.SerialNumber = currentSettings.General.SerialNumber;
         
-        // Reinitialize GoXLR service with new serial
-        _goXLRService.Reinitialize();
-        
-        // Give the service time to reinitialize - wait for API to be fully ready
-        await Task.Delay(10000);
+        // No need to Reinitialize - Settings object is shared, serial will be picked up automatically
+        // Brief delay to let UI update
+        await Task.Delay(500);
         
         MessageBox.Show("Serial number saved successfully!", "Success", 
             MessageBoxButton.OK, MessageBoxImage.Information);

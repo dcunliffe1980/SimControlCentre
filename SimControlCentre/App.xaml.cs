@@ -30,48 +30,73 @@ public partial class App : Application
             // Initialize GoXLR service
             _goXLRService = new GoXLRService(Settings);
 
-            // Warm up the GoXLR API connection and auto-detect serial if needed
+            // Always warm up the GoXLR API connection on startup
             _ = Task.Run(async () =>
             {
-                await Task.Delay(2000); // Give GoXLR Utility time to respond
+                await Task.Delay(2000); // Give GoXLR Utility time to start
                 
-                try
+                Console.WriteLine("[App] Warming up GoXLR API connection...");
+                
+                // Warm up the connection by making an API call (don't wait for result)
+                _ = _goXLRService.IsConnectedAsync();
+                
+                // Auto-detect serial if not configured
+                if (string.IsNullOrWhiteSpace(Settings.General.SerialNumber))
                 {
-                    using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-                    var response = await httpClient.GetFromJsonAsync<GoXLRFullResponse>(
-                        Settings.General.ApiEndpoint + "/api/get-devices");
-                    
-                    // Auto-detect serial if not configured
-                    if (string.IsNullOrWhiteSpace(Settings.General.SerialNumber) && 
-                        response?.Mixers != null && response.Mixers.Count == 1)
+                    try
                     {
-                        var serial = response.Mixers.Keys.First();
-                        Settings.General.SerialNumber = serial;
+                        Console.WriteLine("[App] Starting auto-detect...");
                         
-                        // Save to config
-                        Dispatcher.Invoke(() =>
+                        // Get devices to extract serial
+                        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                        var response = await httpClient.GetFromJsonAsync<GoXLRFullResponse>(
+                            Settings.General.ApiEndpoint + "/api/get-devices");
+                        
+                        if (response?.Mixers != null && response.Mixers.Count == 1)
                         {
-                            _configService.Save(Settings);
-                            _goXLRService.Reinitialize();
+                            var serial = response.Mixers.Keys.First();
+                            Settings.General.SerialNumber = serial;
+                            Console.WriteLine($"[App] Auto-detected serial: {serial}");
                             
-                            // Update MainWindow serial number display
-                            if (_mainWindow != null)
+                            // Save to config
+                            Dispatcher.Invoke(() =>
                             {
-                                _mainWindow.UpdateSerialNumberDisplay(serial);
+                                _configService.Save(Settings);
                                 
-                                // Automatically test connection after auto-detect
-                                _ = _mainWindow.TestConnectionAfterAutoDetect();
-                            }
+                                // Update MainWindow serial number display
+                                if (_mainWindow != null)
+                                {
+                                    _mainWindow.UpdateSerialNumberDisplay(serial);
+                                }
+                                
+                                _notifyIcon?.ShowBalloonTip("GoXLR Auto-Detected", 
+                                    $"Serial: {serial}\nConnection ready!", 
+                                    BalloonIcon.Info);
+                            });
                             
-                            _notifyIcon?.ShowBalloonTip("GoXLR Auto-Detected", 
-                                $"Serial: {serial}\nTesting connection...", 
-                                BalloonIcon.Info);
-                        });
+                            // Wait a bit, then test connection (on main thread)
+                            await Task.Delay(3000);
+                            await Dispatcher.InvokeAsync(async () =>
+                            {
+                                if (_mainWindow != null)
+                                {
+                                    await _mainWindow.TestConnectionAfterAutoDetect();
+                                }
+                            });
+                        }
+                        else
+                        {
+                            Console.WriteLine($"[App] Auto-detect found {response?.Mixers?.Count ?? 0} devices");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[App] Auto-detect failed: {ex.Message}");
                     }
                 }
-                catch (Exception ex)
+                else
                 {
-                    Console.WriteLine($"[App] API warm-up failed: {ex.Message}");
+                    Console.WriteLine($"[App] Serial already configured: {Settings.General.SerialNumber}");
                 }
             });
 
