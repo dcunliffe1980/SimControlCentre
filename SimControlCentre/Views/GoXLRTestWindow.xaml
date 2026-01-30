@@ -1,0 +1,75 @@
+<Window x:Class="SimControlCentre.Views.GoXLRTestWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="GoXLR API Test" Height="500" Width="600"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Connection Test -->
+        <GroupBox Header="Connection" Grid.Row="0" Margin="0,0,0,10">
+            <StackPanel>
+                <Button Name="TestConnectionBtn" Content="Test Connection" 
+                        Click="TestConnection_Click" Padding="10,5" Margin="5"/>
+                <Button Name="RefreshBtn" Content="Refresh Status" 
+                        Click="RefreshStatus_Click" Padding="10,5" Margin="5"/>
+                <Button Name="TestRawAPIBtn" Content="Test Raw API (Debug)" 
+                        Click="TestRawAPI_Click" Padding="10,5" Margin="5" 
+                        Background="LightYellow"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Volume Control -->
+        <GroupBox Header="Volume Control" Grid.Row="1" Margin="0,0,0,10">
+            <StackPanel>
+                <ComboBox Name="ChannelCombo" Margin="5">
+                    <ComboBoxItem Content="Game" IsSelected="True"/>
+                    <ComboBoxItem Content="Music"/>
+                    <ComboBoxItem Content="Chat"/>
+                    <ComboBoxItem Content="System"/>
+                    <ComboBoxItem Content="Console"/>
+                    <ComboBoxItem Content="Mic"/>
+                    <ComboBoxItem Content="LineIn"/>
+                    <ComboBoxItem Content="Sample"/>
+                </ComboBox>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button Name="VolumeDownBtn" Content="Volume Down" 
+                            Click="VolumeDown_Click" Padding="15,5" Margin="5"/>
+                    <Button Name="VolumeUpBtn" Content="Volume Up" 
+                            Click="VolumeUp_Click" Padding="15,5" Margin="5"/>
+                </StackPanel>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Profile Control -->
+        <GroupBox Header="Profile Control" Grid.Row="2" Margin="0,0,0,10">
+            <StackPanel>
+                <ComboBox Name="ProfileCombo" Margin="5">
+                    <ComboBoxItem Content="Speakers - Personal"/>
+                    <ComboBoxItem Content="Headphones - Personal (Online)"/>
+                    <ComboBoxItem Content="Headphones - Work"/>
+                    <ComboBoxItem Content="iRacing"/>
+                </ComboBox>
+                <Button Name="LoadProfileBtn" Content="Load Profile" 
+                        Click="LoadProfile_Click" Padding="10,5" Margin="5"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Status Display -->
+        <GroupBox Header="Status" Grid.Row="4">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <TextBlock Name="StatusText" 
+                           Text="Click 'Test Connection' or 'Refresh Status' to begin..."
+                           TextWrapping="Wrap"
+                           FontFamily="Consolas"
+                           Padding="5"/>
+            </ScrollViewer>
+        </GroupBox>
+    </Grid>
+</Window>
