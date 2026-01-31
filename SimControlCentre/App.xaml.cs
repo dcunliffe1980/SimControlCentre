@@ -128,12 +128,6 @@ public partial class App : Application
                         _notifyIcon?.ShowBalloonTip("GoXLR Ready!",
                             "Connected and ready to control volume!",
                             BalloonIcon.Info);
-                        
-                        // Update MainWindow connection status if window exists
-                        if (_mainWindow != null)
-                        {
-                            _ = _mainWindow.CheckConnectionAsync();
-                        }
                     });
                 }
                 else
@@ -164,25 +158,9 @@ public partial class App : Application
                             {
                                 _configService.Save(Settings);
                                 
-                                // Update MainWindow serial number display
-                                if (_mainWindow != null)
-                                {
-                                    _mainWindow.UpdateSerialNumberDisplay(serial);
-                                }
-                                
                                 _notifyIcon?.ShowBalloonTip("GoXLR Auto-Detected", 
                                     $"Serial: {serial}\nConnection ready!", 
                                     BalloonIcon.Info);
-                            });
-                            
-                            // Wait a bit, then test connection (on main thread)
-                            await Task.Delay(3000);
-                            await Dispatcher.InvokeAsync(async () =>
-                            {
-                                if (_mainWindow != null)
-                                {
-                                    await _mainWindow.TestConnectionAfterAutoDetect();
-                                }
                             });
                         }
                         else
@@ -232,6 +210,12 @@ public partial class App : Application
             _controllerManager = new ControllerManager(_directInputService, _goXLRService, Settings);
             _controllerManager.InitializeControllers(windowInterop.Handle);
             
+            // Initialize Controllers Tab now that DirectInputService exists
+            if (_mainWindow != null)
+            {
+                _mainWindow.InitializeControllersTab(_directInputService);
+            }
+            
             // Show registration result
             if (registeredCount > 0)
             {
@@ -256,12 +240,8 @@ public partial class App : Application
 
     private void Application_Exit(object sender, ExitEventArgs e)
     {
-        // Save configuration before exit
-        if (_mainWindow != null)
-        {
-            _mainWindow.SaveWindowSettings();
-        }
-
+        // Window settings are saved by MainWindow's OnClosed handler
+        
         _hotkeyManager?.Dispose();
         _hotkeyService?.Dispose();
         _controllerManager?.Dispose();
