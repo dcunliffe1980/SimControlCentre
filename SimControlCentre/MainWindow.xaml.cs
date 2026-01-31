@@ -87,9 +87,8 @@ public partial class MainWindow : Window
         Dispatcher.InvokeAsync(async () =>
         {
             await Task.Delay(500);
-            RefreshControllerList();
             
-            // Also populate Controllers tab list
+            // Populate Controllers tab list
             RefreshControllerList2();
             
             // Subscribe to button events for the indicator
@@ -451,7 +450,7 @@ public partial class MainWindow : Window
         await CheckConnectionAsync();
     }
 
-    private async Task CheckConnectionAsync()
+    public async Task CheckConnectionAsync()
     {
         ConnectionStatusText.Text = "Connection Status: Checking...";
         ConnectionStatusText.Foreground = System.Windows.Media.Brushes.Orange;
@@ -531,37 +530,6 @@ public partial class MainWindow : Window
         {
             System.Diagnostics.Process.Start("explorer.exe", folderPath);
         }
-    }
-
-    private void RefreshControllerList()
-    {
-        var directInputService = App.GetDirectInputService();
-        if (directInputService == null)
-        {
-            ControllerStatusText.Text = "Controller service not available";
-            ControllerStatusText.Foreground = System.Windows.Media.Brushes.Red;
-            return;
-        }
-
-        var controllers = directInputService.GetConnectedDevices();
-        
-        if (controllers.Count == 0)
-        {
-            ControllerStatusText.Text = "No controllers detected";
-            ControllerStatusText.Foreground = System.Windows.Media.Brushes.Gray;
-            ControllersListBox.ItemsSource = null;
-        }
-        else
-        {
-            ControllerStatusText.Text = $"Found {controllers.Count} controller(s):";
-            ControllerStatusText.Foreground = System.Windows.Media.Brushes.Green;
-            ControllersListBox.ItemsSource = controllers;
-        }
-    }
-
-    private void RefreshControllers_Click(object sender, RoutedEventArgs e)
-    {
-        RefreshControllerList();
     }
 
     private void PopulateHotkeyEditor()
@@ -1346,10 +1314,15 @@ public partial class MainWindow : Window
         
         if (!string.IsNullOrWhiteSpace(button))
         {
-            // Parse button string: Device:{GUID}:Button:{number}
+            // Parse button string: DeviceName:{ProductGuid}:Button:{number}
             var buttonParts = button.Split(':');
             if (buttonParts.Length >= 4)
-                parts.Add($"Btn {buttonParts[3]}");
+            {
+                var deviceName = buttonParts[0]; // Device name is first part
+                var buttonNumber = buttonParts[3];
+                
+                parts.Add($"{deviceName} Btn {buttonNumber}");
+            }
         }
         
         return parts.Count > 0 ? string.Join(" OR ", parts) : "";
@@ -1444,8 +1417,10 @@ public partial class MainWindow : Window
 
         Dispatcher.Invoke(() =>
         {
-            // Format: Device:{GUID}:Button:{number}
-            var buttonString = $"Device:{e.DeviceGuid}:Button:{e.ButtonNumber}";
+            // Format: DeviceName:{ProductGuid}:Button:{number}
+            var buttonString = $"{e.DeviceName}:{e.ProductGuid}:Button:{e.ButtonNumber}";
+            
+            Console.WriteLine($"[Capture] Saved button string: {buttonString}");
             
             // Check for button conflicts
             var conflict = CheckButtonConflict(buttonString, _captureType!, _captureAction!);
@@ -1616,34 +1591,102 @@ public partial class MainWindow : Window
 
         Dispatcher.Invoke(() =>
         {
-            // Format: Device:{GUID}:Button:{number}
-            var buttonString = $"Device:{e.DeviceGuid}:Button:{e.ButtonNumber}";
+            // Format: DeviceName:{ProductGuid}:Button:{number} - includes name for display
+            var buttonString = $"{e.DeviceName}:{e.ProductGuid}:Button:{e.ButtonNumber}";
             
-            // Save based on action type
-            if (_captureAction == "VolumeUpButton")
+            Console.WriteLine($"[Capture] Saved button string: {buttonString}");
+            
+            // Check for button conflicts
+            var conflict = CheckButtonConflict(buttonString, _captureType!, _captureAction!);
+            if (!string.IsNullOrEmpty(conflict))
+            {
+                // Show "Already in use" message
+                string originalButton = "";
+                string originalKeyboard = "";
+                
+                if (_captureType == "Profile")
+                {
+                    originalButton = _settings.ProfileButtons.ContainsKey(_captureAction!) 
+                        ? _settings.ProfileButtons[_captureAction!] : "";
+                    originalKeyboard = _settings.ProfileHotkeys.ContainsKey(_captureAction!) 
+                        ? _settings.ProfileHotkeys[_captureAction!] : "";
+                }
+                else
+                {
+                    originalButton = _captureAction == "VolumeUp"
+                        ? _settings.VolumeHotkeys[_captureType!].VolumeUpButton ?? ""
+                        : _settings.VolumeHotkeys[_captureType!].VolumeDownButton ?? "";
+                    
+                    originalKeyboard = _captureAction == "VolumeUp"
+                        ? _settings.VolumeHotkeys[_captureType!].VolumeUp ?? ""
+                        : _settings.VolumeHotkeys[_captureType!].VolumeDown ?? "";
+                }
+
+                _captureButtonTextBox.Text = "Already in use";
+                _captureButtonTextBox.Foreground = System.Windows.Media.Brushes.Red;
+                _captureButtonTextBox.Background = System.Windows.Media.Brushes.LightPink;
+                
+                var textBoxToReset = _captureButtonTextBox;
+                
+                StopCombinedCapture();
+                
+                // Re-register hotkeys
+                var mgr = App.GetHotkeyManager();
+                mgr?.RegisterAllHotkeys();
+                
+                // Reset after 3 seconds
+                var timer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(3)
+                };
+                timer.Tick += (s, args) =>
+                {
+                    timer.Stop();
+                    textBoxToReset.Text = GetCombinedHotkeyDisplay(originalKeyboard, originalButton);
+                    textBoxToReset.Foreground = System.Windows.Media.Brushes.Black;
+                    textBoxToReset.Background = System.Windows.Media.Brushes.White;
+                };
+                timer.Start();
+                
+                return;
+            }
+            
+            // Save based on action type - display as "DeviceName Btn X"
+            var displayText = $"{e.DeviceName} Btn {e.ButtonNumber}";
+            
+            if (_captureType == "Profile")
+            {
+                _settings.ProfileButtons[_captureAction!] = buttonString;
+                _captureButtonTextBox.Text = GetCombinedHotkeyDisplay(
+                    _settings.ProfileHotkeys.ContainsKey(_captureAction!) ? _settings.ProfileHotkeys[_captureAction!] : "",
+                    buttonString);
+            }
+            else if (_captureAction == "VolumeUp")
             {
                 _settings.VolumeHotkeys[_captureType!].VolumeUpButton = buttonString;
+                _captureButtonTextBox.Text = GetCombinedHotkeyDisplay(
+                    _settings.VolumeHotkeys[_captureType!].VolumeUp,
+                    buttonString);
             }
-            else if (_captureAction == "VolumeDownButton")
+            else if (_captureAction == "VolumeDown")
             {
                 _settings.VolumeHotkeys[_captureType!].VolumeDownButton = buttonString;
-            }
-            else if (_captureAction?.StartsWith("Profile") == true)
-            {
-                // Handle profile buttons if needed
-                var profileName = _captureAction.Replace("ProfileButton|", "");
-                _settings.ProfileButtons[profileName] = buttonString;
+                _captureButtonTextBox.Text = GetCombinedHotkeyDisplay(
+                    _settings.VolumeHotkeys[_captureType!].VolumeDown,
+                    buttonString);
             }
 
-            // Update UI
-            _captureButtonTextBox.Text = $"Btn {e.ButtonNumber}";
             _captureButtonTextBox.Background = System.Windows.Media.Brushes.White;
             
             // Auto-save
             _configService.Save(_settings);
             
+            // Re-register hotkeys
+            var hotkeyManager = App.GetHotkeyManager();
+            hotkeyManager?.RegisterAllHotkeys();
+            
             // Stop capture
-            StopControllerButtonCapture();
+            StopCombinedCapture();
         });
     }
 

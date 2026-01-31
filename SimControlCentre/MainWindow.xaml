@@ -117,49 +117,6 @@
                                         Padding="10,5"/>
                             </StackPanel>
                         </GroupBox>
-                        
-                        <!-- Controllers -->
-                        <GroupBox Header="Connected Controllers" Margin="0,20,0,0" Padding="10">
-                            <StackPanel>
-                                <TextBlock Name="ControllerStatusText" 
-                                           Text="Scanning for controllers..." 
-                                           Foreground="Gray"
-                                           Margin="0,0,0,10"/>
-                                
-                                <ItemsControl Name="ControllersListBox" 
-                                              Margin="0,0,0,10">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border BorderBrush="LightGray" 
-                                                    BorderThickness="1" 
-                                                    Padding="8" 
-                                                    Margin="0,0,0,5"
-                                                    Background="WhiteSmoke">
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding Name}" 
-                                                               FontWeight="Bold" 
-                                                               FontSize="12"/>
-                                                    <TextBlock Text="{Binding Type}" 
-                                                               FontSize="10" 
-                                                               Foreground="Gray"/>
-                                                    <TextBlock FontSize="9" 
-                                                               Foreground="DarkGray" 
-                                                               Margin="0,2,0,0">
-                                                        <Run Text="GUID: "/>
-                                                        <Run Text="{Binding InstanceGuid}"/>
-                                                    </TextBlock>
-                                                </StackPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                
-                                <Button Name="RefreshControllersBtn" 
-                                        Content="Refresh Controllers" 
-                                        Click="RefreshControllers_Click"
-                                        Padding="10,5"/>
-                            </StackPanel>
-                        </GroupBox>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>

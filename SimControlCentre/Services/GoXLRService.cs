@@ -74,6 +74,24 @@ public class GoXLRService : IDisposable
 
         return new VolumeChangeResult { Success = false, Message = "Failed to adjust volume. Check if GoXLR Utility is running and serial number is correct." };
     }
+    
+    /// <summary>
+    /// Pre-warms the volume cache for a channel to avoid first-press delays
+    /// </summary>
+    public async Task WarmVolumeCacheAsync(string channel)
+    {
+        if (_apiClient == null || !IsConfigured)
+            return;
+        
+        try
+        {
+            _ = await _apiClient.GetVolumeAsync(SerialNumber, channel);
+        }
+        catch
+        {
+            // Silently ignore cache warming failures
+        }
+    }
 
     /// <summary>
     /// Attempts to auto-detect serial number if only one device exists

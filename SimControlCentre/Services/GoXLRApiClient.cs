@@ -30,7 +30,7 @@ public class GoXLRApiClient : IDisposable
         _httpClient = new HttpClient
         {
             BaseAddress = new Uri(apiEndpoint),
-            Timeout = TimeSpan.FromMilliseconds(1000)
+            Timeout = TimeSpan.FromMilliseconds(5000) // Increased from 2000ms to 5000ms (5 seconds)
         };
     }
 
@@ -112,21 +112,39 @@ public class GoXLRApiClient : IDisposable
 
         Console.WriteLine($"[GoXLR] Cache miss/expired for {channel}, fetching from device");
         
-        // Cache miss or expired - refresh from device
-        var device = await GetDeviceStatusAsync(serialNumber);
-        if (device?.Levels.Volumes.TryGetValue(channel, out var volume) == true)
+        // Cache miss or expired - refresh from device with retry logic
+        int maxRetries = 2;
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            Console.WriteLine($"[GoXLR] Got volume for {channel}: {volume}");
-            _volumeCache[channel] = new CachedVolume { Volume = volume, Timestamp = DateTime.Now };
-            return volume;
-        }
-
-        Console.WriteLine($"[GoXLR] Failed to get volume for channel: {channel}");
-        if (device != null)
-        {
-            Console.WriteLine($"[GoXLR] Available channels: {string.Join(", ", device.Levels.Volumes.Keys)}");
+            try
+            {
+                var device = await GetDeviceStatusAsync(serialNumber);
+                if (device?.Levels.Volumes.TryGetValue(channel, out var volume) == true)
+                {
+                    Console.WriteLine($"[GoXLR] Got volume for {channel}: {volume}");
+                    _volumeCache[channel] = new CachedVolume { Volume = volume, Timestamp = DateTime.Now };
+                    return volume;
+                }
+                
+                Console.WriteLine($"[GoXLR] Failed to get volume for channel: {channel}");
+                if (device != null)
+                {
+                    Console.WriteLine($"[GoXLR] Available channels: {string.Join(", ", device.Levels.Volumes.Keys)}");
+                }
+                return null; // Channel not found, don't retry
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GoXLR] Attempt {attempt}/{maxRetries} failed for {channel}: {ex.Message}");
+                if (attempt < maxRetries)
+                {
+                    Console.WriteLine($"[GoXLR] Retrying in 500ms...");
+                    await Task.Delay(500);
+                }
+            }
         }
         
+        Console.WriteLine($"[GoXLR] All retry attempts failed for {channel}");
         return null;
     }
 

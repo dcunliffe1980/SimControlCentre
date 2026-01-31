@@ -52,8 +52,8 @@ public class ControllerManager : IDisposable
 
     private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
     {
-        // Debounce
-        var key = $"{e.DeviceGuid}_{e.ButtonNumber}";
+        // Debounce using ProductGuid for consistency
+        var key = $"{e.ProductGuid}_{e.ButtonNumber}";
         if (_lastButtonPress.TryGetValue(key, out var lastPress))
         {
             if ((DateTime.Now - lastPress).TotalMilliseconds < DEBOUNCE_MS)
@@ -61,24 +61,24 @@ public class ControllerManager : IDisposable
         }
         _lastButtonPress[key] = DateTime.Now;
 
-        Console.WriteLine($"[ControllerManager] Button {e.ButtonNumber} pressed on {e.DeviceGuid}");
+        Console.WriteLine($"[ControllerManager] Button {e.ButtonNumber} pressed on {e.DeviceName} (Product: {e.ProductGuid})");
 
-        // Check Volume Hotkeys for button mappings
-        var buttonString = $"Device:{e.DeviceGuid}:Button:{e.ButtonNumber}";
+        // Check Volume Hotkeys for button mappings - format is DeviceName:{ProductGuid}:Button:{number}
+        // We match on ProductGuid (position 1) and ButtonNumber (position 3)
         
         foreach (var channelKvp in _settings.VolumeHotkeys)
         {
             var channel = channelKvp.Key;
             var hotkeys = channelKvp.Value;
 
-            if (hotkeys.VolumeUpButton == buttonString)
+            if (!string.IsNullOrWhiteSpace(hotkeys.VolumeUpButton) && MatchesButton(hotkeys.VolumeUpButton, e.ProductGuid, e.ButtonNumber))
             {
                 Console.WriteLine($"[ControllerManager] Executing Volume Up for {channel}");
                 _ = _goXLRService.AdjustVolumeAsync(channel, true);
                 return;
             }
 
-            if (hotkeys.VolumeDownButton == buttonString)
+            if (!string.IsNullOrWhiteSpace(hotkeys.VolumeDownButton) && MatchesButton(hotkeys.VolumeDownButton, e.ProductGuid, e.ButtonNumber))
             {
                 Console.WriteLine($"[ControllerManager] Executing Volume Down for {channel}");
                 _ = _goXLRService.AdjustVolumeAsync(channel, false);
@@ -89,7 +89,7 @@ public class ControllerManager : IDisposable
         // Check Profile Buttons
         foreach (var profileKvp in _settings.ProfileButtons)
         {
-            if (profileKvp.Value == buttonString)
+            if (!string.IsNullOrWhiteSpace(profileKvp.Value) && MatchesButton(profileKvp.Value, e.ProductGuid, e.ButtonNumber))
             {
                 Console.WriteLine($"[ControllerManager] Loading profile: {profileKvp.Key}");
                 _ = _goXLRService.LoadProfileAsync(profileKvp.Key);
@@ -110,6 +110,30 @@ public class ControllerManager : IDisposable
     private void OnButtonReleased(object? sender, ButtonReleasedEventArgs e)
     {
         // Could handle button release for non-toggle actions here
+    }
+    
+    /// <summary>
+    /// Checks if a button string matches the given ProductGuid and button number
+    /// Format: DeviceName:{ProductGuid}:Button:{number}
+    /// </summary>
+    private bool MatchesButton(string buttonString, Guid productGuid, int buttonNumber)
+    {
+        var parts = buttonString.Split(':');
+        if (parts.Length < 4)
+            return false;
+        
+        // Check ProductGuid (position 1)
+        if (!Guid.TryParse(parts[1], out var storedProductGuid))
+            return false;
+        
+        if (storedProductGuid != productGuid)
+            return false;
+        
+        // Check button number (position 3)
+        if (!int.TryParse(parts[3], out var storedButtonNumber))
+            return false;
+        
+        return storedButtonNumber == buttonNumber;
     }
 
     /// <summary>

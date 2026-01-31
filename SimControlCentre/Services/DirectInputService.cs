@@ -10,6 +10,7 @@ public class DirectInputService : IDisposable
     private readonly DirectInput _directInput;
     private readonly Dictionary<Guid, Joystick> _devices = new();
     private readonly Dictionary<Guid, JoystickState> _previousStates = new();
+    private readonly Dictionary<Guid, DeviceInfo> _deviceInfo = new(); // Track device info
     private System.Timers.Timer? _pollTimer;
     
     public event EventHandler<ButtonPressedEventArgs>? ButtonPressed;
@@ -65,12 +66,29 @@ public class DirectInputService : IDisposable
     {
         try
         {
+            // Get device instance info to store ProductGuid and Name
+            var deviceInstance = _directInput.GetDevices().FirstOrDefault(d => d.InstanceGuid == deviceGuid);
+            if (deviceInstance == null)
+            {
+                Console.WriteLine($"[DirectInput] Device {deviceGuid} not found");
+                return false;
+            }
+            
             var joystick = new Joystick(_directInput, deviceGuid);
             joystick.SetCooperativeLevel(windowHandle, CooperativeLevel.Background | CooperativeLevel.NonExclusive);
             joystick.Acquire();
             
             _devices[deviceGuid] = joystick;
             _previousStates[deviceGuid] = joystick.GetCurrentState();
+            
+            // Store device info for later lookup
+            _deviceInfo[deviceGuid] = new DeviceInfo
+            {
+                InstanceGuid = deviceInstance.InstanceGuid,
+                ProductGuid = deviceInstance.ProductGuid,
+                Name = deviceInstance.ProductName,
+                Type = deviceInstance.Type.ToString()
+            };
             
             return true;
         }
@@ -130,18 +148,30 @@ public class DirectInputService : IDisposable
                     // Button pressed
                     if (currentPressed && !previousPressed)
                     {
+                        var info = _deviceInfo.TryGetValue(deviceGuid, out var devInfo) 
+                            ? devInfo 
+                            : new DeviceInfo { InstanceGuid = deviceGuid, ProductGuid = Guid.Empty, Name = "Unknown" };
+                        
                         ButtonPressed?.Invoke(this, new ButtonPressedEventArgs
                         {
                             DeviceGuid = deviceGuid,
+                            ProductGuid = info.ProductGuid,
+                            DeviceName = info.Name,
                             ButtonNumber = i + 1 // 1-based for user display
                         });
                     }
                     // Button released
                     else if (!currentPressed && previousPressed)
                     {
+                        var info = _deviceInfo.TryGetValue(deviceGuid, out var devInfo) 
+                            ? devInfo 
+                            : new DeviceInfo { InstanceGuid = deviceGuid, ProductGuid = Guid.Empty, Name = "Unknown" };
+                        
                         ButtonReleased?.Invoke(this, new ButtonReleasedEventArgs
                         {
                             DeviceGuid = deviceGuid,
+                            ProductGuid = info.ProductGuid,
+                            DeviceName = info.Name,
                             ButtonNumber = i + 1
                         });
                     }
@@ -217,7 +247,9 @@ public class DeviceInfo
 /// </summary>
 public class ButtonPressedEventArgs : EventArgs
 {
-    public Guid DeviceGuid { get; set; }
+    public Guid DeviceGuid { get; set; }  // Instance GUID (changes on reconnect)
+    public Guid ProductGuid { get; set; } // Product GUID (stable)
+    public string DeviceName { get; set; } = string.Empty;
     public int ButtonNumber { get; set; }
 }
 
@@ -226,6 +258,9 @@ public class ButtonPressedEventArgs : EventArgs
 /// </summary>
 public class ButtonReleasedEventArgs : EventArgs
 {
-    public Guid DeviceGuid { get; set; }
+    public Guid DeviceGuid { get; set; }  // Instance GUID (changes on reconnect)
+    public Guid ProductGuid { get; set; } // Product GUID (stable)
+    public string DeviceName { get; set; } = string.Empty;
     public int ButtonNumber { get; set; }
 }
+

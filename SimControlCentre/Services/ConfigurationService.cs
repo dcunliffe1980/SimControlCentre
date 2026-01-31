@@ -77,7 +77,7 @@ public class ConfigurationService
             {
                 SerialNumber = string.Empty, // User must configure
                 VolumeStep = 10,
-                VolumeCacheTimeMs = 5000,
+                VolumeCacheTimeMs = 30000, // Increased from 5000ms to 30000ms (30 seconds)
                 ApiEndpoint = "http://localhost:14564"
             },
             EnabledChannels = new List<string>

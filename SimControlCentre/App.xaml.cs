@@ -67,12 +67,79 @@ public partial class App : Application
             // Always warm up the GoXLR API connection on startup
             _ = Task.Run(async () =>
             {
-                await Task.Delay(2000); // Give GoXLR Utility time to start
+                // Wait for GoXLR Daemon to be running before attempting connection
+                Console.WriteLine("[App] Waiting for GoXLR Daemon to start...");
+                bool utilityRunning = await WaitForGoXLRUtility(TimeSpan.FromMinutes(2));
                 
-                Console.WriteLine("[App] Warming up GoXLR API connection...");
+                if (!utilityRunning)
+                {
+                    Console.WriteLine("[App] GoXLR Daemon did not start within 2 minutes. Will retry on demand.");
+                    Dispatcher.Invoke(() =>
+                    {
+                        _notifyIcon?.ShowBalloonTip("GoXLR Daemon Not Found",
+                            "GoXLR Daemon not detected after 2 minutes. Start it manually.",
+                            BalloonIcon.Warning);
+                    });
+                    return;
+                }
                 
-                // Warm up the connection by making an API call (don't wait for result)
-                _ = _goXLRService.IsConnectedAsync();
+                Console.WriteLine("[App] GoXLR Daemon detected! Warming up API connection...");
+                Dispatcher.Invoke(() =>
+                {
+                    _notifyIcon?.ShowBalloonTip("GoXLR Daemon Detected",
+                        "GoXLR Daemon found! Connecting...",
+                        BalloonIcon.Info);
+                });
+                
+                // Give the daemon more time to fully initialize its API
+                await Task.Delay(5000); // Increased from 2 to 5 seconds
+                
+                // Test connection
+                Console.WriteLine("[App] Testing GoXLR connection...");
+                bool isConnected = await _goXLRService.IsConnectedAsync();
+                
+                if (!isConnected)
+                {
+                    Console.WriteLine("[App] Connection test failed - API might still be initializing");
+                    // Wait a bit more and retry
+                    await Task.Delay(5000);
+                    isConnected = await _goXLRService.IsConnectedAsync();
+                }
+                
+                if (isConnected)
+                {
+                    Console.WriteLine("[App] Successfully connected to GoXLR!");
+                    
+                    // Pre-warm the volume cache BEFORE showing "connected" notification
+                    Console.WriteLine("[App] Pre-warming volume cache for all enabled channels...");
+                    await Task.Delay(1000); // Give API time to fully initialize
+                    
+                    foreach (var channel in Settings.EnabledChannels)
+                    {
+                        Console.WriteLine($"[App] Warming cache for {channel}...");
+                        await _goXLRService.WarmVolumeCacheAsync(channel);
+                        Console.WriteLine($"[App] ✓ Cache warmed for {channel}");
+                    }
+                    Console.WriteLine("[App] Volume cache pre-warming complete!");
+                    
+                    // NOW show the connected notification - cache is ready!
+                    Dispatcher.Invoke(() =>
+                    {
+                        _notifyIcon?.ShowBalloonTip("GoXLR Ready!",
+                            "Connected and ready to control volume!",
+                            BalloonIcon.Info);
+                        
+                        // Update MainWindow connection status if window exists
+                        if (_mainWindow != null)
+                        {
+                            _ = _mainWindow.CheckConnectionAsync();
+                        }
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("[App] Could not connect to GoXLR API");
+                }
                 
                 // Auto-detect serial if not configured
                 if (string.IsNullOrWhiteSpace(Settings.General.SerialNumber))
@@ -201,6 +268,34 @@ public partial class App : Application
         _directInputService?.Dispose();
         _goXLRService?.Dispose();
         _notifyIcon?.Dispose();
+    }
+
+    /// <summary>
+    /// Waits for GoXLR Utility process to be running
+    /// </summary>
+    private async Task<bool> WaitForGoXLRUtility(TimeSpan timeout)
+    {
+        var startTime = DateTime.Now;
+        var checkInterval = TimeSpan.FromSeconds(5);
+        
+        while (DateTime.Now - startTime < timeout)
+        {
+            // Check if goxlr-daemon process is running
+            var processes = System.Diagnostics.Process.GetProcessesByName("goxlr-daemon");
+            if (processes.Length > 0)
+            {
+                Console.WriteLine($"[App] GoXLR Daemon found (PID: {processes[0].Id})");
+                return true;
+            }
+            
+            // Not found yet, wait and retry
+            var elapsed = DateTime.Now - startTime;
+            Console.WriteLine($"[App] GoXLR Daemon not running yet... ({elapsed.TotalSeconds:F0}s elapsed, will retry)");
+            await Task.Delay(checkInterval);
+        }
+        
+        Console.WriteLine("[App] Timeout waiting for GoXLR Daemon");
+        return false;
     }
 
     private void OpenSettings_Click(object sender, RoutedEventArgs e)
