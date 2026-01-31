@@ -69,15 +69,15 @@ public partial class App : Application
             {
                 // Wait for GoXLR Daemon to be running before attempting connection
                 Console.WriteLine("[App] Waiting for GoXLR Daemon to start...");
-                bool utilityRunning = await WaitForGoXLRUtility(TimeSpan.FromMinutes(2));
+                bool utilityRunning = await WaitForGoXLRUtility(TimeSpan.FromMinutes(5));
                 
                 if (!utilityRunning)
                 {
-                    Console.WriteLine("[App] GoXLR Daemon did not start within 2 minutes. Will retry on demand.");
+                    Console.WriteLine("[App] GoXLR Daemon did not start within 5 minutes. Will retry on demand.");
                     Dispatcher.Invoke(() =>
                     {
                         _notifyIcon?.ShowBalloonTip("GoXLR Daemon Not Found",
-                            "GoXLR Daemon not detected after 2 minutes. Start it manually.",
+                            "GoXLR Daemon not detected after 5 minutes. Start it manually.",
                             BalloonIcon.Warning);
                     });
                     return;

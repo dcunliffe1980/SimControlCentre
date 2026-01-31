@@ -108,7 +108,7 @@ namespace SimControlCentre.Views.Tabs
             // Volume Up
             var upLabel = new TextBlock
             {
-                Text = "? Up:",
+                Text = "Up:",
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 5, 0),
                 Foreground = System.Windows.Media.Brushes.Gray
@@ -141,7 +141,7 @@ namespace SimControlCentre.Views.Tabs
             
             var upClearButton = new Button
             {
-                Content = "?",
+                Content = "Clear",
                 Padding = new Thickness(8, 5, 8, 5),
                 Margin = new Thickness(0, 0, 15, 0),
                 Tag = $"{channel}|VolumeUp",
@@ -154,7 +154,7 @@ namespace SimControlCentre.Views.Tabs
             // Volume Down
             var downLabel = new TextBlock
             {
-                Text = "? Down:",
+                Text = "Down:",
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 5, 0),
                 Foreground = System.Windows.Media.Brushes.Gray
@@ -187,7 +187,7 @@ namespace SimControlCentre.Views.Tabs
             
             var downClearButton = new Button
             {
-                Content = "?",
+                Content = "Clear",
                 Padding = new Thickness(8, 5, 8, 5),
                 Tag = $"{channel}|VolumeDown",
                 ToolTip = "Clear hotkey"
@@ -246,7 +246,7 @@ namespace SimControlCentre.Views.Tabs
             // Clear button
             var clearButton = new Button
             {
-                Content = "?",
+                Content = "Clear",
                 Padding = new Thickness(10, 5, 10, 5),
                 Tag = $"Profile|{profile}",
                 ToolTip = "Clear hotkey"
@@ -271,9 +271,9 @@ namespace SimControlCentre.Views.Tabs
                 var buttonParts = button.Split(':');
                 if (buttonParts.Length >= 4)
                 {
-                    var deviceName = buttonParts[0];
+                    var deviceName = buttonParts[0].Trim();
                     var buttonNumber = buttonParts[3];
-                    parts.Add($"{deviceName} Btn {buttonNumber}");
+                    parts.Add($"{deviceName}: Btn {buttonNumber}");
                 }
             }
             

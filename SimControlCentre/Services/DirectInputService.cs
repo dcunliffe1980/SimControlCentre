@@ -49,7 +49,7 @@ public class DirectInputService : IDisposable
             {
                 InstanceGuid = deviceInstance.InstanceGuid,
                 ProductGuid = deviceInstance.ProductGuid,
-                Name = deviceInstance.ProductName,
+                Name = deviceInstance.ProductName.Trim(),
                 Type = deviceInstance.Type.ToString()
             });
         }
@@ -86,7 +86,7 @@ public class DirectInputService : IDisposable
             {
                 InstanceGuid = deviceInstance.InstanceGuid,
                 ProductGuid = deviceInstance.ProductGuid,
-                Name = deviceInstance.ProductName,
+                Name = deviceInstance.ProductName.Trim(),
                 Type = deviceInstance.Type.ToString()
             };
             
