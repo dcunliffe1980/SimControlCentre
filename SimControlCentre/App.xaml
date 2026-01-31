@@ -9,6 +9,12 @@
         <ContextMenu x:Key="TrayContextMenu">
             <MenuItem Header="Open Settings" Click="OpenSettings_Click" FontWeight="Bold" />
             <Separator />
+            <MenuItem Name="ToggleHotkeysMenuItem" 
+                     Header="Enable Hotkeys" 
+                     IsCheckable="True" 
+                     IsChecked="True"
+                     Click="ToggleHotkeys_Click"/>
+            <Separator />
             <MenuItem Header="Exit" Click="Exit_Click" />
         </ContextMenu>
     </Application.Resources>

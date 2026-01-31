@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,6 +22,13 @@ public partial class MainWindow : Window
     private string? _captureType;
     private string? _captureAction;
     private TextBox? _captureTextBox;
+    
+    // Controller capture state
+    private bool _isCapturingButton = false;
+    private TextBox? _captureButtonTextBox;
+    
+    // Available GoXLR profiles
+    private List<string> _availableProfiles = new();
 
     public MainWindow(AppSettings settings, ConfigurationService configService, GoXLRService goXLRService)
     {
@@ -69,6 +76,58 @@ public partial class MainWindow : Window
         
         // Populate hotkey editor
         PopulateHotkeyEditor();
+        
+        // Populate channels and profiles management
+        PopulateChannelsAndProfiles();
+        
+        // Initialize Start with Windows checkbox
+        StartWithWindowsCheckBox.IsChecked = IsStartWithWindowsEnabled();
+        
+        // Refresh controller list after a short delay to ensure DirectInput is initialized
+        Dispatcher.InvokeAsync(async () =>
+        {
+            await Task.Delay(500);
+            RefreshControllerList();
+            
+            // Also populate Controllers tab list
+            RefreshControllerList2();
+            
+            // Subscribe to button events for the indicator
+            var directInputService = App.GetDirectInputService();
+            if (directInputService != null)
+            {
+                directInputService.ButtonPressed += OnAnyButtonPressed;
+                directInputService.ButtonReleased += OnAnyButtonReleased;
+            }
+            
+            // Auto-fetch GoXLR profiles
+            await Task.Delay(2500); // Additional delay for GoXLR API warm-up
+            await FetchGoXLRProfilesAsync();
+        });
+    }
+
+    private void OnAnyButtonPressed(object? sender, ButtonPressedEventArgs e)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            ButtonIndicator.Fill = System.Windows.Media.Brushes.LimeGreen;
+            ButtonIndicatorText.Text = $"Button {e.ButtonNumber} pressed!";
+            ButtonIndicatorText.Foreground = System.Windows.Media.Brushes.Green;
+        });
+    }
+
+    private void OnAnyButtonReleased(object? sender, ButtonReleasedEventArgs e)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            // Delay reset to make it visible
+            Task.Delay(100).ContinueWith(_ => Dispatcher.Invoke(() =>
+            {
+                ButtonIndicator.Fill = System.Windows.Media.Brushes.Gray;
+                ButtonIndicatorText.Text = "Waiting for input...";
+                ButtonIndicatorText.Foreground = System.Windows.Media.Brushes.Gray;
+            }));
+        });
     }
 
     private void MainWindow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -104,7 +163,7 @@ public partial class MainWindow : Window
             // Capture the textbox reference before StopCapture() clears it
             var textBoxToReset = _captureTextBox;
             
-            StopCapture();
+            StopCombinedCapture();
             
             // Re-register hotkeys since we stopped capture
             var mgr = App.GetHotkeyManager();
@@ -157,7 +216,7 @@ public partial class MainWindow : Window
         }
         
         // Stop capture mode
-        StopCapture();
+        StopCombinedCapture();
 
         e.Handled = true;
     }
@@ -474,17 +533,66 @@ public partial class MainWindow : Window
         }
     }
 
+    private void RefreshControllerList()
+    {
+        var directInputService = App.GetDirectInputService();
+        if (directInputService == null)
+        {
+            ControllerStatusText.Text = "Controller service not available";
+            ControllerStatusText.Foreground = System.Windows.Media.Brushes.Red;
+            return;
+        }
+
+        var controllers = directInputService.GetConnectedDevices();
+        
+        if (controllers.Count == 0)
+        {
+            ControllerStatusText.Text = "No controllers detected";
+            ControllerStatusText.Foreground = System.Windows.Media.Brushes.Gray;
+            ControllersListBox.ItemsSource = null;
+        }
+        else
+        {
+            ControllerStatusText.Text = $"Found {controllers.Count} controller(s):";
+            ControllerStatusText.Foreground = System.Windows.Media.Brushes.Green;
+            ControllersListBox.ItemsSource = controllers;
+        }
+    }
+
+    private void RefreshControllers_Click(object sender, RoutedEventArgs e)
+    {
+        RefreshControllerList();
+    }
+
     private void PopulateHotkeyEditor()
     {
         VolumeHotkeysPanel.Children.Clear();
         ProfileHotkeysPanel.Children.Clear();
 
-        // Populate Volume Hotkeys
-        foreach (var channel in _settings.VolumeHotkeys.Keys.OrderBy(k => k))
+        // Populate Volume Hotkeys - ONLY for enabled channels
+        var enabledChannels = _settings.EnabledChannels
+            .Where(c => _settings.VolumeHotkeys.ContainsKey(c))
+            .OrderBy(c => c)
+            .ToList();
+        
+        if (enabledChannels.Count == 0)
         {
-            var hotkeys = _settings.VolumeHotkeys[channel];
+            var emptyText = new TextBlock
+            {
+                Text = "No channels enabled. Go to 'Channels & Profiles' tab to enable channels.",
+                FontStyle = FontStyles.Italic,
+                Foreground = System.Windows.Media.Brushes.Gray,
+                Margin = new Thickness(0, 10, 0, 10)
+            };
+            VolumeHotkeysPanel.Children.Add(emptyText);
+        }
+        else
+        {
+            foreach (var channel in enabledChannels)
+            {
+                var hotkeys = _settings.VolumeHotkeys[channel];
             
-            // Create a grid for this channel
+            // Create a grid for this channel  
             var channelGrid = new Grid { Margin = new Thickness(0, 0, 0, 15) };
             channelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
             channelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -522,29 +630,29 @@ public partial class MainWindow : Window
             Grid.SetRow(upLabel, 0);
             channelGrid.Children.Add(upLabel);
             
-            // Volume Up TextBox
+            // Volume Up TextBox - shows both keyboard AND button
             var upBox = new TextBox
             {
-                Text = hotkeys.VolumeUp ?? "",
+                Text = GetCombinedHotkeyDisplay(hotkeys.VolumeUp, hotkeys.VolumeUpButton),
                 IsReadOnly = true,
                 Padding = new Thickness(5),
                 VerticalContentAlignment = VerticalAlignment.Center,
                 Tag = $"{channel}|VolumeUp",
-                MinWidth = 120
+                MinWidth = 150
             };
             Grid.SetColumn(upBox, 2);
             Grid.SetRow(upBox, 0);
             channelGrid.Children.Add(upBox);
             
-            // Volume Up Capture Button
+            // Volume Up Capture Button - captures BOTH keyboard and controller
             var upButton = new Button
             {
-                Content = "⌨ Capture",
+                Content = "⌨/🎮 Capture",
                 Padding = new Thickness(8, 5, 8, 5),
                 Margin = new Thickness(5, 0, 5, 0),
                 Tag = $"{channel}|VolumeUp|{upBox.GetHashCode()}"
             };
-            upButton.Click += StartCapture_Click;
+            upButton.Click += StartCombinedCapture_Click;
             Grid.SetColumn(upButton, 3);
             Grid.SetRow(upButton, 0);
             channelGrid.Children.Add(upButton);
@@ -575,29 +683,29 @@ public partial class MainWindow : Window
             Grid.SetRow(downLabel, 0);
             channelGrid.Children.Add(downLabel);
             
-            // Volume Down TextBox
+            // Volume Down TextBox - shows both keyboard AND button
             var downBox = new TextBox
             {
-                Text = hotkeys.VolumeDown ?? "",
+                Text = GetCombinedHotkeyDisplay(hotkeys.VolumeDown, hotkeys.VolumeDownButton),
                 IsReadOnly = true,
                 Padding = new Thickness(5),
                 VerticalContentAlignment = VerticalAlignment.Center,
                 Tag = $"{channel}|VolumeDown",
-                MinWidth = 120
+                MinWidth = 150
             };
             Grid.SetColumn(downBox, 6);
             Grid.SetRow(downBox, 0);
             channelGrid.Children.Add(downBox);
             
-            // Volume Down Capture Button
+            // Volume Down Capture Button - captures BOTH
             var downButton = new Button
             {
-                Content = "⌨ Capture",
+                Content = "⌨/🎮 Capture",
                 Padding = new Thickness(8, 5, 8, 5),
                 Margin = new Thickness(5, 0, 5, 0),
                 Tag = $"{channel}|VolumeDown|{downBox.GetHashCode()}"
             };
-            downButton.Click += StartCapture_Click;
+            downButton.Click += StartCombinedCapture_Click;
             Grid.SetColumn(downButton, 7);
             Grid.SetRow(downButton, 0);
             channelGrid.Children.Add(downButton);
@@ -616,12 +724,14 @@ public partial class MainWindow : Window
             channelGrid.Children.Add(downClearButton);
             
             VolumeHotkeysPanel.Children.Add(channelGrid);
+            }
         }
 
         // Populate Profile Hotkeys
         foreach (var profile in _settings.ProfileHotkeys.Keys.OrderBy(k => k))
         {
             var hotkey = _settings.ProfileHotkeys[profile];
+            var button = _settings.ProfileButtons.ContainsKey(profile) ? _settings.ProfileButtons[profile] : "";
             
             var profileGrid = new Grid { Margin = new Thickness(0, 0, 0, 10) };
             profileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
@@ -641,10 +751,10 @@ public partial class MainWindow : Window
             Grid.SetColumn(label, 0);
             profileGrid.Children.Add(label);
             
-            // Hotkey textbox
+            // Hotkey textbox - shows both keyboard AND button
             var hotkeyBox = new TextBox
             {
-                Text = hotkey ?? "",
+                Text = GetCombinedHotkeyDisplay(hotkey, button),
                 IsReadOnly = true,
                 Padding = new Thickness(5),
                 VerticalContentAlignment = VerticalAlignment.Center,
@@ -653,15 +763,15 @@ public partial class MainWindow : Window
             Grid.SetColumn(hotkeyBox, 1);
             profileGrid.Children.Add(hotkeyBox);
             
-            // Capture button
+            // Capture button - captures BOTH
             var captureButton = new Button
             {
-                Content = "⌨ Capture",
+                Content = "⌨/🎮 Capture",
                 Padding = new Thickness(10, 5, 10, 5),
                 Margin = new Thickness(5, 0, 5, 0),
                 Tag = $"Profile|{profile}|{hotkeyBox.GetHashCode()}"
             };
-            captureButton.Click += StartCapture_Click;
+            captureButton.Click += StartCombinedCapture_Click;
             Grid.SetColumn(captureButton, 2);
             profileGrid.Children.Add(captureButton);
             
@@ -765,17 +875,25 @@ public partial class MainWindow : Window
         var type = parts[0]; // Channel name or "Profile"
         var action = parts[1]; // "VolumeUp", "VolumeDown", or profile name
 
-        // Clear the hotkey
+        // Clear BOTH keyboard hotkey AND controller button
         if (type == "Profile")
         {
             _settings.ProfileHotkeys[action] = "";
+            if (_settings.ProfileButtons.ContainsKey(action))
+                _settings.ProfileButtons[action] = "";
         }
         else
         {
             if (action == "VolumeUp")
+            {
                 _settings.VolumeHotkeys[type].VolumeUp = "";
+                _settings.VolumeHotkeys[type].VolumeUpButton = "";
+            }
             else if (action == "VolumeDown")
+            {
                 _settings.VolumeHotkeys[type].VolumeDown = "";
+                _settings.VolumeHotkeys[type].VolumeDownButton = "";
+            }
         }
 
         // Auto-save to config file
@@ -808,6 +926,28 @@ public partial class MainWindow : Window
         foreach (var kvp in _settings.ProfileHotkeys)
         {
             if (kvp.Value == hotkey && !(excludeType == "Profile" && excludeAction == kvp.Key))
+                return $"Profile: {kvp.Key}";
+        }
+
+        return null;
+    }
+
+    private string? CheckButtonConflict(string buttonString, string excludeType, string excludeAction)
+    {
+        // Check volume button assignments
+        foreach (var kvp in _settings.VolumeHotkeys)
+        {
+            if (kvp.Value.VolumeUpButton == buttonString && !(excludeType == kvp.Key && excludeAction == "VolumeUp"))
+                return $"{kvp.Key} Volume Up";
+            
+            if (kvp.Value.VolumeDownButton == buttonString && !(excludeType == kvp.Key && excludeAction == "VolumeDown"))
+                return $"{kvp.Key} Volume Down";
+        }
+
+        // Check profile button assignments
+        foreach (var kvp in _settings.ProfileButtons)
+        {
+            if (kvp.Value == buttonString && !(excludeType == "Profile" && excludeAction == kvp.Key))
                 return $"Profile: {kvp.Key}";
         }
 
@@ -894,4 +1034,632 @@ public partial class MainWindow : Window
         SaveWindowSettings();
         base.OnClosed(e);
     }
+
+    private void RefreshControllerList2()
+    {
+        var directInputService = App.GetDirectInputService();
+        if (directInputService == null)
+        {
+            ControllerStatusText2.Text = "Controller service not available";
+            ControllerStatusText2.Foreground = System.Windows.Media.Brushes.Red;
+            return;
+        }
+
+        var controllers = directInputService.GetConnectedDevices();
+        
+        if (controllers.Count == 0)
+        {
+            ControllerStatusText2.Text = "No controllers detected";
+            ControllerStatusText2.Foreground = System.Windows.Media.Brushes.Gray;
+            ControllersListBox2.ItemsSource = null;
+        }
+        else
+        {
+            ControllerStatusText2.Text = $"Found {controllers.Count} controller(s):";
+            ControllerStatusText2.Foreground = System.Windows.Media.Brushes.Green;
+            ControllersListBox2.ItemsSource = controllers;
+        }
+    }
+
+    private void RefreshControllers2_Click(object sender, RoutedEventArgs e)
+    {
+        RefreshControllerList2();
+    }
+
+    // ===== Start with Windows =====
+    
+    private const string StartupRegistryKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    private const string AppName = "SimControlCentre";
+    
+    private void StartWithWindows_Changed(object sender, RoutedEventArgs e)
+    {
+        if (StartWithWindowsCheckBox.IsChecked == true)
+        {
+            EnableStartWithWindows();
+        }
+        else
+        {
+            DisableStartWithWindows();
+        }
+        
+        // Save to settings
+        _settings.Window.StartWithWindows = StartWithWindowsCheckBox.IsChecked == true;
+        _configService.Save(_settings);
+    }
+    
+    private bool IsStartWithWindowsEnabled()
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(StartupRegistryKey, false);
+            var value = key?.GetValue(AppName) as string;
+            return !string.IsNullOrEmpty(value);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    
+    private void EnableStartWithWindows()
+    {
+        try
+        {
+            var exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
+            if (string.IsNullOrEmpty(exePath))
+                return;
+            
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(StartupRegistryKey, true);
+            key?.SetValue(AppName, $"\"{exePath}\"");
+            
+            Console.WriteLine($"[MainWindow] Enabled start with Windows: {exePath}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MainWindow] Failed to enable start with Windows: {ex.Message}");
+            MessageBox.Show($"Failed to enable start with Windows.\n\n{ex.Message}", 
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+    
+    private void DisableStartWithWindows()
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(StartupRegistryKey, true);
+            key?.DeleteValue(AppName, false);
+            
+            Console.WriteLine("[MainWindow] Disabled start with Windows");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MainWindow] Failed to disable start with Windows: {ex.Message}");
+        }
+    }
+
+    // ===== Channels & Profiles Management =====
+    
+    private void PopulateChannelsAndProfiles()
+    {
+        // All available GoXLR channels
+        var allChannels = new List<string> 
+        { 
+            "Mic", "LineIn", "Console", "System", "Game", "Chat", "Sample", "Music", 
+            "Headphones", "MicMonitor", "LineOut" 
+        };
+        
+        // Create checkboxes with proper state tracking
+        var checkBoxes = new List<CheckBox>();
+        foreach (var channel in allChannels)
+        {
+            var checkBox = new CheckBox
+            {
+                Content = channel,
+                IsChecked = _settings.EnabledChannels.Contains(channel),
+                Margin = new Thickness(0, 5, 0, 5),
+                Tag = channel
+            };
+            checkBox.Checked += Channel_CheckedChanged;
+            checkBox.Unchecked += Channel_CheckedChanged;
+            checkBoxes.Add(checkBox);
+        }
+        
+        ChannelsListBox.ItemsSource = checkBoxes;
+        
+        // Populate profiles
+        RefreshProfilesList();
+    }
+    
+    private void RefreshProfilesList()
+    {
+        var profiles = _settings.ProfileHotkeys.Keys.ToList();
+        ProfilesListBox.ItemsSource = null;
+        ProfilesListBox.ItemsSource = profiles;
+        
+        if (profiles.Count > 0)
+        {
+            ProfileStatusText.Text = $"{profiles.Count} profile(s) configured";
+            ProfileStatusText.Foreground = System.Windows.Media.Brushes.Green;
+        }
+        else
+        {
+            ProfileStatusText.Text = "No profiles configured";
+            ProfileStatusText.Foreground = System.Windows.Media.Brushes.Gray;
+        }
+    }
+    
+    private async void FetchProfiles_Click(object sender, RoutedEventArgs e)
+    {
+        await FetchGoXLRProfilesAsync();
+    }
+    
+    private async Task FetchGoXLRProfilesAsync()
+    {
+        ProfileStatusText.Text = "Fetching profiles from GoXLR...";
+        ProfileStatusText.Foreground = System.Windows.Media.Brushes.Orange;
+        
+        try
+        {
+            var profiles = await _goXLRService.GetProfilesAsync();
+            
+            if (profiles.Count == 0)
+            {
+                ProfileStatusText.Text = "No profiles found on GoXLR";
+                ProfileStatusText.Foreground = System.Windows.Media.Brushes.Orange;
+                _availableProfiles.Clear();
+                AvailableProfilesComboBox.ItemsSource = null;
+                return;
+            }
+            
+            _availableProfiles = profiles;
+            
+            // Show only profiles that aren't already configured
+            var unconfiguredProfiles = profiles
+                .Where(p => !_settings.ProfileHotkeys.ContainsKey(p))
+                .ToList();
+            
+            AvailableProfilesComboBox.ItemsSource = unconfiguredProfiles;
+            
+            if (unconfiguredProfiles.Count > 0)
+            {
+                AvailableProfilesComboBox.SelectedIndex = 0;
+                ProfileStatusText.Text = $"Found {profiles.Count} profile(s) - {unconfiguredProfiles.Count} available to add";
+                ProfileStatusText.Foreground = System.Windows.Media.Brushes.Green;
+            }
+            else
+            {
+                ProfileStatusText.Text = $"Found {profiles.Count} profile(s) - all already configured";
+                ProfileStatusText.Foreground = System.Windows.Media.Brushes.Green;
+            }
+        }
+        catch (Exception ex)
+        {
+            ProfileStatusText.Text = "Failed to fetch profiles (GoXLR Utility may not be running)";
+            ProfileStatusText.Foreground = System.Windows.Media.Brushes.Red;
+            _availableProfiles.Clear();
+            AvailableProfilesComboBox.ItemsSource = null;
+            Console.WriteLine($"[MainWindow] Failed to fetch profiles: {ex.Message}");
+        }
+    }
+    
+    private void AddSelectedProfile_Click(object sender, RoutedEventArgs e)
+    {
+        if (AvailableProfilesComboBox.SelectedItem is not string profileName)
+        {
+            return; // Silently ignore if nothing selected
+        }
+        
+        if (_settings.ProfileHotkeys.ContainsKey(profileName))
+        {
+            return; // Silently ignore if already exists
+        }
+        
+        // Add profile
+        _settings.ProfileHotkeys[profileName] = "";
+        _settings.ProfileButtons[profileName] = "";
+        
+        // Auto-save
+        _configService.Save(_settings);
+        
+        // Refresh UI
+        RefreshProfilesList();
+        PopulateHotkeyEditor();
+        
+        // Refresh available profiles dropdown
+        var unconfiguredProfiles = _availableProfiles
+            .Where(p => !_settings.ProfileHotkeys.ContainsKey(p))
+            .ToList();
+        AvailableProfilesComboBox.ItemsSource = unconfiguredProfiles;
+        if (unconfiguredProfiles.Count > 0)
+            AvailableProfilesComboBox.SelectedIndex = 0;
+    }
+    
+    private async void RefreshProfilesList_Click(object sender, RoutedEventArgs e)
+    {
+        await FetchGoXLRProfilesAsync();
+    }
+    
+    private void RemoveProfile_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not string profileName)
+            return;
+        
+        var result = MessageBox.Show($"Remove profile '{profileName}'?\n\nThis will also remove its hotkey assignments.", 
+            "Confirm Removal", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        
+        if (result == MessageBoxResult.Yes)
+        {
+            _settings.ProfileHotkeys.Remove(profileName);
+            _settings.ProfileButtons.Remove(profileName);
+            RefreshProfilesList();
+        }
+    }
+    
+    private void Channel_CheckedChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is not CheckBox checkBox || checkBox.Tag is not string channel)
+            return;
+        
+        if (checkBox.IsChecked == true)
+        {
+            // Enable channel
+            if (!_settings.EnabledChannels.Contains(channel))
+            {
+                _settings.EnabledChannels.Add(channel);
+            }
+            
+            // Ensure it has a VolumeHotkeys entry
+            if (!_settings.VolumeHotkeys.ContainsKey(channel))
+            {
+                _settings.VolumeHotkeys[channel] = new ChannelHotkeys();
+            }
+        }
+        else
+        {
+            // Disable channel
+            _settings.EnabledChannels.Remove(channel);
+        }
+        
+        // Auto-save
+        _configService.Save(_settings);
+        
+        // Refresh hotkeys tab
+        PopulateHotkeyEditor();
+    }
+    
+    private void SaveChannelsProfiles_Click(object sender, RoutedEventArgs e)
+    {
+        _configService.Save(_settings);
+        
+        // Refresh hotkeys tab to show new profiles
+        PopulateHotkeyEditor();
+    }
+
+    // ===== Controller Button Capture =====
+    
+    private string GetCombinedHotkeyDisplay(string? keyboard, string? button)
+    {
+        var parts = new List<string>();
+        
+        if (!string.IsNullOrWhiteSpace(keyboard))
+            parts.Add(keyboard);
+        
+        if (!string.IsNullOrWhiteSpace(button))
+        {
+            // Parse button string: Device:{GUID}:Button:{number}
+            var buttonParts = button.Split(':');
+            if (buttonParts.Length >= 4)
+                parts.Add($"Btn {buttonParts[3]}");
+        }
+        
+        return parts.Count > 0 ? string.Join(" OR ", parts) : "";
+    }
+    
+    private void StartCombinedCapture_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not string tag)
+            return;
+
+        var parts = tag.Split('|');
+        if (parts.Length < 3)
+            return;
+
+        var type = parts[0]; // Channel name or "Profile"
+        var action = parts[1]; // "VolumeUp", "VolumeDown", or profile name
+        var textBoxHashCode = int.Parse(parts[2]);
+
+        // Find the TextBox to highlight
+        TextBox? targetTextBox = null;
+        
+        if (type == "Profile")
+        {
+            foreach (var child in ProfileHotkeysPanel.Children)
+            {
+                if (child is Grid grid)
+                {
+                    foreach (var gridChild in grid.Children)
+                    {
+                        if (gridChild is TextBox tb && tb.GetHashCode() == textBoxHashCode)
+                        {
+                            targetTextBox = tb;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            foreach (var child in VolumeHotkeysPanel.Children)
+            {
+                if (child is Grid grid)
+                {
+                    foreach (var gridChild in grid.Children)
+                    {
+                        if (gridChild is TextBox tb && tb.GetHashCode() == textBoxHashCode)
+                        {
+                            targetTextBox = tb;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (targetTextBox == null)
+            return;
+
+        // Start BOTH keyboard and button capture
+        _isCapturingHotkey = true;
+        _isCapturingButton = true;
+        _captureType = type;
+        _captureAction = action;
+        _captureTextBox = targetTextBox;
+        _captureButtonTextBox = targetTextBox; // Same textbox for both
+
+        // Temporarily unregister all global hotkeys
+        var hotkeyManager = App.GetHotkeyManager();
+        hotkeyManager?.TemporaryUnregisterAll();
+
+        // Subscribe to button events
+        var directInputService = App.GetDirectInputService();
+        if (directInputService != null)
+        {
+            directInputService.ButtonPressed += OnCombinedButtonCaptured;
+        }
+
+        // Highlight the textbox
+        targetTextBox.Background = System.Windows.Media.Brushes.LightYellow;
+        targetTextBox.Foreground = System.Windows.Media.Brushes.Black;
+        targetTextBox.Text = "Press key or button...";
+        
+        // Focus the window to ensure it receives key events
+        Focus();
+    }
+
+    private void OnCombinedButtonCaptured(object? sender, ButtonPressedEventArgs e)
+    {
+        if (!_isCapturingButton || _captureButtonTextBox == null)
+            return;
+
+        Dispatcher.Invoke(() =>
+        {
+            // Format: Device:{GUID}:Button:{number}
+            var buttonString = $"Device:{e.DeviceGuid}:Button:{e.ButtonNumber}";
+            
+            // Check for button conflicts
+            var conflict = CheckButtonConflict(buttonString, _captureType!, _captureAction!);
+            if (!string.IsNullOrEmpty(conflict))
+            {
+                // Show "Already in use" message
+                string originalButton = "";
+                string originalKeyboard = "";
+                
+                if (_captureType == "Profile")
+                {
+                    originalButton = _settings.ProfileButtons.ContainsKey(_captureAction!) 
+                        ? _settings.ProfileButtons[_captureAction!] : "";
+                    originalKeyboard = _settings.ProfileHotkeys.ContainsKey(_captureAction!) 
+                        ? _settings.ProfileHotkeys[_captureAction!] : "";
+                }
+                else
+                {
+                    originalButton = _captureAction == "VolumeUp"
+                        ? _settings.VolumeHotkeys[_captureType!].VolumeUpButton ?? ""
+                        : _settings.VolumeHotkeys[_captureType!].VolumeDownButton ?? "";
+                    
+                    originalKeyboard = _captureAction == "VolumeUp"
+                        ? _settings.VolumeHotkeys[_captureType!].VolumeUp ?? ""
+                        : _settings.VolumeHotkeys[_captureType!].VolumeDown ?? "";
+                }
+
+                _captureButtonTextBox.Text = "Already in use";
+                _captureButtonTextBox.Foreground = System.Windows.Media.Brushes.Red;
+                _captureButtonTextBox.Background = System.Windows.Media.Brushes.LightPink;
+                
+                var textBoxToReset = _captureButtonTextBox;
+                
+                StopCombinedCapture();
+                
+                // Re-register hotkeys
+                var mgr = App.GetHotkeyManager();
+                mgr?.RegisterAllHotkeys();
+                
+                // Reset after 3 seconds
+                var timer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(3)
+                };
+                timer.Tick += (s, args) =>
+                {
+                    timer.Stop();
+                    textBoxToReset.Text = GetCombinedHotkeyDisplay(originalKeyboard, originalButton);
+                    textBoxToReset.Foreground = System.Windows.Media.Brushes.Black;
+                    textBoxToReset.Background = System.Windows.Media.Brushes.White;
+                };
+                timer.Start();
+                
+                return;
+            }
+            
+            // Save based on action type
+            if (_captureType == "Profile")
+            {
+                _settings.ProfileButtons[_captureAction!] = buttonString;
+                _captureButtonTextBox.Text = GetCombinedHotkeyDisplay(
+                    _settings.ProfileHotkeys.ContainsKey(_captureAction!) ? _settings.ProfileHotkeys[_captureAction!] : "",
+                    buttonString);
+            }
+            else if (_captureAction == "VolumeUp")
+            {
+                _settings.VolumeHotkeys[_captureType!].VolumeUpButton = buttonString;
+                _captureButtonTextBox.Text = GetCombinedHotkeyDisplay(
+                    _settings.VolumeHotkeys[_captureType!].VolumeUp,
+                    buttonString);
+            }
+            else if (_captureAction == "VolumeDown")
+            {
+                _settings.VolumeHotkeys[_captureType!].VolumeDownButton = buttonString;
+                _captureButtonTextBox.Text = GetCombinedHotkeyDisplay(
+                    _settings.VolumeHotkeys[_captureType!].VolumeDown,
+                    buttonString);
+            }
+
+            _captureButtonTextBox.Background = System.Windows.Media.Brushes.White;
+            
+            // Auto-save
+            _configService.Save(_settings);
+            
+            // Re-register hotkeys
+            var hotkeyManager = App.GetHotkeyManager();
+            hotkeyManager?.RegisterAllHotkeys();
+            
+            // Stop capture
+            StopCombinedCapture();
+        });
+    }
+
+    private void StopCombinedCapture()
+    {
+        _isCapturingHotkey = false;
+        _isCapturingButton = false;
+        _captureType = null;
+        _captureAction = null;
+        _captureTextBox = null;
+        _captureButtonTextBox = null;
+
+        var directInputService = App.GetDirectInputService();
+        if (directInputService != null)
+        {
+            directInputService.ButtonPressed -= OnCombinedButtonCaptured;
+        }
+    }
+    
+    private void StartButtonCapture_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not string tag)
+            return;
+
+        var parts = tag.Split('|');
+        if (parts.Length < 3)
+            return;
+
+        var channel = parts[0]; // Channel name or "Profile"
+        var action = parts[1]; // "VolumeUpButton", "VolumeDownButton", etc.
+        var textBoxHashCode = int.Parse(parts[2]);
+
+        // Find the TextBox to highlight
+        TextBox? targetTextBox = null;
+        foreach (var child in VolumeHotkeysPanel.Children)
+        {
+            if (child is Grid grid)
+            {
+                foreach (var gridChild in grid.Children)
+                {
+                    if (gridChild is TextBox tb && tb.GetHashCode() == textBoxHashCode)
+                    {
+                        targetTextBox = tb;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (targetTextBox == null)
+            return;
+
+        // Start capture mode
+        _isCapturingButton = true;
+        _captureButtonTextBox = targetTextBox;
+        _captureType = channel;
+        _captureAction = action;
+
+        // Highlight the textbox
+        targetTextBox.Background = System.Windows.Media.Brushes.LightYellow;
+        targetTextBox.Text = "Press button...";
+        
+        // Subscribe to button events
+        var directInputService = App.GetDirectInputService();
+        if (directInputService != null)
+        {
+            directInputService.ButtonPressed += OnControllerButtonCaptured;
+        }
+        
+        // Focus the window
+        Focus();
+    }
+
+    private void OnControllerButtonCaptured(object? sender, ButtonPressedEventArgs e)
+    {
+        if (!_isCapturingButton || _captureButtonTextBox == null)
+            return;
+
+        Dispatcher.Invoke(() =>
+        {
+            // Format: Device:{GUID}:Button:{number}
+            var buttonString = $"Device:{e.DeviceGuid}:Button:{e.ButtonNumber}";
+            
+            // Save based on action type
+            if (_captureAction == "VolumeUpButton")
+            {
+                _settings.VolumeHotkeys[_captureType!].VolumeUpButton = buttonString;
+            }
+            else if (_captureAction == "VolumeDownButton")
+            {
+                _settings.VolumeHotkeys[_captureType!].VolumeDownButton = buttonString;
+            }
+            else if (_captureAction?.StartsWith("Profile") == true)
+            {
+                // Handle profile buttons if needed
+                var profileName = _captureAction.Replace("ProfileButton|", "");
+                _settings.ProfileButtons[profileName] = buttonString;
+            }
+
+            // Update UI
+            _captureButtonTextBox.Text = $"Btn {e.ButtonNumber}";
+            _captureButtonTextBox.Background = System.Windows.Media.Brushes.White;
+            
+            // Auto-save
+            _configService.Save(_settings);
+            
+            // Stop capture
+            StopControllerButtonCapture();
+        });
+    }
+
+    private void StopControllerButtonCapture()
+    {
+        _isCapturingButton = false;
+        _captureButtonTextBox = null;
+        _captureType = null;
+        _captureAction = null;
+
+        var directInputService = App.GetDirectInputService();
+        if (directInputService != null)
+        {
+            directInputService.ButtonPressed -= OnControllerButtonCaptured;
+        }
+    }
 }
+
+

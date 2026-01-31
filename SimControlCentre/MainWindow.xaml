@@ -1,4 +1,4 @@
-﻿<Window x:Class="SimControlCentre.MainWindow"
+<Window x:Class="SimControlCentre.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -81,6 +81,27 @@
                             </StackPanel>
                         </GroupBox>
                         
+                        <!-- General Settings -->
+                        <GroupBox Header="General Settings" Padding="10" Margin="0,0,0,20">
+                            <StackPanel>
+                                <CheckBox Name="StartMinimizedCheckBox"
+                                         Content="Start application minimized to system tray"
+                                         IsChecked="{Binding Window.StartMinimized, Mode=TwoWay}"
+                                         Margin="0,0,0,10"/>
+                                
+                                <CheckBox Name="StartWithWindowsCheckBox"
+                                         Content="Start application with Windows"
+                                         Checked="StartWithWindows_Changed"
+                                         Unchecked="StartWithWindows_Changed"
+                                         Margin="0,0,0,0"/>
+                                
+                                <TextBlock Text="The application will start automatically when Windows starts"
+                                          FontSize="10"
+                                          Foreground="Gray"
+                                          Margin="20,5,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
+                        
                         <!-- Quick Actions -->
                         <GroupBox Header="Quick Actions" Padding="10">
                             <StackPanel>
@@ -96,6 +117,49 @@
                                         Padding="10,5"/>
                             </StackPanel>
                         </GroupBox>
+                        
+                        <!-- Controllers -->
+                        <GroupBox Header="Connected Controllers" Margin="0,20,0,0" Padding="10">
+                            <StackPanel>
+                                <TextBlock Name="ControllerStatusText" 
+                                           Text="Scanning for controllers..." 
+                                           Foreground="Gray"
+                                           Margin="0,0,0,10"/>
+                                
+                                <ItemsControl Name="ControllersListBox" 
+                                              Margin="0,0,0,10">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="LightGray" 
+                                                    BorderThickness="1" 
+                                                    Padding="8" 
+                                                    Margin="0,0,0,5"
+                                                    Background="WhiteSmoke">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Name}" 
+                                                               FontWeight="Bold" 
+                                                               FontSize="12"/>
+                                                    <TextBlock Text="{Binding Type}" 
+                                                               FontSize="10" 
+                                                               Foreground="Gray"/>
+                                                    <TextBlock FontSize="9" 
+                                                               Foreground="DarkGray" 
+                                                               Margin="0,2,0,0">
+                                                        <Run Text="GUID: "/>
+                                                        <Run Text="{Binding InstanceGuid}"/>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                
+                                <Button Name="RefreshControllersBtn" 
+                                        Content="Refresh Controllers" 
+                                        Click="RefreshControllers_Click"
+                                        Padding="10,5"/>
+                            </StackPanel>
+                        </GroupBox>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -107,6 +171,11 @@
                         <TextBlock Text="Hotkey Configuration" 
                                    FontSize="20" 
                                    FontWeight="Bold" 
+                                   Margin="0,0,0,10"/>
+                        
+                        <TextBlock Text="You can assign keyboard keys OR controller buttons to each action"
+                                   FontSize="11"
+                                   Foreground="Gray"
                                    Margin="0,0,0,20"/>
                         
                         <!-- Volume Hotkeys -->
@@ -136,19 +205,181 @@
                 </ScrollViewer>
             </TabItem>
             
-            <!-- Channels Tab -->
-            <TabItem Header="Channels">
+            <!-- Channels &amp; Profiles Tab -->
+            <TabItem Header="Channels &amp; Profiles">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
-                        <TextBlock Text="Channel Configuration" 
+                        <TextBlock Text="Manage Channels &amp; Profiles" 
                                    FontSize="20" 
                                    FontWeight="Bold" 
                                    Margin="0,0,0,20"/>
                         
-                        <TextBlock Text="Channel management coming soon..." 
-                                   FontSize="12" 
+                        <!-- Channels -->
+                        <GroupBox Header="GoXLR Channels" Padding="10" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="Select which channels you want to control:" 
+                                           FontSize="11" 
+                                           Foreground="Gray"
+                                           Margin="0,0,0,10"/>
+                                
+                                <ItemsControl Name="ChannelsListBox"/>
+                            </StackPanel>
+                        </GroupBox>
+                        
+                        <!-- Profiles -->
+                        <GroupBox Header="GoXLR Profiles" Padding="10">
+                            <StackPanel>
+                                <TextBlock Text="Add profiles from GoXLR for hotkey assignment:" 
+                                           FontSize="11" 
+                                           Foreground="Gray"
+                                           Margin="0,0,0,10"/>
+                                
+                                <TextBlock Name="ProfileStatusText"
+                                           Text="Loading profiles..."
+                                           Foreground="Gray"
+                                           Margin="0,0,0,10"/>
+                                
+                                <!-- Add from dropdown -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                                    <TextBlock Text="Available Profiles:"
+                                              VerticalAlignment="Center"
+                                              Margin="0,0,10,0"/>
+                                    <ComboBox Name="AvailableProfilesComboBox"
+                                             Width="250"
+                                             Margin="0,0,10,0"/>
+                                    <Button Name="AddSelectedProfileBtn"
+                                           Content="Add Selected Profile"
+                                           Click="AddSelectedProfile_Click"
+                                           Padding="10,5"/>
+                                    <Button Name="RefreshProfilesBtn"
+                                           Content="↻ Refresh"
+                                           Click="RefreshProfilesList_Click"
+                                           Padding="10,5"
+                                           Margin="10,0,0,0"
+                                           ToolTip="Reload profiles from GoXLR"/>
+                                </StackPanel>
+                                
+                                <TextBlock Text="Configured Profiles:"
+                                          FontWeight="Bold"
+                                          Margin="0,0,0,5"/>
+                                
+                                <ItemsControl Name="ProfilesListBox">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="LightGray"
+                                                   BorderThickness="1"
+                                                   Padding="8"
+                                                   Margin="0,0,0,5"
+                                                   Background="WhiteSmoke">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding}" 
+                                                              FontWeight="Bold"
+                                                              VerticalAlignment="Center"/>
+                                                    <Button Grid.Column="1"
+                                                           Content="Remove"
+                                                           Click="RemoveProfile_Click"
+                                                           Tag="{Binding}"
+                                                           Padding="5,2"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                
+                                <Button Name="SaveChannelsProfilesBtn"
+                                       Content="Save Changes"
+                                       Click="SaveChannelsProfiles_Click"
+                                       Padding="15,8"
+                                       Margin="0,20,0,0"
+                                       HorizontalAlignment="Center"
+                                       FontSize="14"
+                                       FontWeight="Bold"/>
+                            </StackPanel>
+                        </GroupBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            
+            <!-- Controllers Tab -->
+            <TabItem Header="Controllers">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                        <TextBlock Text="Connected Controllers" 
+                                   FontSize="20" 
+                                   FontWeight="Bold" 
+                                   Margin="0,0,0,20"/>
+                        
+                        <!-- Button Press Indicator -->
+                        <Border BorderBrush="Gray" 
+                                BorderThickness="2" 
+                                CornerRadius="5"
+                                Padding="15"
+                                Margin="0,0,0,20"
+                                Background="WhiteSmoke">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Button Press Indicator:" 
+                                           VerticalAlignment="Center"
+                                           FontWeight="Bold"
+                                           Margin="0,0,10,0"/>
+                                <Ellipse Name="ButtonIndicator"
+                                         Width="30"
+                                         Height="30"
+                                         Fill="Gray"
+                                         Stroke="DarkGray"
+                                         StrokeThickness="2"/>
+                                <TextBlock Name="ButtonIndicatorText"
+                                           Text="No input detected"
+                                           VerticalAlignment="Center"
+                                           Margin="10,0,0,0"
+                                           FontSize="12"
+                                           Foreground="Gray"/>
+                            </StackPanel>
+                        </Border>
+                        
+                        <TextBlock Text="Controller buttons can be assigned in the Hotkeys tab"
+                                   FontSize="11"
                                    Foreground="Gray"
-                                   HorizontalAlignment="Center"/>
+                                   Margin="0,0,0,20"/>
+                        
+                        <GroupBox Header="Detected Devices" Padding="10">
+                            <StackPanel>
+                                <TextBlock Name="ControllerStatusText2" 
+                                           Text="Scanning..." 
+                                           Foreground="Gray"
+                                           Margin="0,0,0,10"/>
+                                
+                                <ItemsControl Name="ControllersListBox2">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="LightGray" 
+                                                    BorderThickness="1" 
+                                                    Padding="8" 
+                                                    Margin="0,0,0,5"
+                                                    Background="WhiteSmoke">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Name}" 
+                                                               FontWeight="Bold" 
+                                                               FontSize="12"/>
+                                                    <TextBlock Text="{Binding Type}" 
+                                                               FontSize="10" 
+                                                               Foreground="Gray"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                
+                                <Button Name="RefreshControllersBtn2" 
+                                        Content="Refresh Controllers" 
+                                        Click="RefreshControllers2_Click"
+                                        Padding="10,5"
+                                        Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </GroupBox>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -198,3 +429,5 @@
         </TabControl>
     </Grid>
 </Window>
+
+

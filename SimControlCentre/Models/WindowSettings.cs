@@ -10,4 +10,6 @@ public class WindowSettings
     public double Left { get; set; } = 100;
     public double Top { get; set; } = 100;
     public bool StartMinimized { get; set; } = true;
+    public bool StartWithWindows { get; set; } = false;
 }
+

@@ -1,6 +1,7 @@
 ﻿using System.Net.Http;
 using System.Net.Http.Json;
 using System.Windows;
+using System.Windows.Controls;
 using Hardcodet.Wpf.TaskbarNotification;
 using SimControlCentre.Services;
 using SimControlCentre.Models;
@@ -18,7 +19,40 @@ public partial class App : Application
     private GoXLRService? _goXLRService;
     private HotkeyService? _hotkeyService;
     private HotkeyManager? _hotkeyManager;
+    private DirectInputService? _directInputService;
+    private ControllerManager? _controllerManager;
     public AppSettings Settings { get; private set; } = new();
+
+    public App()
+    {
+        // Add global exception handlers
+        AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+        DispatcherUnhandledException += OnDispatcherUnhandledException;
+    }
+    
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        base.OnStartup(e);
+        // Application_Startup will be called automatically by the base.OnStartup
+    }
+
+    private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        var ex = e.ExceptionObject as Exception;
+        MessageBox.Show($"Fatal Error:\n\n{ex?.Message}\n\nStack Trace:\n{ex?.StackTrace}", 
+            "SimControlCentre - Fatal Error", 
+            MessageBoxButton.OK, 
+            MessageBoxImage.Error);
+    }
+
+    private void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+    {
+        MessageBox.Show($"Error:\n\n{e.Exception.Message}\n\nStack Trace:\n{e.Exception.StackTrace}", 
+            "SimControlCentre - Error", 
+            MessageBoxButton.OK, 
+            MessageBoxImage.Error);
+        e.Handled = true; // Prevent app from crashing
+    }
 
     private void Application_Startup(object sender, StartupEventArgs e)
     {
@@ -105,7 +139,8 @@ public partial class App : Application
             {
                 IconSource = CreateSimpleIcon(),
                 ToolTipText = "SimControlCentre - GoXLR Control",
-                ContextMenu = (System.Windows.Controls.ContextMenu)FindResource("TrayContextMenu")
+                ContextMenu = (System.Windows.Controls.ContextMenu)FindResource("TrayContextMenu"),
+                Visibility = System.Windows.Visibility.Visible
             };
 
             // Double-click tray icon to open settings
@@ -124,6 +159,11 @@ public partial class App : Application
             // Initialize hotkey manager
             _hotkeyManager = new HotkeyManager(_hotkeyService, _goXLRService, Settings);
             var registeredCount = _hotkeyManager.RegisterAllHotkeys();
+            
+            // Initialize controller input
+            _directInputService = new DirectInputService();
+            _controllerManager = new ControllerManager(_directInputService, _goXLRService, Settings);
+            _controllerManager.InitializeControllers(windowInterop.Handle);
             
             // Show registration result
             if (registeredCount > 0)
@@ -157,6 +197,8 @@ public partial class App : Application
 
         _hotkeyManager?.Dispose();
         _hotkeyService?.Dispose();
+        _controllerManager?.Dispose();
+        _directInputService?.Dispose();
         _goXLRService?.Dispose();
         _notifyIcon?.Dispose();
     }
@@ -201,6 +243,39 @@ public partial class App : Application
     public static HotkeyManager? GetHotkeyManager()
     {
         return ((App)Current)._hotkeyManager;
+    }
+
+    public static DirectInputService? GetDirectInputService()
+    {
+        return ((App)Current)._directInputService;
+    }
+
+    private void ToggleHotkeys_Click(object sender, RoutedEventArgs e)
+    {
+        if (_hotkeyManager == null)
+            return;
+
+        if (sender is MenuItem menuItem)
+        {
+            if (menuItem.IsChecked)
+            {
+                // Enable hotkeys
+                var count = _hotkeyManager.RegisterAllHotkeys();
+                _notifyIcon?.ShowBalloonTip("Hotkeys Enabled", 
+                    $"{count} keyboard hotkey(s) registered", 
+                    BalloonIcon.Info);
+                Console.WriteLine("[App] Hotkeys enabled");
+            }
+            else
+            {
+                // Disable hotkeys
+                _hotkeyManager.TemporaryUnregisterAll();
+                _notifyIcon?.ShowBalloonTip("Hotkeys Disabled", 
+                    "All keyboard hotkeys temporarily disabled", 
+                    BalloonIcon.Info);
+                Console.WriteLine("[App] Hotkeys disabled");
+            }
+        }
     }
 
     public void ShowVolumeNotification(string message)

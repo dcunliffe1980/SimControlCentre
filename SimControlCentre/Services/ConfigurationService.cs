@@ -94,6 +94,7 @@ public class ConfigurationService
                 { "Headphones - Work", string.Empty },
                 { "iRacing", string.Empty }
             },
+            ProfileButtons = new Dictionary<string, string>(),
             VolumeHotkeys = new Dictionary<string, ChannelHotkeys>
             {
                 // Example hotkeys - user can customize these
