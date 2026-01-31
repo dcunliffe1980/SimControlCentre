@@ -1,174 +1,316 @@
-# Global Hotkeys Implementation
+# Hotkeys & Controller Buttons
 
 ## Overview
-Global keyboard shortcuts to control GoXLR volume and switch profiles from anywhere in Windows.
+Control GoXLR volume and profiles using:
+- **Global Keyboard Hotkeys** - Work from anywhere in Windows
+- **Controller Buttons** - Button boxes, wheels, gamepads, etc.
 
-## Components Created
+## Keyboard Hotkeys
 
-### Services
-
-#### HotkeyParser.cs
-Parses hotkey strings and converts them to Win32 key codes.
-
-**Key Methods:**
-- `TryParse(string, out ModifierKeys, out Key)` - Parses hotkey strings like "Ctrl+Shift+Up"
-- `ToWin32Modifiers(ModifierKeys)` - Converts WPF modifiers to Win32 flags
-- `ToVirtualKey(Key)` - Converts WPF Key to virtual key code
-
-**Supported Modifiers:**
+### Supported Modifiers
 - `Ctrl` / `Control`
 - `Shift`
 - `Alt`
 - `Win` / `Windows`
 
-**Example Hotkey Strings:**
-- `"Ctrl+Shift+Up"`
-- `"Alt+F1"`
-- `"Win+PageDown"`
-- `"Ctrl+Alt+M"`
+### Example Hotkey Strings
+- `"Ctrl+Shift+Up"` - Typical volume up
+- `"Alt+F1"` - Profile switching
+- `"Win+PageDown"` - Alternative volume control
+- `"Ctrl+Alt+M"` - Mic mute/unmute
 
-#### HotkeyService.cs
-Low-level Win32 hotkey registration service.
+### How It Works
+1. **HotkeyParser.cs** - Parses hotkey strings to Win32 key codes
+2. **HotkeyService.cs** - Registers hotkeys using Win32 `RegisterHotKey` API
+3. **HotkeyManager.cs** - Maps hotkeys to GoXLR actions
+4. Hotkeys work globally (even when app is minimized)
 
-**Key Features:**
-- Registers global hotkeys using Win32 `RegisterHotKey` API
-- Handles `WM_HOTKEY` messages via window procedure hook
-- Maps hotkey IDs to action callbacks
-- Unregisters all hotkeys on dispose
+## Controller Buttons
 
-**Key Methods:**
-- `Initialize(IntPtr windowHandle)` - Sets up window message hook
-- `RegisterHotkey(string, Action)` - Registers hotkey from string
-- `RegisterHotkey(ModifierKeys, Key, Action)` - Registers with parsed keys
-- `UnregisterAll()` - Removes all registered hotkeys
+### Supported Devices
+Any DirectInput-compatible device:
+- **Button Boxes** (e.g., PXN-CB1, Leo Bodnar)
+- **Racing Wheels** (e.g., Fanatec, Thrustmaster, Logitech)
+- **Game Controllers** (Xbox, PlayStation, generic gamepads)
+- **HOTAS** (flight sim controllers)
+- **Pedals** with buttons
 
-#### HotkeyManager.cs
-High-level manager that connects hotkeys to GoXLR actions.
+### Button Format
+Buttons are stored using **ProductGuid** for stability:
+```
+Format: DeviceName:{ProductGuid}:Button:{number}
+Example: PXN-CB1:80013668-0000-0000-0000-504944564944:Button:1
+Display: PXN-CB1 Btn 1
+```
 
-**Key Features:**
-- Reads hotkey configuration from AppSettings
-- Registers volume up/down hotkeys for each channel
-- Registers profile switching hotkeys
-- Executes GoXLR commands when hotkeys are triggered
-- Logs all registration success/failures
+**Why ProductGuid?**
+- **Instance GUID changes** every time you reconnect a device
+- **Product GUID stays the same** - stable across reboots and reconnections
+- Your button mappings work consistently!
 
-**Key Methods:**
-- `RegisterAllHotkeys()` - Registers all configured hotkeys
-- `AdjustVolume(channel, increase)` - Called when volume hotkey pressed
-- `LoadProfile(profileName)` - Called when profile hotkey pressed
+### How It Works
+1. **DirectInputService.cs** - Detects DirectInput devices, polls for button presses
+2. **ControllerManager.cs** - Maps button presses to GoXLR actions
+3. Button presses trigger same actions as keyboard hotkeys
+4. Debouncing (100ms) prevents double-presses
 
-## Integration
+### Device Detection
+- Filters out keyboards and mice (won't interfere with typing)
+- Scans for all button-capable devices on startup
+- Displays device name, type, and GUID in Controllers tab
+- Real-time button indicator (green flash) shows activity
 
-### App.xaml.cs
-**Initialization:**
-1. Creates `HotkeyService` after MainWindow is created
-2. Gets window handle using `WindowInteropHelper`
-3. Initializes service with window handle
-4. Creates `HotkeyManager` with GoXLR and settings
-5. Calls `RegisterAllHotkeys()` to register all configured hotkeys
+## Configuration in UI
 
-**Cleanup:**
-- Disposes `HotkeyManager` (which unregisters all hotkeys)
-- Disposes `HotkeyService`
+### Assigning Keyboard Hotkeys
+1. Open Settings ? **Hotkeys tab**
+2. Find the channel or profile you want to control
+3. Click **"?/?? Capture"** button
+4. Press your desired **keyboard key combination**
+5. Shows in textbox (e.g., "Ctrl+Shift+Up")
 
-### Configuration
-Hotkeys are configured in `config.json`:
+### Assigning Controller Buttons
+1. Open Settings ? **Hotkeys tab**
+2. Find the channel or profile you want to control
+3. Click **"?/?? Capture"** button
+4. Press a **button on your controller**
+5. Shows in textbox (e.g., "PXN-CB1 Btn 5")
+
+### Unified Capture
+The **"?/?? Capture"** button accepts **BOTH**:
+- Keyboard keys
+- Controller buttons
+- You can even assign both to the same action!
+- Display format: `"Ctrl+Shift+Up OR PXN-CB1 Btn 5"`
+
+### Conflict Detection
+- Warns if hotkey/button is already assigned
+- Shows which action is using it
+- Textbox turns red with "Already in use" message
+
+### Clearing Assignments
+- Click **"Clear"** button next to any mapping
+- Removes both keyboard hotkey AND controller button
+- Auto-saves immediately
+
+## Configuration File Format
+
+Hotkeys and buttons are stored in `config.json`:
 
 ```json
 {
   "volumeHotkeys": {
     "Game": {
       "volumeUp": "Ctrl+Shift+Up",
-      "volumeDown": "Ctrl+Shift+Down"
+      "volumeDown": "Ctrl+Shift+Down",
+      "volumeUpButton": "PXN-CB1:80013668-0000-0000-0000-504944564944:Button:1",
+      "volumeDownButton": "PXN-CB1:80013668-0000-0000-0000-504944564944:Button:2"
     },
     "Music": {
       "volumeUp": "Ctrl+Shift+PageUp",
-      "volumeDown": "Ctrl+Shift+PageDown"
+      "volumeDown": "Ctrl+Shift+PageDown",
+      "volumeUpButton": null,
+      "volumeDownButton": null
     }
   },
   "profileHotkeys": {
     "iRacing": "Ctrl+Shift+F1",
-    "Speakers - Personal": "Ctrl+Shift+F2"
+    "Speakers - Personal": ""
+  },
+  "profileButtons": {
+    "iRacing": "PXN-CB1:80013668-0000-0000-0000-504944564944:Button:5",
+    "Speakers - Personal": ""
   }
 }
 ```
 
-## Default Hotkeys
+## Technical Implementation
 
-The application creates these example hotkeys by default:
+### Keyboard Hotkey Components
 
-### Volume Control
-- **Game Volume Up**: `Ctrl+Shift+Up`
-- **Game Volume Down**: `Ctrl+Shift+Down`
-- **Music Volume Up**: `Ctrl+Shift+PageUp`
-- **Music Volume Down**: `Ctrl+Shift+PageDown`
+**HotkeyParser.cs**
+- Parses strings like "Ctrl+Shift+Up" to Win32 key codes
+- Supports all standard modifiers and keys
+- Validates hotkey format
 
-### Profile Switching
-- No profile hotkeys configured by default (add manually)
+**HotkeyService.cs**
+- Low-level Win32 `RegisterHotKey` API integration
+- Window message hook for `WM_HOTKEY` messages
+- Maps hotkey IDs to action callbacks
 
-## How It Works
+**HotkeyManager.cs**
+- High-level manager connecting hotkeys to GoXLR actions
+- Reads configuration and registers all hotkeys
+- Handles unregistration on dispose
 
-### Registration Process
-1. Application starts
-2. MainWindow created (creates window handle)
-3. HotkeyService initialized with window handle
-4. HotkeyManager reads configuration
-5. For each configured hotkey:
-   - Parse hotkey string to modifiers + key
-   - Convert to Win32 codes
-   - Call `RegisterHotKey` Win32 API
-   - Map hotkey ID to action callback
+### Controller Button Components
 
-### Execution Process
-1. User presses registered hotkey anywhere in Windows
-2. Windows sends `WM_HOTKEY` message to window
-3. HotkeyService's `WndProc` intercepts message
-4. Looks up action callback for hotkey ID
-5. Executes callback
-6. Callback calls GoXLR API to adjust volume or load profile
+**DirectInputService.cs**
+- Scans for DirectInput devices
+- Polls for button state changes (50ms interval)
+- Filters out keyboards/mice
+- Raises ButtonPressed/ButtonReleased events
+- Stores ProductGuid and device name
 
-### Cleanup Process
-1. Application closes
-2. `HotkeyManager.Dispose()` called
-3. Calls `HotkeyService.UnregisterAll()`
-4. For each registered hotkey:
-   - Call `UnregisterHotKey` Win32 API
-   - Remove from action dictionary
+**ControllerManager.cs**
+- Listens to DirectInputService button events
+- Matches button string format against configuration
+- Executes GoXLR actions (volume, profile)
+- Debouncing (100ms) prevents accidental double-presses
 
-## Limitations & Notes
+### Integration Flow
 
-### Windows Restrictions
-- Hotkeys must be unique system-wide
-- If another app has registered the same hotkey, registration fails
-- Some hotkeys are reserved by Windows (e.g., `Win+L`)
+**Keyboard Hotkeys:**
+1. User presses hotkey anywhere in Windows
+2. Windows sends `WM_HOTKEY` message
+3. HotkeyService intercepts and looks up action
+4. Calls GoXLRService to adjust volume/load profile
 
-### Registration Failures
-Common reasons hotkeys fail to register:
-1. Already registered by another application
-2. Reserved by Windows
-3. Invalid key combination
-4. Application doesn't have window handle yet
+**Controller Buttons:**
+1. DirectInputService polls devices every 50ms
+2. Detects button press, raises ButtonPressed event
+3. ControllerManager receives event
+4. Matches ProductGuid + button number to configuration
+5. Calls GoXLRService to adjust volume/load profile
 
-### Best Practices
-- Use modifier combinations (Ctrl+Shift+Key) to avoid conflicts
-- Avoid common shortcuts (Ctrl+C, Ctrl+V, etc.)
-- Check console output for registration success/failure
-- Test hotkeys in different applications
+## System Tray Hotkey Toggle
 
-## Testing
+Right-click tray icon ? **"? Enable Hotkeys"**
 
-### Manual Testing
-1. Run application
-2. Check console output for hotkey registration messages
-3. Try pressing configured hotkeys
-4. Volume should adjust or profile should load
-5. Check console for action execution messages
+- **Checked:** Keyboard hotkeys are active
+- **Unchecked:** Keyboard hotkeys are disabled
+- Controller buttons always work (not affected by toggle)
+- Useful for gaming to avoid conflicts
 
-### Debugging
-Enable verbose logging to see:
-- Hotkey registration attempts
-- Parse success/failure
-- Win32 API call results
+## Troubleshooting
+
+### Keyboard Hotkeys Not Working
+
+**Check:**
+1. Are hotkeys registered? (Console shows registration count)
+2. Is another app using the same hotkey?
+3. Try different modifier combinations
+4. Check "Enable Hotkeys" is checked in tray menu
+
+**Solutions:**
+- Use more specific combinations (Ctrl+Shift+Alt+Key)
+- Avoid common shortcuts
+- Check Task Manager for conflicting apps
+
+### Controller Buttons Not Working
+
+**Check:**
+1. Is controller detected? (Controllers tab should list it)
+2. Does button indicator flash when you press buttons?
+3. Is button mapped correctly? (Should show device name + button number)
+4. Did you reboot since mapping? (Old InstanceGuid mappings won't work)
+
+**Solutions:**
+- Recapture button mapping (uses ProductGuid now)
+- Verify device name matches (e.g., "PXN-CB1 Btn 1")
+- Check Controllers tab to confirm device detection
+- Try unplugging/replugging device
+
+### First Button Press Fails
+
+**This is normal during cache warm-up:**
+- Wait 5-10 seconds after "GoXLR Ready!" notification
+- Press again - subsequent presses work immediately
+- Cache lasts 30 seconds
+- If you wait longer, first press may timeout again
+
+### Hotkey Conflicts
+
+If you see "Already in use":
+1. Check which action is using that hotkey
+2. Clear the old mapping first
+3. Or use a different key combination
+
+## Best Practices
+
+### Keyboard Hotkeys
+- **Use modifiers:** `Ctrl+Shift+Key` or `Ctrl+Alt+Key`
+- **Avoid common shortcuts:** Don't use Ctrl+C, Ctrl+V, etc.
+- **Volume control:** Use arrow keys or PageUp/PageDown
+- **Profiles:** Use function keys (F1-F12)
+- **Test in different apps:** Make sure no conflicts
+
+### Controller Buttons
+- **Label your buttons:** Physical labels help remember mappings
+- **Group by function:** Volume on one side, profiles on another
+- **Use button box:** Dedicated button boxes work best
+- **Avoid accidental presses:** Position buttons carefully
+
+### General Tips
+- **Backup config.json:** Save your configuration!
+- **Test thoroughly:** Verify all mappings work
+- **Document mappings:** Keep a list of what each hotkey/button does
+- **Start simple:** Configure frequently-used channels first
+- **Add gradually:** Don't try to map everything at once
+
+## Example Configurations
+
+### Sim Racing Setup
+```json
+{
+  "volumeHotkeys": {
+    "Game": {
+      "volumeUp": "Ctrl+Shift+Up",
+      "volumeDown": "Ctrl+Shift+Down",
+      "volumeUpButton": "Fanatec:btn-guid:Button:1",
+      "volumeDownButton": "Fanatec:btn-guid:Button:2"
+    },
+    "Chat": {
+      "volumeUpButton": "Fanatec:btn-guid:Button:3",
+      "volumeDownButton": "Fanatec:btn-guid:Button:4"
+    }
+  },
+  "profileButtons": {
+    "iRacing": "Fanatec:btn-guid:Button:5"
+  }
+}
+```
+
+### Streaming Setup
+```json
+{
+  "volumeHotkeys": {
+    "Mic": {
+      "volumeUp": "Ctrl+Alt+Up",
+      "volumeDown": "Ctrl+Alt+Down"
+    },
+    "Music": {
+      "volumeUp": "Ctrl+Alt+PageUp",
+      "volumeDown": "Ctrl+Alt+PageDown"
+    },
+    "Chat": {
+      "volumeUpButton": "PXN-CB1:btn-guid:Button:1",
+      "volumeDownButton": "PXN-CB1:btn-guid:Button:2"
+    }
+  }
+}
+```
+
+## Advanced: Manual Configuration
+
+You can manually edit `config.json`, but **use the UI** - it's much easier and safer!
+
+If you must manually edit:
+1. Close SimControlCentre
+2. Edit `%LocalAppData%\SimControlCentre\config.json`
+3. Validate JSON syntax
+4. Save file
+5. Restart SimControlCentre
+
+**Button string format:**
+```
+DeviceName:{ProductGuid}:Button:{number}
+```
+
+To find ProductGuid:
+1. Open SimControlCentre ? Controllers tab
+2. Note the "Product GUID" for your device
+3. Use that GUID in the button string
 - Hotkey trigger events
 - GoXLR command execution
 

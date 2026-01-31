@@ -1,103 +1,334 @@
-# Settings UI Implementation
+# Settings UI Guide
 
 ## Overview
-Modern tabbed interface for configuring all aspects of SimControlCentre.
+Modern tabbed interface for configuring all aspects of SimControlCentre. Five main tabs provide complete control over GoXLR integration, hotkeys, channels, profiles, and controllers.
 
-## Phase 5: Settings UI - Initial Implementation
+## Tab 1: General
 
-### Features Implemented
+### GoXLR Connection
+**Serial Number:**
+- Text input for GoXLR serial number
+- "Detect Serial Number" button - Auto-detects if only one device connected
+- "Save Serial Number" button - Saves to configuration
+- Connection Status display with color coding:
+  - ?? Green: "? Connected (Profile: YourProfile)"
+  - ?? Orange: "? Serial number not configured"
+  - ?? Red: "? GoXLR Utility not running"
+- "Test Connection" button - Verifies connection manually
 
-#### **General Tab**
-Settings for GoXLR connection and volume behavior.
+**API Endpoint:**
+- Default: `http://localhost:14564`
+- Change only if using custom GoXLR Utility port
 
-**GoXLR Configuration:**
-- Serial Number input with auto-detect button
-- Save Serial Number button
-- Connection Status display with color coding
-- Test Connection button
+### Volume Settings
+**Volume Step (0-255):**
+- How much to adjust volume per hotkey/button press
+- Default: 10
+- Lower = finer control, Higher = bigger jumps
 
-**Volume Settings:**
-- Volume Step (1-255) - How much to adjust volume per hotkey press
-- Volume Cache Time (ms) - How long to cache volume values
-- Save Volume Settings button
+**Volume Cache Time (ms):**
+- How long to cache volume values before refetching
+- Default: 30000 (30 seconds)
+- Lower = more API calls, Higher = less frequent updates
 
-**Quick Actions:**
-- Open GoXLR Test Window - Debug and test API
-- Reload Hotkeys - Re-register hotkeys after config changes
+**Auto-Save:** Changes save immediately
 
-#### **Hotkeys Tab**
-View currently configured hotkeys.
+### General Settings
+**Start application minimized to system tray:**
+- Checkbox - App starts hidden on launch
+- Default: Checked
 
-**Current Implementation:**
-- Display all configured volume hotkeys (per channel)
-- Display all configured profile hotkeys
-- Shows count of total hotkeys
+**Start application with Windows:**
+- Checkbox - Creates Windows startup registry entry
+- Auto-saves immediately
+- Works with Current User (no UAC prompt)
 
-**Coming Next:**
-- Visual hotkey capture interface
-- Edit/delete existing hotkeys
-- Add new hotkeys
-- Conflict detection
+### Quick Actions
+**Open GoXLR Test Window:**
+- Opens API testing utility
+- Test volume adjustments
+- Test profile switching
+- View current device status
 
-#### **Channels Tab**
-Manage which GoXLR channels are enabled.
+**Reload Hotkeys:**
+- Re-registers all keyboard hotkeys
+- Useful after manual config.json edits
+- Shows count of registered hotkeys
 
-**Coming Next:**
-- Checkbox list of all channels (Game, Music, Chat, System, etc.)
-- Enable/disable channels
-- Reorder channels
+---
 
-#### **About Tab**
-Application information and utilities.
+## Tab 2: Hotkeys
 
-**Current Implementation:**
-- Application name and version
-- Description
-- Configuration file path display
-- Open Config Folder button
+### Overview
+Configure keyboard hotkeys and controller buttons for volume control and profile switching.
 
-## UI Design
+### Volume Hotkeys Section
+Lists all enabled channels with up/down controls:
+
+**For Each Channel (e.g., "Game"):**
+- **Volume Up:** Textbox showing current hotkey/button (e.g., "Ctrl+Shift+Up OR PXN-CB1 Btn 1")
+- **"?/?? Capture" button:** Click to capture new keyboard key or controller button
+- **"Clear" button:** Removes both keyboard and controller assignments
+- **Volume Down:** Same controls as Volume Up
+
+**Inline Capture:**
+1. Click "?/?? Capture"
+2. Textbox turns yellow with "Press key or button..."
+3. Press keyboard key OR controller button
+4. Textbox updates with new assignment
+5. Auto-saves immediately
+
+**Conflict Detection:**
+- If key/button already assigned, textbox turns red
+- Shows "Already in use" message
+- Reverts to original after 3 seconds
+
+### Profile Hotkeys Section
+Lists all configured profiles:
+
+**For Each Profile (e.g., "iRacing"):**
+- **Hotkey/Button:** Textbox showing current assignment
+- **"?/?? Capture" button:** Capture keyboard or controller
+- **"Clear" button:** Remove assignment
+
+### Display Format
+- **Keyboard only:** `Ctrl+Shift+Up`
+- **Controller only:** `PXN-CB1 Btn 5`
+- **Both assigned:** `Ctrl+Shift+Up OR PXN-CB1 Btn 5`
+
+### Auto-Save
+- All changes save immediately
+- Hotkeys re-register automatically
+- No manual "Save" button needed
+
+---
+
+## Tab 3: Channels & Profiles
+
+### Channels Section
+**Enable/Disable Channels:**
+- Checkbox list of all GoXLR channels:
+  - ? Mic
+  - ? Line In
+  - ? System
+  - ? Game
+  - ? Chat
+  - ? Sample
+  - ? Music
+  - ? Headphones
+  - ? Mic Monitor
+  - ? Line Out
+
+**Behavior:**
+- Only checked channels appear in Hotkeys tab
+- Unchecking a channel removes it from Hotkeys
+- Auto-saves on change
+
+### Profiles Section
+**Auto-Fetch from GoXLR:**
+- On startup, waits for GoXLR Daemon
+- Fetches all profiles from GoXLR Utility
+- Populates dropdown with available profiles
+
+**Profile Status:**
+- "Loading profiles..." - During startup
+- "Found X profile(s) - Y available to add" - Ready
+- "No profiles found" - GoXLR Utility issue
+
+**Add Profiles:**
+- **Dropdown:** Shows profiles from GoXLR that aren't configured yet
+- **"Add Selected Profile" button:** Adds profile to configured list
+- **"? Refresh" button:** Refetches profiles from GoXLR
+
+**Configured Profiles List:**
+- Shows all profiles you've added
+- Each has a "Remove" button
+- These appear in Hotkeys tab for assignment
+
+**Auto-Save:**
+- Adding/removing profiles saves immediately
+- Updates Hotkeys tab in real-time
+
+---
+
+## Tab 4: Controllers
+
+### Controller List
+Shows all detected DirectInput devices:
+
+**For Each Device:**
+- Device Name (e.g., "PXN-CB1")
+- Device Type (e.g., "Joystick")
+- Instance GUID
+- Product GUID (used for stable button mappings)
+
+**Device Filtering:**
+- Automatically filters out keyboards and mice
+- Only shows button-capable devices
+- Updates on "Refresh Controllers" click
+
+### Button Indicator
+**Real-Time Activity:**
+- Green circle indicator
+- Flashes when ANY button is pressed on ANY controller
+- Helps verify device is working
+
+**Label:** "Button Activity: ?" (green when active, gray when idle)
+
+### Refresh Controllers Button
+- Rescans for DirectInput devices
+- Updates the list
+- Useful after plugging/unplugging devices
+
+### Device Detection
+**Automatic Initialization:**
+- All detected devices are automatically initialized on startup
+- No manual setup required
+- Devices are ready to use immediately
+
+---
+
+## Tab 5: About
+
+### Application Information
+- **Name:** SimControlCentre
+- **Version:** [Current Version]
+- **Description:** GoXLR Control Center with keyboard and controller support
+
+### Configuration
+**Config File Path:**
+- Displays: `C:\Users\[You]\AppData\Local\SimControlCentre\config.json`
+- **"Open Config Folder" button:** Opens folder in Windows Explorer
+
+**Purpose:**
+- Manual config editing (advanced users)
+- Backup configuration
+- View/edit raw JSON
+
+---
+
+## UI Design Principles
 
 ### Layout
-- **TabControl** - Main navigation between settings sections
+- **TabControl** - Main navigation between sections
 - **ScrollViewer** - Each tab scrollable for small screens
 - **GroupBox** - Logical grouping of related settings
-- **Min/Max Window Size** - 700x500 minimum, 900x700 default
+- **Window Size:**
+  - Minimum: 700×500
+  - Default: 900×700
+  - Remembers position and size
 
 ### Color Coding
-- **Green** - Connected/Success
-- **Orange** - Testing/Warning
-- **Red** - Error/Not Running
-- **Gray** - Unknown/Waiting
+- ?? **Green** - Connected/Success/Active
+- ?? **Orange** - Testing/Warning/Processing
+- ?? **Red** - Error/Disconnected
+- ? **Gray** - Unknown/Waiting/Inactive
 
-## New Functionality
+### Visual Feedback
+- **Yellow background** - Capture mode active
+- **Light pink background** - Conflict detected
+- **Green flash** - Button press detected
+- **Balloon tips** - System tray notifications
 
-### Save Volume Settings
-```csharp
-// Validates and saves volume step and cache time
-// Shows success message with note about restart for cache changes
-```
+### Auto-Save Philosophy
+- No manual "Save" buttons in Hotkeys/Channels tabs
+- Changes persist immediately
+- Reduces user error (forgetting to save)
+- "Save Changes" button only in General tab for Volume Settings
 
-### Open Config Folder
-```csharp
-// Opens Windows Explorer to the config folder
-// Uses System.Diagnostics.Process.Start()
-```
-
-### Input Validation
-- Volume Step: Must be 1-255
-- Cache Time: Must be positive number
-- Shows warning MessageBox for invalid input
+---
 
 ## Settings Persistence
 
-### On Change
-Settings are saved immediately when:
-- Serial number is detected/saved
-- Volume settings are saved
-- Other settings modified (future)
+### Auto-Save Triggers
+Settings save automatically when:
+- Serial number detected/saved
+- Channel checked/unchecked
+- Profile added/removed
+- Hotkey/button captured
+- Start with Windows toggled
+
+### Manual Save Required
+Only Volume Settings require clicking "Save Volume Settings":
+- Volume Step changes
+- Cache Time changes
+- These affect performance, so require explicit confirmation
 
 ### On Exit
+- Window position and size saved automatically
+- No confirmation dialogs
+- Clean shutdown
+
+---
+
+## Keyboard Shortcuts (Future)
+
+Planned shortcuts for Settings window:
+- `Ctrl+S` - Save (on tabs with Save button)
+- `Escape` - Cancel capture mode
+- `F5` - Refresh controllers
+- `Ctrl+Tab` - Next tab
+- `Ctrl+Shift+Tab` - Previous tab
+
+---
+
+## Best Practices
+
+### Configuration Workflow
+1. **General Tab:**
+   - Detect serial number
+   - Test connection
+   - Configure volume settings
+
+2. **Channels & Profiles Tab:**
+   - Enable channels you use
+   - Add profiles from GoXLR
+
+3. **Hotkeys Tab:**
+   - Assign keyboard hotkeys
+   - Assign controller buttons
+   - Test each assignment
+
+4. **Controllers Tab:**
+   - Verify devices detected
+   - Check button indicator works
+
+### Testing
+- Use "Test GoXLR Window" to verify API connection
+- Test each hotkey individually
+- Press controller buttons and watch indicator
+- Test volume changes in different apps
+
+### Troubleshooting
+- **Connection fails:** Check GoXLR Utility is running
+- **Hotkey conflicts:** Use more modifiers
+- **Controller not detected:** Click "Refresh Controllers"
+- **Button doesn't work:** Recapture using ProductGuid format
+
+---
+
+## Technical Notes
+
+### Window Handle
+- Settings window provides window handle for Win32 hotkey registration
+- Must exist before hotkeys can be registered
+- Handle obtained via `WindowInteropHelper`
+
+### DirectInput Polling
+- Controllers polled every 50ms
+- Button events raised on state changes
+- Debouncing (100ms) prevents double-presses
+
+### Configuration Loading
+- Config loaded on startup
+- UI populated from `AppSettings` object
+- Changes update `AppSettings` and save to JSON
+
+### Validation
+- Serial number format not validated (any string accepted)
+- Volume step must be 1-255
+- Cache time must be positive integer
+- Invalid input shows warning MessageBox
 Window position and size are saved automatically on application exit (existing behavior).
 
 ### Reload

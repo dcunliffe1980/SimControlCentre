@@ -1,6 +1,14 @@
 # Quick Start Guide
 
-## First Run
+## Installation
+
+### Option 1: Download Pre-Built Executable
+1. Download `SimControlCentre.exe` from [Releases](https://github.com/dcunliffe1980/SimControlCentre/releases)
+2. Place it anywhere you like (e.g., `C:\Program Files\SimControlCentre\`)
+3. Double-click to run
+4. Look for the "SC" icon in your system tray
+
+### Option 2: Build from Source
 
 1. **Build the application:**
    ```powershell
@@ -14,6 +22,7 @@
 
 3. **You should see:**
    - A "SC" icon appears in your system tray
+   - Balloon notification: "GoXLR Daemon Detected" ? "GoXLR Ready!"
    - No main window (starts minimized by default)
 
 ## Opening the Settings Window
@@ -22,35 +31,94 @@
 
 **Option 2:** Right-click the tray icon ? "Open Settings"
 
-## Testing GoXLR API
+## First-Time Setup
 
-1. Make sure **GoXLR Utility is running** (http://localhost:14564)
+### 1. Configure Your GoXLR Serial Number
 
-2. Click the **"Test GoXLR API"** button in the main window
+**Auto-Detect (Recommended):**
+1. Open Settings ? General tab
+2. Click "Detect Serial Number"
+3. Should auto-populate if you have one GoXLR device
+4. Connection Status turns green ?
 
-3. In the test window:
-   - Click **"Test Connection"** to verify GoXLR Utility is accessible
-   - Click **"Refresh Status"** to see current profile and volumes
-   - Use **Volume Up/Down** buttons to test volume adjustment
-   - Select a profile and click **"Load Profile"** to test profile switching
+**Manual Entry:**
+1. Find your serial in GoXLR Utility
+2. Enter it in the "Serial Number" field
+3. Click "Test Connection"
 
-## Configuring Your Serial Number
+### 2. Select Channels to Control
 
-1. **Find your GoXLR serial number:**
-   - Open GoXLR Utility
-   - Look for serial number in the interface
-   - OR use the test window - connection error will show available serials
+1. Go to **Channels & Profiles tab**
+2. Check the channels you want hotkeys for:
+   - ? Mic
+   - ? Game  
+   - ? Chat
+   - ? Music
+   - etc.
+3. Changes save automatically
 
-2. **Edit the configuration file:**
-   - Location: `%LocalAppData%\SimControlCentre\config.json`
-   - Open in any text editor (Notepad, VS Code, etc.)
-   - Find the line: `"serialNumber": ""`
-   - Replace with your serial: `"serialNumber": "S220202153DI7"`
-   - Save the file
+### 3. Add Your Profiles
 
-3. **Restart the application**
+Your GoXLR profiles are auto-fetched!
 
-4. **Test again** - should now show your current profile and volumes
+1. Stay on **Channels & Profiles tab**
+2. Wait for profiles to populate in the dropdown
+3. Select a profile ? Click "Add Selected Profile"
+4. Repeat for all profiles you want hotkeys for
+
+**OR add custom profiles:**
+- Type a name ? Click "Add Custom Profile"
+
+### 4. Assign Keyboard Hotkeys
+
+1. Go to **Hotkeys tab**
+2. Find the channel/profile you want to control
+3. Click "?/?? Capture" button
+4. Press your desired key combination (e.g., `Ctrl+Shift+Up`)
+5. Done! Shows in the textbox
+
+**Tips:**
+- Use modifiers (Ctrl, Shift, Alt) to avoid conflicts
+- Clear button removes the hotkey
+- Conflict detection shows if key is already in use
+
+### 5. Assign Controller Buttons (Optional)
+
+If you have a button box, wheel, or controller:
+
+1. Go to **Hotkeys tab**
+2. Click "?/?? Capture" button
+3. **Press a button on your controller** instead of a keyboard key
+4. Shows as "PXN-CB1 Btn 1" (device name + button number)
+5. Done!
+
+**Verify your controller is detected:**
+- Go to **Controllers tab**
+- Should list all detected devices
+- Button indicator flashes green when you press buttons
+
+## Testing Your Setup
+
+### Test Volume Control
+1. Assign a hotkey to "Game Volume Up"
+2. Press the hotkey
+3. Game volume should increase
+
+### Test Profile Switching
+1. Assign a hotkey to a profile (e.g., "iRacing")
+2. Press the hotkey
+3. GoXLR should switch to that profile
+
+### Test Controller Buttons
+1. Assign a button to "Music Volume Down"
+2. Press that button on your controller
+3. Music volume should decrease
+
+## Auto-Start with Windows
+
+1. Go to **General tab**
+2. Check "Start application with Windows"
+3. Next time you boot, app starts automatically!
 
 ## Configuration File Location
 
@@ -59,45 +127,80 @@ Press `Win + R` and paste this:
 %LocalAppData%\SimControlCentre
 ```
 
-You'll find `config.json` in this folder.
+You'll find `config.json` in this folder. Backup this file to save your configuration!
 
-## Default Configuration
+## System Tray Menu
 
-The app creates sensible defaults on first run:
-- **Volume Step:** 10 (on 0-255 scale)
-- **Cache Time:** 5000ms (5 seconds)
-- **API Endpoint:** http://localhost:14564
-- **Enabled Channels:** Game, Music, Chat, System
-- **Predefined Profiles:**
-  - Speakers - Personal
-  - Headphones - Personal (Online)
-  - Headphones - Work
-  - iRacing
+Right-click the "SC" icon:
+- **Open Settings** - Opens settings window
+- **? Enable Hotkeys** - Toggle all keyboard hotkeys on/off
+- **Exit** - Quit the application
 
 ## Common Issues
 
-### "GoXLR Utility not running"
-- **Solution:** Start the TC-Helicon GoXLR Utility application
-- It must be running for the API to work
+### "GoXLR Daemon Not Found"
+- **Solution:** Wait 2 minutes for GoXLR Utility (daemon) to start
+- Or manually start TC-Helicon GoXLR Utility
+- App checks every 5 seconds
 
-### "Unable to connect" in test window
-- **Check 1:** Is GoXLR Utility running?
-- **Check 2:** Is your serial number configured correctly?
-- **Check 3:** Try opening http://localhost:14564/api/get-devices in a browser
+### Controller buttons not working after reboot
+- **This is fixed!** Buttons now use ProductGuid (stable across reboots)
+- If you have old mappings, just recapture them once
+- They'll show device name like "PXN-CB1 Btn 1"
+
+### First button press fails, then works
+- **Normal behavior during cache warm-up**
+- Wait 5-10 seconds after "GoXLR Ready!" notification
+- Or just press again - subsequent presses work immediately
+- Cache lasts 30 seconds
+
+### Hotkey conflict detected
+- Try different key combination
+- Check if another app is using that key
+- Use more modifiers (Ctrl+Shift+Alt)
 
 ### System tray icon not appearing
-- **Check:** Look in the "hidden icons" area of your taskbar
-- **Fix:** Drag the icon to the main tray area
+- Check the "hidden icons" area (^ arrow in taskbar)
+- Drag the "SC" icon to main tray area
 
 ### Window doesn't open when clicking tray icon
-- **Check:** The window might be off-screen (from previous session)
-- **Fix:** Delete config.json and restart app to reset window position
+- Window might be off-screen from previous session
+- Delete `%LocalAppData%\SimControlCentre\config.json`
+- Restart app to reset window position
+
+## Advanced Tips
+
+### Volume Step Adjustment
+- Default: 10 (on 0-255 scale)
+- Lower = finer control, Higher = bigger jumps
+- General tab ? Volume Step
+
+### Cache Time Adjustment
+- Default: 30 seconds
+- Lower = more responsive to external changes, more API calls
+- Higher = faster button presses, less accurate
+- General tab ? Volume Cache Time (ms)
+
+### Disable Hotkeys Temporarily
+- Right-click tray icon ? Uncheck "Enable Hotkeys"
+- Useful when playing games with conflicting keys
+- Controller buttons still work!
 
 ## Next Steps
 
-Once the API is working:
-1. Configure your serial number
-2. Test volume adjustments
+? Configured serial number  
+? Added channels and profiles  
+? Assigned hotkeys  
+? Tested everything works  
+
+**You're all set!** Enjoy seamless GoXLR control! ??
+
+## Need Help?
+
+Check the other documentation:
+- [Configuration Details](CONFIGURATION.md)
+- [Hotkey Setup](HOTKEYS.md)
+- [Settings UI Guide](SETTINGS_UI.md)
 3. Test profile switching
 4. Wait for next phase: **Global Hotkeys** (coming soon!)
 
