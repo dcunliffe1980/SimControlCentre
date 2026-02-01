@@ -441,8 +441,8 @@ namespace SimControlCentre.Views.Tabs
 
                 if (!string.IsNullOrEmpty(updateInfo.Error))
                 {
-                    updateStatusText.Text = $"Error checking for updates: {updateInfo.Error}";
-                    updateStatusText.Foreground = System.Windows.Media.Brushes.Red;
+                    updateStatusText.Text = updateInfo.Error;
+                    updateStatusText.Foreground = System.Windows.Media.Brushes.Orange;
                 }
                 else if (updateInfo.IsAvailable)
                 {

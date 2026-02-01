@@ -36,15 +36,31 @@ namespace SimControlCentre.Services
         {
             try
             {
-                var response = await _httpClient.GetFromJsonAsync<GitHubRelease>(GitHubApiUrl);
+                var response = await _httpClient.GetAsync(GitHubApiUrl);
                 
-                if (response == null || string.IsNullOrWhiteSpace(response.tag_name))
+                // Handle 404 - no releases exist yet
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    return new UpdateInfo
+                    {
+                        IsAvailable = false,
+                        CurrentVersion = GetCurrentVersion(),
+                        Error = "No releases available yet. This is the first version!"
+                    };
+                }
+                
+                // Ensure successful response
+                response.EnsureSuccessStatusCode();
+                
+                var releaseData = await response.Content.ReadFromJsonAsync<GitHubRelease>();
+                
+                if (releaseData == null || string.IsNullOrWhiteSpace(releaseData.tag_name))
                 {
                     return new UpdateInfo { IsAvailable = false, CurrentVersion = GetCurrentVersion() };
                 }
 
                 // Remove 'v' prefix from tag name if present
-                var latestVersion = response.tag_name.TrimStart('v');
+                var latestVersion = releaseData.tag_name.TrimStart('v');
                 var currentVersion = GetCurrentVersion();
 
                 // Compare versions
@@ -55,8 +71,18 @@ namespace SimControlCentre.Services
                     IsAvailable = isNewer,
                     CurrentVersion = currentVersion,
                     LatestVersion = latestVersion,
-                    ReleaseUrl = response.html_url,
-                    ReleaseNotes = response.body
+                    ReleaseUrl = releaseData.html_url,
+                    ReleaseNotes = releaseData.body
+                };
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"[UpdateService] HTTP error checking for updates: {ex.Message}");
+                return new UpdateInfo
+                {
+                    IsAvailable = false,
+                    CurrentVersion = GetCurrentVersion(),
+                    Error = "Unable to check for updates. Please check your internet connection."
                 };
             }
             catch (Exception ex)
@@ -66,7 +92,7 @@ namespace SimControlCentre.Services
                 {
                     IsAvailable = false,
                     CurrentVersion = GetCurrentVersion(),
-                    Error = ex.Message
+                    Error = $"Error: {ex.Message}"
                 };
             }
         }
