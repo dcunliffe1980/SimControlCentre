@@ -24,4 +24,15 @@ public class GeneralSettings
     /// GoXLR Utility API endpoint
     /// </summary>
     public string ApiEndpoint { get; set; } = "http://localhost:14564";
+
+    /// <summary>
+    /// Enable GoXLR integration
+    /// </summary>
+    public bool GoXLREnabled { get; set; } = true;
+
+    /// <summary>
+    /// Run application at Windows startup
+    /// </summary>
+    public bool RunAtStartup { get; set; } = false;
 }
+

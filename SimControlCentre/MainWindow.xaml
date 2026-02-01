@@ -10,8 +10,8 @@
         MinHeight="500" MinWidth="700">
     <Grid>
         <TabControl Margin="10">
-            <!-- General Tab -->
-            <TabItem Header="General" x:Name="GeneralTabItem"/>
+            <!-- Settings Tab -->
+            <TabItem Header="Settings" x:Name="SettingsTabItem"/>
             
             <!-- Hotkeys Tab -->
             <TabItem Header="Hotkeys" x:Name="HotkeysTabItem"/>

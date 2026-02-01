@@ -14,7 +14,7 @@ namespace SimControlCentre
         private readonly iRacingMonitorService? _iRacingMonitor;
         
         // Tab controls
-        private GeneralTab? _generalTab;
+        private SettingsTab? _settingsTab;
         private HotkeysTab? _hotkeysTab;
         private ChannelsProfilesTab? _channelsProfilesTab;
         private ControllersTab? _controllersTab;
@@ -43,13 +43,12 @@ namespace SimControlCentre
 
         private void InitializeTabs()
         {
-            // Create General Tab
-            _generalTab = new GeneralTab(_goXLRService, _configService, _settings);
-            GeneralTabItem.Content = _generalTab;
+            // Create Settings Tab
+            _settingsTab = new SettingsTab(_configService, _settings, _goXLRService);
+            SettingsTabItem.Content = _settingsTab;
             
-            // Create Hotkeys Tab
-            _hotkeysTab = new HotkeysTab(_configService, _settings);
-            HotkeysTabItem.Content = _hotkeysTab;
+            // Create Hotkeys Tab (only if GoXLR enabled)
+            UpdateHotkeysTabVisibility();
             
             // Create Channels & Profiles Tab
             _channelsProfilesTab = new ChannelsProfilesTab(_goXLRService, _configService, _settings);
@@ -69,22 +68,31 @@ namespace SimControlCentre
             // Create About Tab
             _aboutTab = new AboutTab(_configService);
             AboutTabItem.Content = _aboutTab;
-            
-            // Check connection on startup (delayed to allow API warm-up)
-            if (!string.IsNullOrWhiteSpace(_settings.General.SerialNumber))
-            {
-                Dispatcher.InvokeAsync(async () =>
-                {
-                    await System.Threading.Tasks.Task.Delay(2000);
-                    await _generalTab.CheckConnectionAsync();
-                });
-            }
         }
 
         public void InitializeControllersTab(DirectInputService directInputService)
         {
             _controllersTab = new ControllersTab(directInputService);
             ControllersTabItem.Content = _controllersTab;
+        }
+
+        public void UpdateHotkeysTabVisibility()
+        {
+            if (_settings.General.GoXLREnabled)
+            {
+                // Show Hotkeys tab
+                if (_hotkeysTab == null)
+                {
+                    _hotkeysTab = new HotkeysTab(_configService, _settings);
+                    HotkeysTabItem.Content = _hotkeysTab;
+                }
+                HotkeysTabItem.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                // Hide Hotkeys tab
+                HotkeysTabItem.Visibility = Visibility.Collapsed;
+            }
         }
 
         private void RestoreWindowSettings()

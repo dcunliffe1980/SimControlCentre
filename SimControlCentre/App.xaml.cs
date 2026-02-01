@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System.Diagnostics;
+using System.Net.Http;
 using System.Net.Http.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -68,21 +69,9 @@ public partial class App : Application
             // Always warm up the GoXLR API connection on startup
             _ = Task.Run(async () =>
             {
-                // Wait for GoXLR Daemon to be running before attempting connection
+                // Wait indefinitely for GoXLR Daemon to be running
                 Console.WriteLine("[App] Waiting for GoXLR Daemon to start...");
-                bool utilityRunning = await WaitForGoXLRUtility(TimeSpan.FromMinutes(5));
-                
-                if (!utilityRunning)
-                {
-                    Console.WriteLine("[App] GoXLR Daemon did not start within 5 minutes. Will retry on demand.");
-                    Dispatcher.Invoke(() =>
-                    {
-                        _notifyIcon?.ShowBalloonTip("GoXLR Daemon Not Found",
-                            "GoXLR Daemon not detected after 5 minutes. Start it manually.",
-                            BalloonIcon.Warning);
-                    });
-                    return;
-                }
+                await WaitForGoXLRUtilityIndefinitely();
                 
                 Console.WriteLine("[App] GoXLR Daemon detected! Warming up API connection...");
                 Dispatcher.Invoke(() =>
@@ -92,8 +81,8 @@ public partial class App : Application
                         BalloonIcon.Info);
                 });
                 
-                // Give the daemon more time to fully initialize its API
-                await Task.Delay(5000); // Increased from 2 to 5 seconds
+                // Give the daemon time to fully initialize its API
+                await Task.Delay(5000);
                 
                 // Test connection
                 Console.WriteLine("[App] Testing GoXLR connection...");
@@ -113,13 +102,13 @@ public partial class App : Application
                     
                     // Pre-warm the volume cache BEFORE showing "connected" notification
                     Console.WriteLine("[App] Pre-warming volume cache for all enabled channels...");
-                    await Task.Delay(1000); // Give API time to fully initialize
+                    await Task.Delay(1000);
                     
                     foreach (var channel in Settings.EnabledChannels)
                     {
                         Console.WriteLine($"[App] Warming cache for {channel}...");
                         await _goXLRService.WarmVolumeCacheAsync(channel);
-                        Console.WriteLine($"[App] ✓ Cache warmed for {channel}");
+                        Console.WriteLine($"[App] Cache warmed for {channel}");
                     }
                     Console.WriteLine("[App] Volume cache pre-warming complete!");
                     
@@ -282,6 +271,28 @@ public partial class App : Application
         
         Console.WriteLine("[App] Timeout waiting for GoXLR Daemon");
         return false;
+    }
+
+    private async Task WaitForGoXLRUtilityIndefinitely()
+    {
+        int checkCount = 0;
+        while (true)
+        {
+            var processes = Process.GetProcessesByName("goxlr-utility");
+            if (processes.Length > 0)
+            {
+                Console.WriteLine($"[App] GoXLR Daemon found after {checkCount * 2} seconds (PID: {processes[0].Id})");
+                return;
+            }
+            
+            checkCount++;
+            if (checkCount % 30 == 0) // Every minute
+            {
+                Console.WriteLine($"[App] Still waiting for GoXLR Daemon... ({checkCount * 2}s elapsed)");
+            }
+            
+            await Task.Delay(2000); // Check every 2 seconds
+        }
     }
 
     private void OpenSettings_Click(object sender, RoutedEventArgs e)
