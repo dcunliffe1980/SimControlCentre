@@ -19,16 +19,16 @@
 
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,20">
-            <TextBlock Text="iRacing Integration" 
+            <TextBlock Text="Application Manager" 
                        FontSize="20" 
                        FontWeight="Bold" 
                        Margin="0,0,0,10"/>
-            <TextBlock Text="Automatically start/stop applications when iRacing starts/stops" 
+            <TextBlock Text="Automatically start/stop applications when your sim racing software launches" 
                        FontSize="11" 
                        Foreground="Gray"/>
         </StackPanel>
 
-        <!-- iRacing Status -->
+        <!-- Sim Status -->
         <Border Grid.Row="1" 
                 BorderBrush="LightGray" 
                 BorderThickness="1" 
@@ -36,7 +36,7 @@
                 Background="WhiteSmoke"
                 Margin="0,0,0,15">
             <StackPanel>
-                <TextBlock Text="iRacing Status" FontWeight="Bold" Margin="0,0,0,5"/>
+                <TextBlock Text="Sim Status" FontWeight="Bold" Margin="0,0,0,5"/>
                 <StackPanel Orientation="Horizontal">
                     <Ellipse Name="iRacingStatusIndicator" 
                              Width="12" 
@@ -60,7 +60,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- START Apps -->
-            <GroupBox Grid.Column="0" Header="Start with iRacing" Padding="10">
+            <GroupBox Grid.Column="0" Header="Start with Sim" Padding="10">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
@@ -171,7 +171,7 @@
             </GroupBox>
 
             <!-- STOP Apps -->
-            <GroupBox Grid.Column="2" Header="Close with iRacing" Padding="10">
+            <GroupBox Grid.Column="2" Header="Close with Sim" Padding="10">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>

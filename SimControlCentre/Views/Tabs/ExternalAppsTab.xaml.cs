@@ -26,7 +26,7 @@ namespace SimControlCentre.Views.Tabs
             _iRacingMonitor.iRacingStateChanged += OnIRacingStateChanged;
 
             // Initial status update
-            UpdateiRacingStatus(_iRacingMonitor.IsiRacingRunning());
+            UpdateSimStatus(_iRacingMonitor.IsiRacingRunning());
 
             // Load apps
             RefreshAppsList();
@@ -86,10 +86,10 @@ namespace SimControlCentre.Views.Tabs
 
         private void OnIRacingStateChanged(object? sender, iRacingStateChangedEventArgs e)
         {
-            Dispatcher.Invoke(() => UpdateiRacingStatus(e.IsRunning));
+            Dispatcher.Invoke(() => UpdateSimStatus(e.IsRunning));
         }
 
-        private void UpdateiRacingStatus(bool isRunning)
+        private void UpdateSimStatus(bool isRunning)
         {
             if (isRunning)
             {

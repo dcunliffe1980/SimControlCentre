@@ -13,8 +13,8 @@
             <!-- Settings Tab -->
             <TabItem Header="Settings" x:Name="SettingsTabItem"/>
             
-            <!-- Hotkeys Tab -->
-            <TabItem Header="Hotkeys" x:Name="HotkeysTabItem"/>
+            <!-- GoXLR Control Tab -->
+            <TabItem Header="GoXLR Control" x:Name="HotkeysTabItem"/>
             
             <!-- Channels & Profiles Tab -->
             <TabItem Header="Channels &amp; Profiles" x:Name="ChannelsProfilesTabItem"/>
@@ -22,8 +22,8 @@
             <!-- Controllers Tab -->
             <TabItem Header="Controllers" x:Name="ControllersTabItem"/>
             
-            <!-- iRacing Tab -->
-            <TabItem Header="iRacing" x:Name="iRacingTabItem"/>
+            <!-- Application Manager Tab -->
+            <TabItem Header="Application Manager" x:Name="iRacingTabItem"/>
             
             <!-- About Tab -->
             <TabItem Header="About" x:Name="AboutTabItem"/>

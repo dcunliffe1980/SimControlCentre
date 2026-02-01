@@ -59,12 +59,12 @@
                 <!-- Options -->
                 <StackPanel Name="StartWithRacingSection">
                     <CheckBox Name="StartWithiRacingCheckBox" 
-                             Content="Start with iRacing" 
+                             Content="Start with sim" 
                              IsChecked="True"
                              Margin="0,0,0,5"/>
                     
                     <CheckBox Name="StopWithiRacingCheckBox" 
-                             Content="Stop with iRacing" 
+                             Content="Stop with sim" 
                              IsChecked="True"
                              Margin="0,0,0,5"/>
                     
@@ -77,10 +77,10 @@
                     <TextBlock Text="Restart Options:" FontWeight="Bold" Margin="0,0,0,10"/>
                     
                     <CheckBox Name="RestartWhenIRacingStopsCheckBox" 
-                             Content="Restart when iRacing stops" 
+                             Content="Restart when sim stops" 
                              IsChecked="True"
                              Margin="0,0,0,5"
-                             ToolTip="Automatically restart this app after iRacing closes"/>
+                             ToolTip="Automatically restart this app after sim closes"/>
                     
                     <CheckBox Name="RestartHiddenCheckBox" 
                              Content="Close window after restart" 
@@ -93,7 +93,7 @@
                              Text="2"
                              Padding="5"
                              Margin="0,0,0,15"
-                             ToolTip="Wait this many seconds after iRacing stops before restarting"/>
+                             ToolTip="Wait this many seconds after sim stops before restarting"/>
                 </StackPanel>
                 
                 <Separator Margin="0,0,0,15"/>
