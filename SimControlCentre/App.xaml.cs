@@ -74,12 +74,7 @@ public partial class App : Application
                 await WaitForGoXLRUtilityIndefinitely();
                 
                 Console.WriteLine("[App] GoXLR Daemon detected! Warming up API connection...");
-                Dispatcher.Invoke(() =>
-                {
-                    _notifyIcon?.ShowBalloonTip("GoXLR Daemon Detected",
-                        "GoXLR Daemon found! Connecting...",
-                        BalloonIcon.Info);
-                });
+                // Removed notification popup
                 
                 // Give the daemon time to fully initialize its API
                 await Task.Delay(5000);
@@ -112,13 +107,7 @@ public partial class App : Application
                     }
                     Console.WriteLine("[App] Volume cache pre-warming complete!");
                     
-                    // NOW show the connected notification - cache is ready!
-                    Dispatcher.Invoke(() =>
-                    {
-                        _notifyIcon?.ShowBalloonTip("GoXLR Ready!",
-                            "Connected and ready to control volume!",
-                            BalloonIcon.Info);
-                    });
+                    // Removed notification popup - cache is ready silently
                 }
                 else
                 {
@@ -148,9 +137,7 @@ public partial class App : Application
                             {
                                 _configService.Save(Settings);
                                 
-                                _notifyIcon?.ShowBalloonTip("GoXLR Auto-Detected", 
-                                    $"Serial: {serial}\nConnection ready!", 
-                                    BalloonIcon.Info);
+                                // Removed notification popup for auto-detect
                             });
                         }
                         else
@@ -210,13 +197,8 @@ public partial class App : Application
                 _mainWindow.InitializeControllersTab(_directInputService);
             }
             
-            // Show registration result
-            if (registeredCount > 0)
-            {
-                _notifyIcon.ShowBalloonTip("Hotkeys Registered", 
-                    $"{registeredCount} hotkey(s) registered successfully", 
-                    BalloonIcon.Info);
-            }
+            // Removed notification popup for hotkeys
+            Console.WriteLine($"Registered {registeredCount} keyboard hotkeys");
             
             // Show window if not set to start minimized
             if (!Settings.Window.StartMinimized)
@@ -353,18 +335,14 @@ public partial class App : Application
             {
                 // Enable hotkeys
                 var count = _hotkeyManager.RegisterAllHotkeys();
-                _notifyIcon?.ShowBalloonTip("Hotkeys Enabled", 
-                    $"{count} keyboard hotkey(s) registered", 
-                    BalloonIcon.Info);
+                // Removed notification popup
                 Console.WriteLine("[App] Hotkeys enabled");
             }
             else
             {
                 // Disable hotkeys
                 _hotkeyManager.TemporaryUnregisterAll();
-                _notifyIcon?.ShowBalloonTip("Hotkeys Disabled", 
-                    "All keyboard hotkeys temporarily disabled", 
-                    BalloonIcon.Info);
+                // Removed notification popup
                 Console.WriteLine("[App] Hotkeys disabled");
             }
         }
@@ -372,7 +350,8 @@ public partial class App : Application
 
     public void ShowVolumeNotification(string message)
     {
-        _notifyIcon?.ShowBalloonTip("GoXLR", message, BalloonIcon.Info);
+        // Removed notification popup for volume changes
+        Console.WriteLine($"[App] Volume: {message}");
     }
 
     private System.Windows.Media.ImageSource CreateSimpleIcon()

@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using SimControlCentre.Models;
@@ -10,14 +11,16 @@ namespace SimControlCentre.Views.Tabs
         private readonly ConfigurationService _configService;
         private readonly AppSettings _settings;
         private readonly GoXLRService _goXLRService;
+        private readonly MainWindow _mainWindow;
 
-        public SettingsTab(ConfigurationService configService, AppSettings settings, GoXLRService goXLRService)
+        public SettingsTab(ConfigurationService configService, AppSettings settings, GoXLRService goXLRService, MainWindow mainWindow)
         {
             InitializeComponent();
             
             _configService = configService;
             _settings = settings;
             _goXLRService = goXLRService;
+            _mainWindow = mainWindow;
 
             // Select first category by default
             CategoryListBox.SelectedIndex = 0;
@@ -124,12 +127,14 @@ namespace SimControlCentre.Views.Tabs
             {
                 _settings.General.GoXLREnabled = true;
                 _configService.Save(_settings);
+                _mainWindow.UpdateHotkeysTabVisibility();
                 RefreshGoXLRSettings();
             };
             enableGoXLRCheck.Unchecked += (s, e) =>
             {
                 _settings.General.GoXLREnabled = false;
                 _configService.Save(_settings);
+                _mainWindow.UpdateHotkeysTabVisibility();
                 RefreshGoXLRSettings();
             };
             SettingsContent.Children.Add(enableGoXLRCheck);
@@ -148,6 +153,35 @@ namespace SimControlCentre.Views.Tabs
                 SettingsContent.Children.Add(disabledMessage);
                 return;
             }
+
+            // Connection Status Text
+            var statusLabel = new TextBlock
+            {
+                Text = "Connection Status: Checking...",
+                Foreground = System.Windows.Media.Brushes.Orange,
+                Margin = new Thickness(0, 0, 0, 20),
+                FontWeight = FontWeights.SemiBold
+            };
+            SettingsContent.Children.Add(statusLabel);
+
+            // Check connection status
+            _ = Task.Run(async () =>
+            {
+                bool isConnected = await _goXLRService.IsConnectedAsync();
+                Dispatcher.Invoke(() =>
+                {
+                    if (isConnected)
+                    {
+                        statusLabel.Text = "Connection Status: Connected";
+                        statusLabel.Foreground = System.Windows.Media.Brushes.Green;
+                    }
+                    else
+                    {
+                        statusLabel.Text = "Connection Status: Not Connected";
+                        statusLabel.Foreground = System.Windows.Media.Brushes.Red;
+                    }
+                });
+            });
 
             // API Endpoint
             var apiEndpointLabel = new TextBlock
@@ -205,22 +239,20 @@ namespace SimControlCentre.Views.Tabs
             {
                 testButton.IsEnabled = false;
                 testButton.Content = "Testing...";
+                statusLabel.Text = "Connection Status: Testing...";
+                statusLabel.Foreground = System.Windows.Media.Brushes.Orange;
 
                 bool isConnected = await _goXLRService.IsConnectedAsync();
 
                 if (isConnected)
                 {
-                    MessageBox.Show("Successfully connected to GoXLR!", 
-                        "Connection Test", 
-                        MessageBoxButton.OK, 
-                        MessageBoxImage.Information);
+                    statusLabel.Text = "Connection Status: Connected";
+                    statusLabel.Foreground = System.Windows.Media.Brushes.Green;
                 }
                 else
                 {
-                    MessageBox.Show("Could not connect to GoXLR.\n\nMake sure:\n- GoXLR Utility is running\n- API endpoint is correct\n- Serial number is correct", 
-                        "Connection Failed", 
-                        MessageBoxButton.OK, 
-                        MessageBoxImage.Error);
+                    statusLabel.Text = "Connection Status: Not Connected";
+                    statusLabel.Foreground = System.Windows.Media.Brushes.Red;
                 }
 
                 testButton.IsEnabled = true;

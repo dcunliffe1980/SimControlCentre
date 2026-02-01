@@ -44,7 +44,7 @@ namespace SimControlCentre
         private void InitializeTabs()
         {
             // Create Settings Tab
-            _settingsTab = new SettingsTab(_configService, _settings, _goXLRService);
+            _settingsTab = new SettingsTab(_configService, _settings, _goXLRService, this);
             SettingsTabItem.Content = _settingsTab;
             
             // Create Hotkeys Tab (only if GoXLR enabled)
