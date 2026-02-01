@@ -16,12 +16,6 @@
             <!-- GoXLR Control Tab -->
             <TabItem Header="GoXLR Control" x:Name="HotkeysTabItem"/>
             
-            <!-- Channels & Profiles Tab -->
-            <TabItem Header="Channels &amp; Profiles" x:Name="ChannelsProfilesTabItem"/>
-            
-            <!-- Controllers Tab -->
-            <TabItem Header="Controllers" x:Name="ControllersTabItem"/>
-            
             <!-- Application Manager Tab -->
             <TabItem Header="Application Manager" x:Name="iRacingTabItem"/>
             

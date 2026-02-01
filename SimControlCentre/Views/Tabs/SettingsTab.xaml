@@ -54,6 +54,7 @@
                     </ListBox.ItemContainerStyle>
                     <ListBoxItem Content="General" Tag="General"/>
                     <ListBoxItem Content="GoXLR" Tag="GoXLR"/>
+                    <ListBoxItem Content="Controllers" Tag="Controllers"/>
                 </ListBox>
             </StackPanel>
         </Border>

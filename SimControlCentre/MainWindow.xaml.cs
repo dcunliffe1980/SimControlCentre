@@ -16,8 +16,6 @@ namespace SimControlCentre
         // Tab controls
         private SettingsTab? _settingsTab;
         private HotkeysTab? _hotkeysTab;
-        private ChannelsProfilesTab? _channelsProfilesTab;
-        private ControllersTab? _controllersTab;
         private ExternalAppsTab? _externalAppsTab;
         private AboutTab? _aboutTab;
 
@@ -50,15 +48,13 @@ namespace SimControlCentre
             // Create Hotkeys Tab (only if GoXLR enabled)
             UpdateHotkeysTabVisibility();
             
-            // Create Channels & Profiles Tab
-            _channelsProfilesTab = new ChannelsProfilesTab(_goXLRService, _configService, _settings);
-            _channelsProfilesTab.HotkeysChanged += (s, e) => _hotkeysTab?.RefreshHotkeys();
-            ChannelsProfilesTabItem.Content = _channelsProfilesTab;
+            // Initialize Channels & Profiles in Settings Tab
+            _settingsTab.InitializeChannelsProfilesTab();
             
             // Controllers Tab will be initialized later via InitializeControllersTab()
             // (DirectInputService is created after MainWindow in App.xaml.cs)
             
-            // Create iRacing Tab
+            // Create Application Manager Tab
             if (_iRacingMonitor != null)
             {
                 _externalAppsTab = new ExternalAppsTab(_configService, _settings, _iRacingMonitor);
@@ -72,8 +68,7 @@ namespace SimControlCentre
 
         public void InitializeControllersTab(DirectInputService directInputService)
         {
-            _controllersTab = new ControllersTab(directInputService);
-            ControllersTabItem.Content = _controllersTab;
+            _settingsTab?.InitializeControllersTab(directInputService);
         }
 
         public void UpdateHotkeysTabVisibility()
@@ -93,6 +88,11 @@ namespace SimControlCentre
                 // Hide Hotkeys tab
                 HotkeysTabItem.Visibility = Visibility.Collapsed;
             }
+        }
+
+        public void RefreshHotkeysTab()
+        {
+            _hotkeysTab?.RefreshHotkeys();
         }
 
         private void RestoreWindowSettings()

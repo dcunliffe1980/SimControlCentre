@@ -12,6 +12,8 @@ namespace SimControlCentre.Views.Tabs
         private readonly AppSettings _settings;
         private readonly GoXLRService _goXLRService;
         private readonly MainWindow _mainWindow;
+        private ChannelsProfilesTab? _channelsProfilesTab;
+        private ControllersTab? _controllersTab;
 
         public SettingsTab(ConfigurationService configService, AppSettings settings, GoXLRService goXLRService, MainWindow mainWindow)
         {
@@ -24,6 +26,35 @@ namespace SimControlCentre.Views.Tabs
 
             // Select first category by default
             CategoryListBox.SelectedIndex = 0;
+        }
+
+        public void InitializeChannelsProfilesTab()
+        {
+            _channelsProfilesTab = new ChannelsProfilesTab(_goXLRService, _configService, _settings);
+            
+            // Subscribe to hotkeys changed event to notify the HotkeysTab
+            _channelsProfilesTab.HotkeysChanged += (s, e) =>
+            {
+                // Notify MainWindow to refresh HotkeysTab if it exists
+                _mainWindow.RefreshHotkeysTab();
+            };
+            
+            // If GoXLR is currently selected, refresh to show the new content
+            if (CategoryListBox.SelectedItem is ListBoxItem selectedItem && selectedItem.Tag as string == "GoXLR")
+            {
+                RefreshGoXLRSettings();
+            }
+        }
+
+        public void InitializeControllersTab(DirectInputService directInputService)
+        {
+            _controllersTab = new ControllersTab(directInputService);
+            
+            // If Controllers is currently selected, refresh to show the new content
+            if (CategoryListBox.SelectedItem is ListBoxItem selectedItem && selectedItem.Tag as string == "Controllers")
+            {
+                LoadControllersSettings();
+            }
         }
 
         private void CategoryListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -46,6 +77,9 @@ namespace SimControlCentre.Views.Tabs
                     break;
                 case "GoXLR":
                     LoadGoXLRSettings();
+                    break;
+                case "Controllers":
+                    LoadControllersSettings();
                     break;
             }
         }
@@ -259,11 +293,76 @@ namespace SimControlCentre.Views.Tabs
                 testButton.Content = "Test Connection";
             };
             SettingsContent.Children.Add(testButton);
+
+            // Add Channels & Profiles content if available
+            if (_channelsProfilesTab != null)
+            {
+                // Separator
+                var separator = new System.Windows.Controls.Separator
+                {
+                    Margin = new Thickness(0, 30, 0, 20)
+                };
+                SettingsContent.Children.Add(separator);
+
+                // Channels & Profiles Title
+                var channelsTitle = new TextBlock
+                {
+                    Text = "Channels & Profiles",
+                    FontSize = 18,
+                    FontWeight = FontWeights.Bold,
+                    Margin = new Thickness(0, 0, 0, 15)
+                };
+                SettingsContent.Children.Add(channelsTitle);
+
+                // Embed the actual ChannelsProfilesTab content
+                var channelsContent = _channelsProfilesTab.Content as UIElement;
+                if (channelsContent != null)
+                {
+                    _channelsProfilesTab.Content = null; // Detach from original parent
+                    SettingsContent.Children.Add(channelsContent);
+                }
+            }
         }
 
         private void RefreshGoXLRSettings()
         {
             LoadSettingsCategory("GoXLR");
+        }
+
+        private void LoadControllersSettings()
+        {
+            // Title
+            var title = new TextBlock
+            {
+                Text = "Controller Configuration",
+                FontSize = 20,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 20)
+            };
+            SettingsContent.Children.Add(title);
+
+            // Embed the ControllersTab content if available
+            if (_controllersTab != null)
+            {
+                var controllersContent = _controllersTab.Content as UIElement;
+                if (controllersContent != null)
+                {
+                    _controllersTab.Content = null; // Detach from original parent
+                    SettingsContent.Children.Add(controllersContent);
+                }
+            }
+            else
+            {
+                var notInitializedMessage = new TextBlock
+                {
+                    Text = "Controllers not yet initialized. Please wait...",
+                    Foreground = System.Windows.Media.Brushes.Gray,
+                    FontStyle = FontStyles.Italic,
+                    Margin = new Thickness(0, 10, 0, 0),
+                    TextWrapping = TextWrapping.Wrap
+                };
+                SettingsContent.Children.Add(notInitializedMessage);
+            }
         }
 
         private void SetStartupRegistry(bool enable)
