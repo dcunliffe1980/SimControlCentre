@@ -55,6 +55,7 @@
                     <ListBoxItem Content="General" Tag="General"/>
                     <ListBoxItem Content="GoXLR" Tag="GoXLR"/>
                     <ListBoxItem Content="Controllers" Tag="Controllers"/>
+                    <ListBoxItem Content="About" Tag="About"/>
                 </ListBox>
             </StackPanel>
         </Border>

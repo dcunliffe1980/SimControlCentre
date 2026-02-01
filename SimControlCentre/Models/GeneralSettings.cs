@@ -34,5 +34,12 @@ public class GeneralSettings
     /// Run application at Windows startup
     /// </summary>
     public bool RunAtStartup { get; set; } = false;
+
+    /// <summary>
+    /// Check for updates on startup
+    /// </summary>
+    public bool CheckForUpdatesOnStartup { get; set; } = true;
 }
+
+
 

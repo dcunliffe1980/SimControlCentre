@@ -2,7 +2,7 @@
 ; https://jrsoftware.org/isinfo.php
 
 #define MyAppName "SimControlCentre"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.1.0"
 #define MyAppPublisher "Dave Cunliffe"
 #define MyAppURL "https://github.com/dcunliffe1980/SimControlCentre"
 #define MyAppExeName "SimControlCentre.exe"
@@ -60,6 +60,10 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [Code]
+var
+  ConfigBackupPath: String;
+  ShouldRestoreConfig: Boolean;
+
 // Check if .NET 8 Desktop Runtime is installed
 function IsDotNet8Installed: Boolean;
 var
@@ -72,7 +76,11 @@ end;
 function InitializeSetup: Boolean;
 var
   ErrorCode: Integer;
+  ConfigPath: String;
+  Answer: Integer;
 begin
+  ShouldRestoreConfig := False;
+  
   if not IsDotNet8Installed then
   begin
     if MsgBox('.NET 8 Desktop Runtime is required but not installed.' + #13#10 + #13#10 + 
@@ -92,6 +100,46 @@ begin
   else
   begin
     Result := True;
+    
+    // Check if config file exists
+    ConfigPath := ExpandConstant('{localappdata}\SimControlCentre\appsettings.json');
+    
+    if FileExists(ConfigPath) then
+    begin
+      Answer := MsgBox('An existing configuration file was found.' + #13#10 + #13#10 + 
+                       'Do you want to keep your current settings?' + #13#10 + #13#10 + 
+                       'Yes = Keep your hotkeys, channels, and app settings' + #13#10 + 
+                       'No = Start fresh with default settings', 
+                       mbConfirmation, MB_YESNO);
+      
+      if Answer = IDYES then
+      begin
+        // Backup config file
+        ConfigBackupPath := ExpandConstant('{tmp}\appsettings.json.backup');
+        FileCopy(ConfigPath, ConfigBackupPath, False);
+        ShouldRestoreConfig := True;
+      end;
+    end;
+  end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ConfigPath: String;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    // Restore config if user wanted to keep it
+    if ShouldRestoreConfig then
+    begin
+      ConfigPath := ExpandConstant('{localappdata}\SimControlCentre\appsettings.json');
+      
+      // Create directory if it doesn't exist
+      ForceDirectories(ExtractFilePath(ConfigPath));
+      
+      // Restore backup
+      FileCopy(ConfigBackupPath, ConfigPath, False);
+    end;
   end;
 end;
 

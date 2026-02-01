@@ -17,7 +17,6 @@ namespace SimControlCentre
         private SettingsTab? _settingsTab;
         private HotkeysTab? _hotkeysTab;
         private ExternalAppsTab? _externalAppsTab;
-        private AboutTab? _aboutTab;
 
         public MainWindow(AppSettings settings, ConfigurationService configService, GoXLRService goXLRService, iRacingMonitorService? iRacingMonitor = null)
         {
@@ -60,10 +59,6 @@ namespace SimControlCentre
                 _externalAppsTab = new ExternalAppsTab(_configService, _settings, _iRacingMonitor);
                 iRacingTabItem.Content = _externalAppsTab;
             }
-            
-            // Create About Tab
-            _aboutTab = new AboutTab(_configService);
-            AboutTabItem.Content = _aboutTab;
         }
 
         public void InitializeControllersTab(DirectInputService directInputService)

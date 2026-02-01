@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,6 +15,8 @@ namespace SimControlCentre.Views.Tabs
         private readonly MainWindow _mainWindow;
         private ChannelsProfilesTab? _channelsProfilesTab;
         private ControllersTab? _controllersTab;
+        private AboutTab? _aboutTab;
+        private readonly UpdateService _updateService;
 
         public SettingsTab(ConfigurationService configService, AppSettings settings, GoXLRService goXLRService, MainWindow mainWindow)
         {
@@ -23,6 +26,7 @@ namespace SimControlCentre.Views.Tabs
             _settings = settings;
             _goXLRService = goXLRService;
             _mainWindow = mainWindow;
+            _updateService = new UpdateService();
 
             // Select first category by default
             CategoryListBox.SelectedIndex = 0;
@@ -81,6 +85,9 @@ namespace SimControlCentre.Views.Tabs
                 case "Controllers":
                     LoadControllersSettings();
                     break;
+                case "About":
+                    LoadAboutSettings();
+                    break;
             }
         }
 
@@ -135,6 +142,25 @@ namespace SimControlCentre.Views.Tabs
                 SetStartupRegistry(false);
             };
             SettingsContent.Children.Add(startupCheck);
+
+            // Check for Updates on Startup
+            var updateCheck = new CheckBox
+            {
+                Content = "Check for updates on startup",
+                IsChecked = _settings.General.CheckForUpdatesOnStartup,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            updateCheck.Checked += (s, e) =>
+            {
+                _settings.General.CheckForUpdatesOnStartup = true;
+                _configService.Save(_settings);
+            };
+            updateCheck.Unchecked += (s, e) =>
+            {
+                _settings.General.CheckForUpdatesOnStartup = false;
+                _configService.Save(_settings);
+            };
+            SettingsContent.Children.Add(updateCheck);
         }
 
         private void LoadGoXLRSettings()
@@ -362,6 +388,111 @@ namespace SimControlCentre.Views.Tabs
                     TextWrapping = TextWrapping.Wrap
                 };
                 SettingsContent.Children.Add(notInitializedMessage);
+            }
+        }
+
+        private void LoadAboutSettings()
+        {
+            // Title
+            var title = new TextBlock
+            {
+                Text = "About SimControlCentre",
+                FontSize = 20,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 20)
+            };
+            SettingsContent.Children.Add(title);
+
+            // Version Info
+            var currentVersion = _updateService.GetCurrentVersion();
+            var versionText = new TextBlock
+            {
+                Text = $"Version: {currentVersion}",
+                FontSize = 14,
+                Margin = new Thickness(0, 0, 0, 20)
+            };
+            SettingsContent.Children.Add(versionText);
+
+            // Update Status
+            var updateStatusText = new TextBlock
+            {
+                Text = "Checking for updates...",
+                Foreground = System.Windows.Media.Brushes.Gray,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            SettingsContent.Children.Add(updateStatusText);
+
+            // Check for Updates Button
+            var checkUpdateButton = new Button
+            {
+                Content = "Check for Updates",
+                Padding = new Thickness(15, 8, 15, 8),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(0, 10, 0, 20)
+            };
+            checkUpdateButton.Click += async (s, e) =>
+            {
+                checkUpdateButton.IsEnabled = false;
+                checkUpdateButton.Content = "Checking...";
+                updateStatusText.Text = "Checking for updates...";
+                updateStatusText.Foreground = System.Windows.Media.Brushes.Gray;
+
+                var updateInfo = await _updateService.CheckForUpdateAsync();
+
+                if (!string.IsNullOrEmpty(updateInfo.Error))
+                {
+                    updateStatusText.Text = $"Error checking for updates: {updateInfo.Error}";
+                    updateStatusText.Foreground = System.Windows.Media.Brushes.Red;
+                }
+                else if (updateInfo.IsAvailable)
+                {
+                    updateStatusText.Text = $"Update available: v{updateInfo.LatestVersion}";
+                    updateStatusText.Foreground = System.Windows.Media.Brushes.Green;
+                    
+                    var result = MessageBox.Show(
+                        $"A new version is available!\n\nCurrent: v{updateInfo.CurrentVersion}\nLatest: v{updateInfo.LatestVersion}\n\nWould you like to download it now?",
+                        "Update Available",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Information);
+
+                    if (result == MessageBoxResult.Yes && !string.IsNullOrEmpty(updateInfo.ReleaseUrl))
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = updateInfo.ReleaseUrl,
+                            UseShellExecute = true
+                        });
+                    }
+                }
+                else
+                {
+                    updateStatusText.Text = "You are running the latest version!";
+                    updateStatusText.Foreground = System.Windows.Media.Brushes.Green;
+                }
+
+                checkUpdateButton.IsEnabled = true;
+                checkUpdateButton.Content = "Check for Updates";
+            };
+            SettingsContent.Children.Add(checkUpdateButton);
+
+            // Separator
+            var separator = new System.Windows.Controls.Separator
+            {
+                Margin = new Thickness(0, 20, 0, 20)
+            };
+            SettingsContent.Children.Add(separator);
+
+            // Embed AboutTab content if initialized
+            if (_aboutTab == null)
+            {
+                _aboutTab = new AboutTab(_configService);
+            }
+
+            var aboutContent = _aboutTab.Content as UIElement;
+            if (aboutContent != null)
+            {
+                _aboutTab.Content = null; // Detach from original parent
+                SettingsContent.Children.Add(aboutContent);
             }
         }
 

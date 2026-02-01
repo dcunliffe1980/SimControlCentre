@@ -200,6 +200,44 @@ public partial class App : Application
             // Removed notification popup for hotkeys
             Console.WriteLine($"Registered {registeredCount} keyboard hotkeys");
             
+            // Check for updates if enabled
+            if (Settings.General.CheckForUpdatesOnStartup)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var updateService = new UpdateService();
+                        var updateInfo = await updateService.CheckForUpdateAsync();
+
+                        if (updateInfo.IsAvailable && !string.IsNullOrEmpty(updateInfo.LatestVersion))
+                        {
+                            Dispatcher.Invoke(() =>
+                            {
+                                var result = System.Windows.MessageBox.Show(
+                                    $"A new version is available!\n\nCurrent: v{updateInfo.CurrentVersion}\nLatest: v{updateInfo.LatestVersion}\n\nWould you like to download it now?",
+                                    "Update Available",
+                                    System.Windows.MessageBoxButton.YesNo,
+                                    System.Windows.MessageBoxImage.Information);
+
+                                if (result == System.Windows.MessageBoxResult.Yes && !string.IsNullOrEmpty(updateInfo.ReleaseUrl))
+                                {
+                                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                                    {
+                                        FileName = updateInfo.ReleaseUrl,
+                                        UseShellExecute = true
+                                    });
+                                }
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[App] Update check failed: {ex.Message}");
+                    }
+                });
+            }
+            
             // Show window if not set to start minimized
             if (!Settings.Window.StartMinimized)
             {
