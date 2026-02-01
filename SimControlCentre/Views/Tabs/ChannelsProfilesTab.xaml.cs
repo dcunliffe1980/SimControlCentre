@@ -28,33 +28,61 @@ namespace SimControlCentre.Views.Tabs
             
             PopulateChannelsAndProfiles();
             
-            // Load profiles after a delay to allow connection to warm up
+            // Load profiles after waiting for connection
             _ = Task.Run(async () =>
             {
-                // Wait for GoXLR connection to be ready
-                await WaitForConnectionAsync();
+                Console.WriteLine("[ChannelsProfilesTab] Waiting for GoXLR connection...");
                 
-                // Load profiles on UI thread
-                await Dispatcher.InvokeAsync(async () =>
+                // Wait for GoXLR connection to be ready (up to 15 seconds)
+                var connected = await WaitForConnectionAsync();
+                
+                if (connected)
                 {
-                    await FetchGoXLRProfilesAsync();
-                });
+                    Console.WriteLine("[ChannelsProfilesTab] Connection ready, loading profiles...");
+                    
+                    // Load profiles on UI thread
+                    await Dispatcher.InvokeAsync(async () =>
+                    {
+                        await FetchGoXLRProfilesAsync();
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("[ChannelsProfilesTab] Timeout waiting for connection");
+                    
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        ProfileStatusText.Text = "Connection timeout - click Refresh to retry";
+                        ProfileStatusText.Foreground = System.Windows.Media.Brushes.Orange;
+                    });
+                }
             });
         }
 
-        private async Task WaitForConnectionAsync()
+        private async Task<bool> WaitForConnectionAsync()
         {
-            // Wait up to 10 seconds for connection to warm
-            for (int i = 0; i < 20; i++)
+            // Wait up to 15 seconds for connection to warm (30 checks * 500ms)
+            for (int i = 0; i < 30; i++)
             {
-                if (await _goXLRService.IsConnectedAsync())
+                try
                 {
-                    Console.WriteLine("[ChannelsProfilesTab] GoXLR connection ready");
-                    return;
+                    if (await _goXLRService.IsConnectedAsync())
+                    {
+                        Console.WriteLine($"[ChannelsProfilesTab] GoXLR connected after {i * 500}ms");
+                        // Give it a bit more time to fully settle
+                        await Task.Delay(500);
+                        return true;
+                    }
                 }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ChannelsProfilesTab] Connection check failed: {ex.Message}");
+                }
+                
                 await Task.Delay(500);
             }
-            Console.WriteLine("[ChannelsProfilesTab] Timeout waiting for GoXLR connection");
+            
+            return false;
         }
 
         private void PopulateChannelsAndProfiles()

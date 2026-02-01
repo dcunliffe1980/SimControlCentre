@@ -41,7 +41,7 @@ public class GoXLRApiClient : IDisposable
         _httpClient = new HttpClient(handler)
         {
             BaseAddress = new Uri(apiEndpoint),
-            Timeout = TimeSpan.FromMilliseconds(1000) // Fast timeout for responsiveness
+            Timeout = TimeSpan.FromMilliseconds(2000) // Keep at 2 seconds for reliability
         };
         
         // Start aggressive connection warming
@@ -50,40 +50,51 @@ public class GoXLRApiClient : IDisposable
 
     private void StartConnectionWarming()
     {
-        // Warm connection immediately on startup
+        Console.WriteLine("[GoXLRApiClient] Starting connection warming...");
+        
+        // Warm connection immediately and aggressively on startup
         _ = Task.Run(async () =>
         {
-            for (int i = 0; i < 3; i++) // Try 3 times initially
+            for (int i = 0; i < 5; i++) // Try 5 times initially
             {
-                await WarmConnectionAsync();
-                if (_isConnectionWarmed) break;
-                await Task.Delay(1000);
+                Console.WriteLine($"[GoXLRApiClient] Warmup attempt {i + 1}/5");
+                var success = await WarmConnectionAsync();
+                if (success)
+                {
+                    Console.WriteLine($"[GoXLRApiClient] Connection warmed successfully on attempt {i + 1}");
+                    break;
+                }
+                await Task.Delay(500); // Wait 500ms between attempts
             }
         });
         
-        // Keep connection warm with periodic pings every 10 seconds
+        // Keep connection warm with periodic pings every 5 seconds (more frequent)
         _connectionWarmupTimer = new Timer(async _ =>
         {
             await WarmConnectionAsync();
-        }, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+        }, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
     }
 
-    private async Task WarmConnectionAsync()
+    private async Task<bool> WarmConnectionAsync()
     {
         try
         {
-            var response = await _httpClient.GetAsync("/api/status");
+            // Use a real endpoint that exists
+            var response = await _httpClient.GetAsync("/api/get-devices");
             if (response.IsSuccessStatusCode)
             {
                 _isConnectionWarmed = true;
                 // Read and discard response to ensure connection is fully established
                 _ = await response.Content.ReadAsStringAsync();
+                return true;
             }
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[GoXLRApiClient] Connection warming failed: {ex.Message}");
             _isConnectionWarmed = false;
         }
+        return false;
     }
 
     public bool IsConnectionWarmed => _isConnectionWarmed;
