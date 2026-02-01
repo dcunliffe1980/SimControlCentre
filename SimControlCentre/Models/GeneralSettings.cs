@@ -39,7 +39,18 @@ public class GeneralSettings
     /// Check for updates on startup
     /// </summary>
     public bool CheckForUpdatesOnStartup { get; set; } = true;
+
+    /// <summary>
+    /// Enable general application logging
+    /// </summary>
+    public bool EnableApplicationLogging { get; set; } = true;
+
+    /// <summary>
+    /// Enable detailed GoXLR diagnostic logging
+    /// </summary>
+    public bool EnableGoXLRDiagnostics { get; set; } = false;
 }
+
 
 
 

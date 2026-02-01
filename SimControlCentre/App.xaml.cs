@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Windows;
@@ -62,6 +63,17 @@ public partial class App : Application
         {
             // Load configuration
             Settings = _configService.Load();
+
+            // Initialize logging
+            var logDirectory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "SimControlCentre",
+                "logs"
+            );
+            Directory.CreateDirectory(logDirectory);
+            
+            // Initialize GoXLR diagnostics
+            GoXLRDiagnostics.Initialize(logDirectory, Settings.General.EnableGoXLRDiagnostics);
 
             // Initialize GoXLR service
             _goXLRService = new GoXLRService(Settings);

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -84,6 +85,9 @@ namespace SimControlCentre.Views.Tabs
                     break;
                 case "Controllers":
                     LoadControllersSettings();
+                    break;
+                case "Logs":
+                    LoadLogsSettings();
                     break;
                 case "About":
                     LoadAboutSettings();
@@ -389,6 +393,123 @@ namespace SimControlCentre.Views.Tabs
                 };
                 SettingsContent.Children.Add(notInitializedMessage);
             }
+        }
+
+        private void LoadLogsSettings()
+        {
+            // Title
+            var title = new TextBlock
+            {
+                Text = "Logging Configuration",
+                FontSize = 20,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 20)
+            };
+            SettingsContent.Children.Add(title);
+
+            // Description
+            var description = new TextBlock
+            {
+                Text = "Configure application and diagnostic logging. Logs are stored in %LocalAppData%\\SimControlCentre\\logs",
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = System.Windows.Media.Brushes.Gray,
+                Margin = new Thickness(0, 0, 0, 20)
+            };
+            SettingsContent.Children.Add(description);
+
+            // Application Logging
+            var appLoggingCheck = new CheckBox
+            {
+                Content = "Enable Application Logging",
+                IsChecked = _settings.General.EnableApplicationLogging,
+                Margin = new Thickness(0, 0, 0, 5)
+            };
+            appLoggingCheck.Checked += (s, e) =>
+            {
+                _settings.General.EnableApplicationLogging = true;
+                _configService.Save(_settings);
+            };
+            appLoggingCheck.Unchecked += (s, e) =>
+            {
+                _settings.General.EnableApplicationLogging = false;
+                _configService.Save(_settings);
+            };
+            SettingsContent.Children.Add(appLoggingCheck);
+
+            var appLoggingDesc = new TextBlock
+            {
+                Text = "Logs general application events, errors, and iRacing integration activities",
+                FontSize = 11,
+                Foreground = System.Windows.Media.Brushes.Gray,
+                Margin = new Thickness(20, 0, 0, 15),
+                TextWrapping = TextWrapping.Wrap
+            };
+            SettingsContent.Children.Add(appLoggingDesc);
+
+            // GoXLR Diagnostics
+            var goxlrDiagCheck = new CheckBox
+            {
+                Content = "Enable GoXLR Diagnostics",
+                IsChecked = _settings.General.EnableGoXLRDiagnostics,
+                Margin = new Thickness(0, 0, 0, 5)
+            };
+            goxlrDiagCheck.Checked += (s, e) =>
+            {
+                _settings.General.EnableGoXLRDiagnostics = true;
+                _configService.Save(_settings);
+                GoXLRDiagnostics.SetEnabled(true);
+            };
+            goxlrDiagCheck.Unchecked += (s, e) =>
+            {
+                _settings.General.EnableGoXLRDiagnostics = false;
+                _configService.Save(_settings);
+                GoXLRDiagnostics.SetEnabled(false);
+            };
+            SettingsContent.Children.Add(goxlrDiagCheck);
+
+            var goxlrDiagDesc = new TextBlock
+            {
+                Text = "Detailed connection timing, warmup attempts, and API responses for troubleshooting GoXLR issues",
+                FontSize = 11,
+                Foreground = System.Windows.Media.Brushes.Gray,
+                Margin = new Thickness(20, 0, 0, 20),
+                TextWrapping = TextWrapping.Wrap
+            };
+            SettingsContent.Children.Add(goxlrDiagDesc);
+
+            // Open Logs Folder Button
+            var openLogsButton = new Button
+            {
+                Content = "Open Logs Folder",
+                Padding = new Thickness(15, 8, 15, 8),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(0, 10, 0, 0)
+            };
+            openLogsButton.Click += (s, e) =>
+            {
+                var logDirectory = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "SimControlCentre",
+                    "logs"
+                );
+
+                if (Directory.Exists(logDirectory))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = logDirectory,
+                        UseShellExecute = true
+                    });
+                }
+                else
+                {
+                    MessageBox.Show("Logs folder does not exist yet. It will be created when logging is enabled.",
+                        "Logs Folder",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+            };
+            SettingsContent.Children.Add(openLogsButton);
         }
 
         private void LoadAboutSettings()

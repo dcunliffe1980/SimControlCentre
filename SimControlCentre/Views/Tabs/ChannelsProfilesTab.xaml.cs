@@ -31,14 +31,14 @@ namespace SimControlCentre.Views.Tabs
             // Load profiles after waiting for connection
             _ = Task.Run(async () =>
             {
-                Console.WriteLine("[ChannelsProfilesTab] Waiting for GoXLR connection...");
+                GoXLRDiagnostics.Info("ChannelsProfilesTab", "Waiting for GoXLR connection...");
                 
                 // Wait for GoXLR connection to be ready (up to 15 seconds)
                 var connected = await WaitForConnectionAsync();
                 
                 if (connected)
                 {
-                    Console.WriteLine("[ChannelsProfilesTab] Connection ready, loading profiles...");
+                    GoXLRDiagnostics.Info("ChannelsProfilesTab", "Connection ready, loading profiles...");
                     
                     // Load profiles on UI thread
                     await Dispatcher.InvokeAsync(async () =>
@@ -48,7 +48,7 @@ namespace SimControlCentre.Views.Tabs
                 }
                 else
                 {
-                    Console.WriteLine("[ChannelsProfilesTab] Timeout waiting for connection");
+                    GoXLRDiagnostics.Warning("ChannelsProfilesTab", "Timeout waiting for connection");
                     
                     await Dispatcher.InvokeAsync(() =>
                     {
@@ -68,7 +68,7 @@ namespace SimControlCentre.Views.Tabs
                 {
                     if (await _goXLRService.IsConnectedAsync())
                     {
-                        Console.WriteLine($"[ChannelsProfilesTab] GoXLR connected after {i * 500}ms");
+                        GoXLRDiagnostics.Info("ChannelsProfilesTab", $"GoXLR connected after {i * 500}ms");
                         // Give it a bit more time to fully settle
                         await Task.Delay(500);
                         return true;
@@ -76,7 +76,7 @@ namespace SimControlCentre.Views.Tabs
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ChannelsProfilesTab] Connection check failed: {ex.Message}");
+                    GoXLRDiagnostics.Error("ChannelsProfilesTab", $"Connection check failed: {ex.Message}");
                 }
                 
                 await Task.Delay(500);

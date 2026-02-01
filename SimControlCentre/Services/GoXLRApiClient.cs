@@ -50,18 +50,18 @@ public class GoXLRApiClient : IDisposable
 
     private void StartConnectionWarming()
     {
-        Console.WriteLine("[GoXLRApiClient] Starting connection warming...");
+        GoXLRDiagnostics.Info("GoXLRApiClient", "Starting connection warming...");
         
         // Warm connection immediately and aggressively on startup
         _ = Task.Run(async () =>
         {
             for (int i = 0; i < 5; i++) // Try 5 times initially
             {
-                Console.WriteLine($"[GoXLRApiClient] Warmup attempt {i + 1}/5");
+                GoXLRDiagnostics.Debug("GoXLRApiClient", $"Warmup attempt {i + 1}/5");
                 var success = await WarmConnectionAsync();
                 if (success)
                 {
-                    Console.WriteLine($"[GoXLRApiClient] Connection warmed successfully on attempt {i + 1}");
+                    GoXLRDiagnostics.Info("GoXLRApiClient", $"Connection warmed successfully on attempt {i + 1}");
                     break;
                 }
                 await Task.Delay(500); // Wait 500ms between attempts
@@ -91,7 +91,7 @@ public class GoXLRApiClient : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[GoXLRApiClient] Connection warming failed: {ex.Message}");
+            GoXLRDiagnostics.Error("GoXLRApiClient", $"Connection warming failed: {ex.Message}");
             _isConnectionWarmed = false;
         }
         return false;
