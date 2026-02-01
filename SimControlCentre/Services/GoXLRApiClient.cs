@@ -41,10 +41,10 @@ public class GoXLRApiClient : IDisposable
         _httpClient = new HttpClient(handler)
         {
             BaseAddress = new Uri(apiEndpoint),
-            Timeout = TimeSpan.FromMilliseconds(2000) // Keep at 2 seconds for reliability
+            Timeout = TimeSpan.FromMilliseconds(2000) // Fast timeout for normal operations
         };
         
-        // Start aggressive connection warming
+        // Start aggressive connection warming with longer timeout
         StartConnectionWarming();
     }
 
@@ -55,32 +55,43 @@ public class GoXLRApiClient : IDisposable
         // Warm connection immediately and aggressively on startup
         _ = Task.Run(async () =>
         {
-            for (int i = 0; i < 5; i++) // Try 5 times initially
+            for (int i = 0; i < 10; i++) // Try 10 times (up to 50 seconds total)
             {
-                GoXLRDiagnostics.Debug("GoXLRApiClient", $"Warmup attempt {i + 1}/5");
-                var success = await WarmConnectionAsync();
+                GoXLRDiagnostics.Debug("GoXLRApiClient", $"Warmup attempt {i + 1}/10");
+                var success = await WarmConnectionAsync(isInitialWarmup: true);
                 if (success)
                 {
                     GoXLRDiagnostics.Info("GoXLRApiClient", $"Connection warmed successfully on attempt {i + 1}");
                     break;
                 }
-                await Task.Delay(500); // Wait 500ms between attempts
+                
+                // Wait longer between attempts if failing (exponential backoff)
+                var delay = Math.Min(1000 * (i + 1), 5000); // 1s, 2s, 3s, 4s, 5s max
+                GoXLRDiagnostics.Debug("GoXLRApiClient", $"Waiting {delay}ms before next attempt...");
+                await Task.Delay(delay);
+            }
+            
+            if (!_isConnectionWarmed)
+            {
+                GoXLRDiagnostics.Warning("GoXLRApiClient", "Failed to warm connection after 10 attempts. GoXLR Utility may not be running.");
             }
         });
         
         // Keep connection warm with periodic pings every 5 seconds (more frequent)
         _connectionWarmupTimer = new Timer(async _ =>
         {
-            await WarmConnectionAsync();
+            await WarmConnectionAsync(isInitialWarmup: false);
         }, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
     }
 
-    private async Task<bool> WarmConnectionAsync()
+    private async Task<bool> WarmConnectionAsync(bool isInitialWarmup)
     {
         try
         {
-            // Use a real endpoint that exists
-            var response = await _httpClient.GetAsync("/api/get-devices");
+            // Use longer timeout for initial warmup, shorter for keepalive
+            using var cts = new CancellationTokenSource(isInitialWarmup ? 10000 : 3000);
+            
+            var response = await _httpClient.GetAsync("/api/get-devices", cts.Token);
             if (response.IsSuccessStatusCode)
             {
                 _isConnectionWarmed = true;
@@ -88,6 +99,11 @@ public class GoXLRApiClient : IDisposable
                 _ = await response.Content.ReadAsStringAsync();
                 return true;
             }
+        }
+        catch (TaskCanceledException)
+        {
+            GoXLRDiagnostics.Warning("GoXLRApiClient", $"Connection warming timeout ({(isInitialWarmup ? "10s initial" : "3s keepalive")})");
+            _isConnectionWarmed = false;
         }
         catch (Exception ex)
         {
