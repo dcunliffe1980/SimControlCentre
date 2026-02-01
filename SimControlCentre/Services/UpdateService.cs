@@ -57,6 +57,24 @@ namespace SimControlCentre.Services
                 Console.WriteLine($"[UpdateService] Checking for updates at: {GitHubApiUrl}");
                 Console.WriteLine($"[UpdateService] Current version: {GetCurrentVersion()}");
                 
+                // Test basic internet connectivity first
+                try
+                {
+                    using var testClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+                    var testResponse = await testClient.GetAsync("https://www.google.com");
+                    Console.WriteLine($"[UpdateService] Internet connectivity test: {testResponse.StatusCode}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[UpdateService] Internet connectivity test failed: {ex.Message}");
+                    return new UpdateInfo
+                    {
+                        IsAvailable = false,
+                        CurrentVersion = GetCurrentVersion(),
+                        Error = "No internet connection detected. Please check your network settings."
+                    };
+                }
+                
                 var response = await _httpClient.GetAsync(GitHubApiUrl);
                 
                 Console.WriteLine($"[UpdateService] Response status: {response.StatusCode}");
@@ -76,10 +94,10 @@ namespace SimControlCentre.Services
                 // Ensure successful response
                 response.EnsureSuccessStatusCode();
                 
-                var responseBody = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[UpdateService] Response body length: {responseBody.Length}");
-                
+                // Read and parse JSON
                 var releaseData = await response.Content.ReadFromJsonAsync<GitHubRelease>();
+                
+                Console.WriteLine($"[UpdateService] Successfully parsed release data");
                 
                 if (releaseData == null || string.IsNullOrWhiteSpace(releaseData.tag_name))
                 {
