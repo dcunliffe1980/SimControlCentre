@@ -212,15 +212,21 @@ public partial class App : Application
             // Removed notification popup for hotkeys
             Console.WriteLine($"Registered {registeredCount} keyboard hotkeys");
             
-            // Check for updates if enabled
+            // Check for updates if enabled (don't block startup)
             if (Settings.General.CheckForUpdatesOnStartup)
             {
                 _ = Task.Run(async () =>
                 {
                     try
                     {
+                        // Wait a bit for app to fully start
+                        await Task.Delay(3000);
+                        
+                        Console.WriteLine("[App] Starting update check...");
                         var updateService = new UpdateService();
                         var updateInfo = await updateService.CheckForUpdateAsync();
+
+                        Console.WriteLine($"[App] Update check complete. IsAvailable: {updateInfo.IsAvailable}");
 
                         if (updateInfo.IsAvailable && !string.IsNullOrEmpty(updateInfo.LatestVersion))
                         {
@@ -241,6 +247,14 @@ public partial class App : Application
                                     });
                                 }
                             });
+                        }
+                        else if (!string.IsNullOrEmpty(updateInfo.Error))
+                        {
+                            Console.WriteLine($"[App] Update check error: {updateInfo.Error}");
+                        }
+                        else
+                        {
+                            Console.WriteLine("[App] No updates available");
                         }
                     }
                     catch (Exception ex)
