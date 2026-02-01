@@ -8,7 +8,7 @@ namespace SimControlCentre.Views.Tabs
 {
     public partial class ControllersTab : UserControl
     {
-        private readonly DirectInputService _directInputService;
+        private readonly DirectInputService? _directInputService;
 
         public ControllersTab(DirectInputService directInputService)
         {
