@@ -27,6 +27,34 @@ namespace SimControlCentre.Views.Tabs
             _settings = settings;
             
             PopulateChannelsAndProfiles();
+            
+            // Load profiles after a delay to allow connection to warm up
+            _ = Task.Run(async () =>
+            {
+                // Wait for GoXLR connection to be ready
+                await WaitForConnectionAsync();
+                
+                // Load profiles on UI thread
+                await Dispatcher.InvokeAsync(async () =>
+                {
+                    await FetchGoXLRProfilesAsync();
+                });
+            });
+        }
+
+        private async Task WaitForConnectionAsync()
+        {
+            // Wait up to 10 seconds for connection to warm
+            for (int i = 0; i < 20; i++)
+            {
+                if (await _goXLRService.IsConnectedAsync())
+                {
+                    Console.WriteLine("[ChannelsProfilesTab] GoXLR connection ready");
+                    return;
+                }
+                await Task.Delay(500);
+            }
+            Console.WriteLine("[ChannelsProfilesTab] Timeout waiting for GoXLR connection");
         }
 
         private void PopulateChannelsAndProfiles()

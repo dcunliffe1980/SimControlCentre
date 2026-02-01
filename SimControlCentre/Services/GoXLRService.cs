@@ -38,6 +38,11 @@ public class GoXLRService : IDisposable
     public bool IsConfigured => !string.IsNullOrWhiteSpace(SerialNumber);
 
     /// <summary>
+    /// Checks if the connection to GoXLR is warmed and ready
+    /// </summary>
+    public bool IsConnectionWarmed => _apiClient?.IsConnectionWarmed ?? false;
+
+    /// <summary>
     /// Adjusts volume for a channel by the configured step amount
     /// </summary>
     public async Task<VolumeChangeResult> AdjustVolumeAsync(string channel, bool increase)

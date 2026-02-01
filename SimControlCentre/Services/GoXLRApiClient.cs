@@ -13,6 +13,8 @@ public class GoXLRApiClient : IDisposable
     private readonly HttpClient _httpClient;
     private readonly string _apiEndpoint;
     private readonly int _cacheTimeMs;
+    private Timer? _connectionWarmupTimer;
+    private bool _isConnectionWarmed = false;
     
     // Volume cache
     private readonly Dictionary<string, CachedVolume> _volumeCache = new();
@@ -27,12 +29,64 @@ public class GoXLRApiClient : IDisposable
         _apiEndpoint = apiEndpoint;
         _cacheTimeMs = cacheTimeMs;
         
-        _httpClient = new HttpClient
+        // Use SocketsHttpHandler for better connection pooling
+        var handler = new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(10),
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
+            MaxConnectionsPerServer = 10,
+            EnableMultipleHttp2Connections = true
+        };
+        
+        _httpClient = new HttpClient(handler)
         {
             BaseAddress = new Uri(apiEndpoint),
-            Timeout = TimeSpan.FromMilliseconds(5000) // Increased from 2000ms to 5000ms (5 seconds)
+            Timeout = TimeSpan.FromMilliseconds(1000) // Fast timeout for responsiveness
         };
+        
+        // Start aggressive connection warming
+        StartConnectionWarming();
     }
+
+    private void StartConnectionWarming()
+    {
+        // Warm connection immediately on startup
+        _ = Task.Run(async () =>
+        {
+            for (int i = 0; i < 3; i++) // Try 3 times initially
+            {
+                await WarmConnectionAsync();
+                if (_isConnectionWarmed) break;
+                await Task.Delay(1000);
+            }
+        });
+        
+        // Keep connection warm with periodic pings every 10 seconds
+        _connectionWarmupTimer = new Timer(async _ =>
+        {
+            await WarmConnectionAsync();
+        }, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+    }
+
+    private async Task WarmConnectionAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("/api/status");
+            if (response.IsSuccessStatusCode)
+            {
+                _isConnectionWarmed = true;
+                // Read and discard response to ensure connection is fully established
+                _ = await response.Content.ReadAsStringAsync();
+            }
+        }
+        catch
+        {
+            _isConnectionWarmed = false;
+        }
+    }
+
+    public bool IsConnectionWarmed => _isConnectionWarmed;
 
     /// <summary>
     /// Gets the current device status including volumes and profiles
@@ -316,6 +370,7 @@ public class GoXLRApiClient : IDisposable
 
     public void Dispose()
     {
+        _connectionWarmupTimer?.Dispose();
         _httpClient?.Dispose();
     }
 
