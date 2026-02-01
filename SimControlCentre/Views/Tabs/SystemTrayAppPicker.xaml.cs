@@ -13,6 +13,7 @@ namespace SimControlCentre.Views.Tabs
     public partial class SystemTrayAppPicker : Window
     {
         public ExternalApp? ResultApp { get; private set; }
+        private List<RunningAppInfo> _allApps = new List<RunningAppInfo>();
 
         public SystemTrayAppPicker()
         {
@@ -127,7 +128,30 @@ namespace SimControlCentre.Views.Tabs
                 .ThenBy(a => a.ProcessName)
                 .ToList();
             
-            AppsListBox.ItemsSource = sortedApps;
+            _allApps = sortedApps;
+            AppsListBox.ItemsSource = _allApps;
+        }
+
+        private void SearchBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            var searchText = SearchBox.Text.ToLower();
+            
+            if (string.IsNullOrWhiteSpace(searchText))
+            {
+                // Show all apps
+                AppsListBox.ItemsSource = _allApps;
+            }
+            else
+            {
+                // Filter apps based on search text
+                var filteredApps = _allApps.Where(app =>
+                    app.ProcessName.ToLower().Contains(searchText) ||
+                    app.MainWindowTitle.ToLower().Contains(searchText) ||
+                    app.ExecutablePath.ToLower().Contains(searchText)
+                ).ToList();
+                
+                AppsListBox.ItemsSource = filteredApps;
+            }
         }
 
         private string GetFriendlyName(string executablePath, string fallbackName)

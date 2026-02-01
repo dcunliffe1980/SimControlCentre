@@ -19,6 +19,7 @@ namespace SimControlCentre.Services
         private bool _iRacingWasRunning = false;
         private readonly Dictionary<string, int> _runningApps = new(); // ExternalApp.Name -> ProcessId
         private bool _isDisposed = false;
+        private CancellationTokenSource? _stopAppsCancellation;
 
         // Windows API for minimizing windows
         [DllImport("user32.dll")]
@@ -64,6 +65,14 @@ namespace SimControlCentre.Services
                     Logger.Info("iRacingMonitor", "========================================");
                     _iRacingWasRunning = true;
                     
+                    // Cancel any pending stop operations (session transition)
+                    if (_stopAppsCancellation != null)
+                    {
+                        Logger.Info("iRacingMonitor", "Cancelling pending stop operation (session transition detected)");
+                        _stopAppsCancellation.Cancel();
+                        _stopAppsCancellation = null;
+                    }
+                    
                     iRacingStateChanged?.Invoke(this, new iRacingStateChangedEventArgs { IsRunning = true });
                     
                     // Stop running apps that should stop when iRacing starts
@@ -103,12 +112,26 @@ namespace SimControlCentre.Services
                     
                     iRacingStateChanged?.Invoke(this, new iRacingStateChangedEventArgs { IsRunning = false });
                     
-                    // Stop external apps (async, don't block timer)
+                    // Create cancellation token for stop operation
+                    _stopAppsCancellation = new CancellationTokenSource();
+                    var cancellationToken = _stopAppsCancellation.Token;
+                    
+                    // Stop external apps with delay (async, don't block timer)
                     _ = Task.Run(async () => 
                     {
                         try
                         {
+                            // Wait 5 seconds before stopping (in case of session transition)
+                            Logger.Info("iRacingMonitor", "Waiting 5 seconds before stopping apps (session transition protection)...");
+                            await Task.Delay(5000, cancellationToken);
+                            
+                            // If we get here, delay completed without cancellation
+                            Logger.Info("iRacingMonitor", "Delay completed, proceeding with app shutdown");
                             await StopExternalApps();
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            Logger.Info("iRacingMonitor", "Stop operation cancelled - iRacing restarted (session transition)");
                         }
                         catch (Exception ex)
                         {

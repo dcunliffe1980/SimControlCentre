@@ -27,13 +27,41 @@
             <Run Text="This frees up CPU and RAM for better racing performance." FontSize="11" Foreground="Gray"/>
         </TextBlock>
         
+        <!-- Search Box -->
+        <TextBox Grid.Row="0"
+                Name="SearchBox"
+                Margin="0,60,0,10"
+                Padding="8,5"
+                TextChanged="SearchBox_TextChanged">
+            <TextBox.Style>
+                <Style TargetType="TextBox">
+                    <Setter Property="Foreground" Value="Black"/>
+                    <Style.Triggers>
+                        <Trigger Property="Text" Value="">
+                            <Setter Property="Background">
+                                <Setter.Value>
+                                    <VisualBrush Stretch="None" AlignmentX="Left">
+                                        <VisualBrush.Visual>
+                                            <TextBlock Text="Search applications..." 
+                                                      Foreground="Gray" 
+                                                      Margin="8,5,0,0"/>
+                                        </VisualBrush.Visual>
+                                    </VisualBrush>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBox.Style>
+        </TextBox>
+        
         <!-- UWP Warning -->
         <Border Grid.Row="0" 
                 Background="#FFF9E6"
                 BorderBrush="Orange"
                 BorderThickness="1"
                 Padding="10"
-                Margin="0,70,0,15"
+                Margin="0,110,0,15"
                 CornerRadius="4">
             <StackPanel>
                 <TextBlock FontWeight="Bold" Foreground="DarkOrange" Margin="0,0,0,5">
