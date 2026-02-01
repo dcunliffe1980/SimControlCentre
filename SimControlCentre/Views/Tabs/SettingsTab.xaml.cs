@@ -613,17 +613,38 @@ namespace SimControlCentre.Views.Tabs
                     using var client = new System.Net.Http.HttpClient();
                     client.DefaultRequestHeaders.Add("User-Agent", "SimControlCentre");
                     
-                    var url = "https://api.github.com/repos/dcunliffe1980/SimControlCentre/releases/latest";
-                    UpdateDiagnostics.Log($"[DEBUG] Testing: {url}");
+                    // Test 1: Latest release
+                    var url1 = "https://api.github.com/repos/dcunliffe1980/SimControlCentre/releases/latest";
+                    UpdateDiagnostics.Log($"[DEBUG] Testing: {url1}");
                     
-                    var response = await client.GetAsync(url);
-                    UpdateDiagnostics.Log($"[DEBUG] Status: {response.StatusCode}");
+                    var response1 = await client.GetAsync(url1);
+                    UpdateDiagnostics.Log($"[DEBUG] /latest Status: {response1.StatusCode}");
                     
-                    var content = await response.Content.ReadAsStringAsync();
-                    UpdateDiagnostics.Log($"[DEBUG] Response: {content}");
+                    var content1 = await response1.Content.ReadAsStringAsync();
+                    UpdateDiagnostics.Log($"[DEBUG] /latest Response: {content1}");
                     
-                    MessageBox.Show($"Status: {response.StatusCode}\n\nCheck logs folder for full response",
-                        "API Test",
+                    // Test 2: All releases
+                    var url2 = "https://api.github.com/repos/dcunliffe1980/SimControlCentre/releases";
+                    UpdateDiagnostics.Log($"[DEBUG] Testing: {url2}");
+                    
+                    var response2 = await client.GetAsync(url2);
+                    UpdateDiagnostics.Log($"[DEBUG] /releases Status: {response2.StatusCode}");
+                    
+                    var content2 = await response2.Content.ReadAsStringAsync();
+                    UpdateDiagnostics.Log($"[DEBUG] /releases Response: {content2}");
+                    
+                    // Test 3: Specific release by tag
+                    var url3 = "https://api.github.com/repos/dcunliffe1980/SimControlCentre/releases/tags/v1.1.1";
+                    UpdateDiagnostics.Log($"[DEBUG] Testing: {url3}");
+                    
+                    var response3 = await client.GetAsync(url3);
+                    UpdateDiagnostics.Log($"[DEBUG] /tags/v1.1.1 Status: {response3.StatusCode}");
+                    
+                    var content3 = await response3.Content.ReadAsStringAsync();
+                    UpdateDiagnostics.Log($"[DEBUG] /tags/v1.1.1 Response: {content3}");
+                    
+                    MessageBox.Show($"/latest: {response1.StatusCode}\n/releases: {response2.StatusCode}\n/tags/v1.1.1: {response3.StatusCode}\n\nCheck logs folder for full responses",
+                        "API Test Results",
                         MessageBoxButton.OK,
                         MessageBoxImage.Information);
                 }
