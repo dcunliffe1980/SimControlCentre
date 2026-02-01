@@ -1,18 +1,16 @@
 <Window x:Class="SimControlCentre.Views.Tabs.SystemTrayAppPicker"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Select Application to Close" 
         Height="600" 
         Width="700"
-        WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize">
-    <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-    </Window.Resources>
-    <Grid Margin="15">
+    WindowStartupLocation="CenterOwner"
+    ResizeMode="NoResize">
+<Window.Resources>
+    <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+</Window.Resources>
+<Grid Margin="15">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
@@ -29,33 +27,10 @@
             <Run Text="This frees up CPU and RAM for better racing performance." FontSize="11" Foreground="Gray"/>
         </TextBlock>
         
-        <!-- UWP Warning -->
-        <Border Grid.Row="1" 
-                Background="#FFF9E6"
-                BorderBrush="Orange"
-                BorderThickness="1"
-                Padding="10"
-                Margin="0,0,0,10"
-                CornerRadius="4">
-            <StackPanel>
-                <TextBlock FontWeight="Bold" Foreground="DarkOrange" Margin="0,0,0,5">
-                    WARNING: Windows Store Apps (UWP) Not Supported
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#666">
-                    <Run Text="Apps like Xbox, Microsoft Store, and Windows Settings cannot be reliably closed."/>
-                    <LineBreak/>
-                    <Run Text="These apps use protected processes that require special permissions."/>
-                    <LineBreak/>
-                    <Run FontWeight="SemiBold" Text="Works with: "/>
-                    <Run Text="Discord, Spotify, Chrome, Steam, and most traditional desktop apps"/>
-                </TextBlock>
-            </StackPanel>
-        </Border>
-        
         <!-- Search Box -->
-        <TextBox Grid.Row="2"
+        <TextBox Grid.Row="0"
                 Name="SearchBox"
-                Margin="0,0,0,10"
+                Margin="0,60,0,10"
                 Padding="8,5"
                 TextChanged="SearchBox_TextChanged">
             <TextBox.Style>
@@ -79,9 +54,32 @@
                 </Style>
             </TextBox.Style>
         </TextBox>
+        
+        <!-- UWP Warning -->
+        <Border Grid.Row="0" 
+                Background="#FFF9E6"
+                BorderBrush="Orange"
+                BorderThickness="1"
+                Padding="10"
+                Margin="0,110,0,15"
+                CornerRadius="4">
+            <StackPanel>
+                <TextBlock FontWeight="Bold" Foreground="DarkOrange" Margin="0,0,0,5">
+                    WARNING: Windows Store Apps (UWP) Not Supported
+                </TextBlock>
+                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#666">
+                    <Run Text="Apps like Xbox, Microsoft Store, and Windows Settings cannot be reliably closed."/>
+                    <LineBreak/>
+                    <Run Text="These apps use protected processes that require special permissions."/>
+                    <LineBreak/>
+                    <Run FontWeight="SemiBold" Text="Works with: "/>
+                    <Run Text="Discord, Spotify, Chrome, Steam, and most traditional desktop apps"/>
+                </TextBlock>
+            </StackPanel>
+        </Border>
 
         <!-- Apps List -->
-        <Border Grid.Row="3" 
+        <Border Grid.Row="1" 
                 BorderBrush="LightGray" 
                 BorderThickness="1"
                 Padding="5">
@@ -167,7 +165,7 @@
         </Border>
 
         <!-- Buttons -->
-        <StackPanel Grid.Row="4" 
+        <StackPanel Grid.Row="2" 
                     Orientation="Horizontal" 
                     HorizontalAlignment="Right"
                     Margin="0,15,0,0">
