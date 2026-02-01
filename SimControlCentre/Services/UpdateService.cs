@@ -18,7 +18,7 @@ namespace SimControlCentre.Services
         {
             _httpClient = new HttpClient
             {
-                Timeout = TimeSpan.FromSeconds(10) // Increase timeout
+                Timeout = TimeSpan.FromSeconds(5) // 5 second timeout
             };
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "SimControlCentre");
             _httpClient.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
@@ -44,7 +44,7 @@ namespace SimControlCentre.Services
             }
             
             // Fallback to hardcoded version
-            return "1.1.1";
+            return "1.1.2";
         }
 
         /// <summary>
@@ -60,8 +60,8 @@ namespace SimControlCentre.Services
                 // Test basic internet connectivity first
                 try
                 {
-                    using var testClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-                    var testResponse = await testClient.GetAsync("https://www.google.com");
+                    using var testClient = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+                    var testResponse = await testClient.GetAsync("https://www.google.com").ConfigureAwait(false);
                     UpdateDiagnostics.Log($"Internet connectivity test: {testResponse.StatusCode}");
                 }
                 catch (Exception ex)
@@ -75,7 +75,7 @@ namespace SimControlCentre.Services
                     };
                 }
                 
-                var response = await _httpClient.GetAsync(GitHubApiUrl);
+                var response = await _httpClient.GetAsync(GitHubApiUrl).ConfigureAwait(false);
                 
                 UpdateDiagnostics.Log($"Response status: {response.StatusCode}");
                 UpdateDiagnostics.Log($"Response headers: {response.Headers}");
@@ -92,7 +92,7 @@ namespace SimControlCentre.Services
                     // Try to get the error message from GitHub
                     try
                     {
-                        var errorBody = await response.Content.ReadAsStringAsync();
+                        var errorBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                         UpdateDiagnostics.Log($"GitHub error: {errorBody}");
                     }
                     catch { }
@@ -109,7 +109,7 @@ namespace SimControlCentre.Services
                 response.EnsureSuccessStatusCode();
                 
                 // Read and parse JSON
-                var releaseData = await response.Content.ReadFromJsonAsync<GitHubRelease>();
+                var releaseData = await response.Content.ReadFromJsonAsync<GitHubRelease>().ConfigureAwait(false);
                 
                 UpdateDiagnostics.Log("Successfully parsed release data");
                 
@@ -137,13 +137,23 @@ namespace SimControlCentre.Services
 
                 UpdateDiagnostics.Log($"Is newer: {isNewer}");
 
+                // Convert GitHub assets to our model
+                var assets = releaseData.assets?.Select(a => new ReleaseAsset
+                {
+                    Name = a.name,
+                    BrowserDownloadUrl = a.browser_download_url
+                }).ToList();
+
+                UpdateDiagnostics.Log($"Found {assets?.Count ?? 0} assets");
+
                 return new UpdateInfo
                 {
                     IsAvailable = isNewer,
                     CurrentVersion = currentVersion,
                     LatestVersion = latestVersion,
                     ReleaseUrl = releaseData.html_url,
-                    ReleaseNotes = releaseData.body
+                    ReleaseNotes = releaseData.body,
+                    Assets = assets
                 };
             }
             catch (HttpRequestException ex)
@@ -202,6 +212,13 @@ namespace SimControlCentre.Services
         public string? ReleaseUrl { get; set; }
         public string? ReleaseNotes { get; set; }
         public string? Error { get; set; }
+        public List<ReleaseAsset>? Assets { get; set; }
+    }
+
+    public class ReleaseAsset
+    {
+        public string Name { get; set; } = "";
+        public string BrowserDownloadUrl { get; set; } = "";
     }
 
     // GitHub API response model
@@ -210,5 +227,12 @@ namespace SimControlCentre.Services
         public string tag_name { get; set; } = "";
         public string html_url { get; set; } = "";
         public string body { get; set; } = "";
+        public List<GitHubAsset>? assets { get; set; }
+    }
+
+    internal class GitHubAsset
+    {
+        public string name { get; set; } = "";
+        public string browser_download_url { get; set; } = "";
     }
 }

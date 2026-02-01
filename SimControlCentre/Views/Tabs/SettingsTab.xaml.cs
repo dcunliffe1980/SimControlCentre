@@ -16,8 +16,9 @@ namespace SimControlCentre.Views.Tabs
         private readonly MainWindow _mainWindow;
         private ChannelsProfilesTab? _channelsProfilesTab;
         private ControllersTab? _controllersTab;
-        private AboutTab? _aboutTab;
-        private readonly UpdateService _updateService;
+        private readonly UpdateCheckService? _updateCheckService;
+        private TextBlock? _updateStatusText;
+        private Button? _downloadButton;
 
         public SettingsTab(ConfigurationService configService, AppSettings settings, GoXLRService goXLRService, MainWindow mainWindow)
         {
@@ -27,10 +28,28 @@ namespace SimControlCentre.Views.Tabs
             _settings = settings;
             _goXLRService = goXLRService;
             _mainWindow = mainWindow;
-            _updateService = new UpdateService();
+            _updateCheckService = App.GetUpdateCheckService();
+
+            // Subscribe to update check status changes
+            if (_updateCheckService != null)
+            {
+                _updateCheckService.StatusChanged += OnUpdateCheckStatusChanged;
+            }
 
             // Select first category by default
             CategoryListBox.SelectedIndex = 0;
+        }
+
+        private void OnUpdateCheckStatusChanged(object? sender, UpdateCheckStatusChangedEventArgs e)
+        {
+            // Update the status text if it exists
+            if (_updateStatusText != null)
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    UpdateStatusTextFromService();
+                });
+            }
         }
 
         public void InitializeChannelsProfilesTab()
@@ -524,8 +543,8 @@ namespace SimControlCentre.Views.Tabs
             };
             SettingsContent.Children.Add(title);
 
-            // Version Info
-            var currentVersion = _updateService.GetCurrentVersion();
+            // Version Info (dynamic - reads from assembly)
+            var currentVersion = GetCurrentVersion();
             var versionText = new TextBlock
             {
                 Text = $"Version: {currentVersion}",
@@ -534,14 +553,16 @@ namespace SimControlCentre.Views.Tabs
             };
             SettingsContent.Children.Add(versionText);
 
-            // Update Status
-            var updateStatusText = new TextBlock
+            // Update Status (this is the key field that will be updated)
+            _updateStatusText = new TextBlock
             {
-                Text = "Checking for updates...",
-                Foreground = System.Windows.Media.Brushes.Gray,
-                Margin = new Thickness(0, 0, 0, 10)
+                Margin = new Thickness(0, 0, 0, 10),
+                TextWrapping = TextWrapping.Wrap
             };
-            SettingsContent.Children.Add(updateStatusText);
+            SettingsContent.Children.Add(_updateStatusText);
+            
+            // Set initial status from service
+            UpdateStatusTextFromService();
 
             // Check for Updates Button
             var checkUpdateButton = new Button
@@ -555,40 +576,28 @@ namespace SimControlCentre.Views.Tabs
             {
                 checkUpdateButton.IsEnabled = false;
                 checkUpdateButton.Content = "Checking...";
-                updateStatusText.Text = "Checking for updates...";
-                updateStatusText.Foreground = System.Windows.Media.Brushes.Gray;
 
-                var updateInfo = await _updateService.CheckForUpdateAsync();
-
-                if (!string.IsNullOrEmpty(updateInfo.Error))
+                if (_updateCheckService != null)
                 {
-                    updateStatusText.Text = updateInfo.Error;
-                    updateStatusText.Foreground = System.Windows.Media.Brushes.Orange;
-                }
-                else if (updateInfo.IsAvailable)
-                {
-                    updateStatusText.Text = $"Update available: v{updateInfo.LatestVersion}";
-                    updateStatusText.Foreground = System.Windows.Media.Brushes.Green;
-                    
-                    var result = MessageBox.Show(
-                        $"A new version is available!\n\nCurrent: v{updateInfo.CurrentVersion}\nLatest: v{updateInfo.LatestVersion}\n\nWould you like to download it now?",
-                        "Update Available",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Information);
+                    var updateInfo = await _updateCheckService.CheckNowAsync();
 
-                    if (result == MessageBoxResult.Yes && !string.IsNullOrEmpty(updateInfo.ReleaseUrl))
+                    if (updateInfo.IsAvailable && !string.IsNullOrEmpty(updateInfo.LatestVersion))
                     {
-                        Process.Start(new ProcessStartInfo
+                        var result = MessageBox.Show(
+                            $"A new version is available!\n\nCurrent: v{updateInfo.CurrentVersion}\nLatest: v{updateInfo.LatestVersion}\n\nWould you like to download it now?",
+                            "Update Available",
+                            MessageBoxButton.YesNo,
+                            MessageBoxImage.Information);
+
+                        if (result == MessageBoxResult.Yes && !string.IsNullOrEmpty(updateInfo.ReleaseUrl))
                         {
-                            FileName = updateInfo.ReleaseUrl,
-                            UseShellExecute = true
-                        });
+                            Process.Start(new ProcessStartInfo
+                            {
+                                FileName = updateInfo.ReleaseUrl,
+                                UseShellExecute = true
+                            });
+                        }
                     }
-                }
-                else
-                {
-                    updateStatusText.Text = "You are running the latest version!";
-                    updateStatusText.Foreground = System.Windows.Media.Brushes.Green;
                 }
 
                 checkUpdateButton.IsEnabled = true;
@@ -596,80 +605,76 @@ namespace SimControlCentre.Views.Tabs
             };
             SettingsContent.Children.Add(checkUpdateButton);
 
-            // Test GitHub API Button (for debugging)
-            var testApiButton = new Button
+            // Download Update Button (shown only when update is available)
+            var downloadButton = new Button
             {
-                Content = "Test GitHub API (Debug)",
+                Content = "Download Update",
                 Padding = new Thickness(15, 8, 15, 8),
                 HorizontalAlignment = HorizontalAlignment.Left,
-                Margin = new Thickness(10, 10, 0, 20)
+                Margin = new Thickness(0, 0, 0, 20),
+                Visibility = Visibility.Collapsed // Hidden by default
             };
-            testApiButton.Click += async (s, e) =>
+            downloadButton.Click += async (s, e) =>
             {
-                testApiButton.IsEnabled = false;
-                
-                try
+                if (_updateCheckService?.LatestUpdateInfo != null)
                 {
-                    using var client = new System.Net.Http.HttpClient();
-                    client.DefaultRequestHeaders.Add("User-Agent", "SimControlCentre");
+                    var updateInfo = _updateCheckService.LatestUpdateInfo;
                     
-                    // Test 0: Repository itself
-                    var url0 = "https://api.github.com/repos/dcunliffe1980/SimControlCentre";
-                    UpdateDiagnostics.Log($"[DEBUG] Testing: {url0}");
+                    // Determine which version to download
+                    var downloadUrl = await DetermineDownloadUrlAsync(updateInfo);
                     
-                    var response0 = await client.GetAsync(url0);
-                    UpdateDiagnostics.Log($"[DEBUG] /repo Status: {response0.StatusCode}");
-                    
-                    var content0 = await response0.Content.ReadAsStringAsync();
-                    UpdateDiagnostics.Log($"[DEBUG] /repo Response: {content0}");
-                    
-                    // Test 1: Latest release
-                    var url1 = "https://api.github.com/repos/dcunliffe1980/SimControlCentre/releases/latest";
-                    UpdateDiagnostics.Log($"[DEBUG] Testing: {url1}");
-                    
-                    var response1 = await client.GetAsync(url1);
-                    UpdateDiagnostics.Log($"[DEBUG] /latest Status: {response1.StatusCode}");
-                    
-                    var content1 = await response1.Content.ReadAsStringAsync();
-                    UpdateDiagnostics.Log($"[DEBUG] /latest Response: {content1}");
-                    
-                    // Test 2: All releases
-                    var url2 = "https://api.github.com/repos/dcunliffe1980/SimControlCentre/releases";
-                    UpdateDiagnostics.Log($"[DEBUG] Testing: {url2}");
-                    
-                    var response2 = await client.GetAsync(url2);
-                    UpdateDiagnostics.Log($"[DEBUG] /releases Status: {response2.StatusCode}");
-                    
-                    var content2 = await response2.Content.ReadAsStringAsync();
-                    UpdateDiagnostics.Log($"[DEBUG] /releases Response: {content2}");
-                    
-                    // Test 3: Specific release by tag
-                    var url3 = "https://api.github.com/repos/dcunliffe1980/SimControlCentre/releases/tags/v1.1.1";
-                    UpdateDiagnostics.Log($"[DEBUG] Testing: {url3}");
-                    
-                    var response3 = await client.GetAsync(url3);
-                    UpdateDiagnostics.Log($"[DEBUG] /tags/v1.1.1 Status: {response3.StatusCode}");
-                    
-                    var content3 = await response3.Content.ReadAsStringAsync();
-                    UpdateDiagnostics.Log($"[DEBUG] /tags/v1.1.1 Response: {content3}");
-                    
-                    MessageBox.Show($"/repo: {response0.StatusCode}\n/latest: {response1.StatusCode}\n/releases: {response2.StatusCode}\n/tags/v1.1.1: {response3.StatusCode}\n\nCheck logs folder for full responses",
-                        "API Test Results",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
+                    if (!string.IsNullOrEmpty(downloadUrl))
+                    {
+                        downloadButton.IsEnabled = false;
+                        downloadButton.Content = "Downloading...";
+                        
+                        try
+                        {
+                            // Start download in browser
+                            Process.Start(new ProcessStartInfo
+                            {
+                                FileName = downloadUrl,
+                                UseShellExecute = true
+                            });
+                            
+                            MessageBox.Show(
+                                "The download has started in your browser.\n\nOnce downloaded, close SimControlCentre and run the installer to update.",
+                                "Download Started",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Information);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Failed to start download:\n\n{ex.Message}", "Error", 
+                                MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                        finally
+                        {
+                            downloadButton.IsEnabled = true;
+                            downloadButton.Content = "Download Update";
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show("Could not determine the correct download URL.\n\nPlease visit the releases page to download manually.",
+                            "Download Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        
+                        // Fallback to releases page
+                        if (!string.IsNullOrEmpty(updateInfo.ReleaseUrl))
+                        {
+                            Process.Start(new ProcessStartInfo
+                            {
+                                FileName = updateInfo.ReleaseUrl,
+                                UseShellExecute = true
+                            });
+                        }
+                    }
                 }
-                catch (Exception ex)
-                {
-                    UpdateDiagnostics.Log($"[DEBUG] Error: {ex.Message}");
-                    MessageBox.Show($"Error: {ex.Message}\n\nCheck logs folder for details",
-                        "API Test Failed",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
-                }
-                
-                testApiButton.IsEnabled = true;
             };
-            SettingsContent.Children.Add(testApiButton);
+            SettingsContent.Children.Add(downloadButton);
+            
+            // Store reference for visibility updates
+            _downloadButton = downloadButton;
 
             // Separator
             var separator = new System.Windows.Controls.Separator
@@ -678,17 +683,296 @@ namespace SimControlCentre.Views.Tabs
             };
             SettingsContent.Children.Add(separator);
 
-            // Embed AboutTab content if initialized
-            if (_aboutTab == null)
+            // Configuration section
+            var configTitle = new TextBlock
             {
-                _aboutTab = new AboutTab(_configService);
+                Text = "Configuration",
+                FontSize = 16,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            SettingsContent.Children.Add(configTitle);
+
+            // Config file path
+            var configPathLabel = new TextBlock
+            {
+                Text = "Configuration File:",
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 5)
+            };
+            SettingsContent.Children.Add(configPathLabel);
+
+            var configPathText = new TextBlock
+            {
+                Text = _configService.GetConfigFilePath(),
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = System.Windows.Media.Brushes.Gray,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            SettingsContent.Children.Add(configPathText);
+
+            var openConfigButton = new Button
+            {
+                Content = "Open Config Folder",
+                Padding = new Thickness(10, 5, 10, 5),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(0, 0, 0, 20)
+            };
+            openConfigButton.Click += (s, e) =>
+            {
+                var configPath = _configService.GetConfigFilePath();
+                var folderPath = Path.GetDirectoryName(configPath);
+
+                if (!string.IsNullOrEmpty(folderPath) && Directory.Exists(folderPath))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = folderPath,
+                        UseShellExecute = true
+                    });
+                }
+            };
+            SettingsContent.Children.Add(openConfigButton);
+
+            // Log file path
+            var logPathLabel = new TextBlock
+            {
+                Text = "Log Folder:",
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 5)
+            };
+            SettingsContent.Children.Add(logPathLabel);
+
+            var logPathText = new TextBlock
+            {
+                Text = Logger.GetLogFilePath(),
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = System.Windows.Media.Brushes.Gray,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            SettingsContent.Children.Add(logPathText);
+
+            var openLogsButton2 = new Button
+            {
+                Content = "Open Logs Folder",
+                Padding = new Thickness(10, 5, 10, 5),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(0, 0, 0, 20)
+            };
+            openLogsButton2.Click += (s, e) =>
+            {
+                Logger.OpenLogsFolder();
+            };
+            SettingsContent.Children.Add(openLogsButton2);
+
+            // Links section
+            var linksTitle = new TextBlock
+            {
+                Text = "Links",
+                FontSize = 16,
+                FontWeight = FontWeights.Bold,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            SettingsContent.Children.Add(linksTitle);
+
+            var githubLink = new TextBlock
+            {
+                Margin = new Thickness(0, 0, 0, 5)
+            };
+            var githubHyperlink = new System.Windows.Documents.Hyperlink(new System.Windows.Documents.Run("GitHub Repository"))
+            {
+                NavigateUri = new Uri("https://github.com/dcunliffe1980/SimControlCentre")
+            };
+            githubHyperlink.RequestNavigate += (s, e) =>
+            {
+                Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+                e.Handled = true;
+            };
+            githubLink.Inlines.Add(githubHyperlink);
+            SettingsContent.Children.Add(githubLink);
+
+            var quickstartLink = new TextBlock
+            {
+                Margin = new Thickness(0, 5, 0, 0)
+            };
+            var quickstartHyperlink = new System.Windows.Documents.Hyperlink(new System.Windows.Documents.Run("Quick Start Guide"))
+            {
+                NavigateUri = new Uri("https://github.com/dcunliffe1980/SimControlCentre/blob/master/QUICKSTART.md")
+            };
+            quickstartHyperlink.RequestNavigate += (s, e) =>
+            {
+                Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+                e.Handled = true;
+            };
+            quickstartLink.Inlines.Add(quickstartHyperlink);
+            SettingsContent.Children.Add(quickstartLink);
+        }
+
+        private void UpdateStatusTextFromService()
+        {
+            if (_updateStatusText == null || _updateCheckService == null)
+                return;
+
+            switch (_updateCheckService.Status)
+            {
+                case UpdateCheckStatus.NotStarted:
+                    _updateStatusText.Text = "Update check has not started yet";
+                    _updateStatusText.Foreground = System.Windows.Media.Brushes.Gray;
+                    if (_downloadButton != null) _downloadButton.Visibility = Visibility.Collapsed;
+                    break;
+
+                case UpdateCheckStatus.Checking:
+                    _updateStatusText.Text = "Checking for updates...";
+                    _updateStatusText.Foreground = System.Windows.Media.Brushes.Orange;
+                    if (_downloadButton != null) _downloadButton.Visibility = Visibility.Collapsed;
+                    break;
+
+                case UpdateCheckStatus.UpToDate:
+                    _updateStatusText.Text = "You are running the latest version!";
+                    _updateStatusText.Foreground = System.Windows.Media.Brushes.Green;
+                    if (_downloadButton != null) _downloadButton.Visibility = Visibility.Collapsed;
+                    break;
+
+                case UpdateCheckStatus.UpdateAvailable:
+                    var updateInfo = _updateCheckService.LatestUpdateInfo;
+                    if (updateInfo != null)
+                    {
+                        _updateStatusText.Text = $"Update available: v{updateInfo.LatestVersion}";
+                        _updateStatusText.Foreground = System.Windows.Media.Brushes.Green;
+                        if (_downloadButton != null) _downloadButton.Visibility = Visibility.Visible;
+                    }
+                    break;
+
+                case UpdateCheckStatus.Error:
+                    var errorInfo = _updateCheckService.LatestUpdateInfo;
+                    if (errorInfo != null && !string.IsNullOrEmpty(errorInfo.Error))
+                    {
+                        _updateStatusText.Text = errorInfo.Error;
+                    }
+                    else
+                    {
+                        _updateStatusText.Text = "Failed to check for updates";
+                    }
+                    _updateStatusText.Foreground = System.Windows.Media.Brushes.Orange;
+                    if (_downloadButton != null) _downloadButton.Visibility = Visibility.Collapsed;
+                    break;
+            }
+        }
+
+        private async Task<string?> DetermineDownloadUrlAsync(UpdateInfo updateInfo)
+        {
+            if (updateInfo.Assets == null || updateInfo.Assets.Count == 0)
+            {
+                UpdateDiagnostics.Log("[DetermineDownload] No assets found in release");
+                return null;
             }
 
-            var aboutContent = _aboutTab.Content as UIElement;
-            if (aboutContent != null)
+            // Detect if we're running the standalone version
+            bool isStandalone = IsStandaloneVersion();
+            
+            UpdateDiagnostics.Log($"[DetermineDownload] Is standalone: {isStandalone}");
+            UpdateDiagnostics.Log($"[DetermineDownload] Available assets:");
+            foreach (var asset in updateInfo.Assets)
             {
-                _aboutTab.Content = null; // Detach from original parent
-                SettingsContent.Children.Add(aboutContent);
+                UpdateDiagnostics.Log($"  - {asset.Name}");
+            }
+
+            // Look for the appropriate installer
+            string searchPattern = isStandalone ? "standalone" : "setup";
+            
+            var matchingAsset = updateInfo.Assets.FirstOrDefault(a => 
+                a.Name.Contains(searchPattern, StringComparison.OrdinalIgnoreCase) &&
+                a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+
+            if (matchingAsset != null)
+            {
+                UpdateDiagnostics.Log($"[DetermineDownload] Found matching asset: {matchingAsset.Name}");
+                return matchingAsset.BrowserDownloadUrl;
+            }
+
+            // Fallback: if standalone pattern not found, try to find any .exe installer
+            var fallbackAsset = updateInfo.Assets.FirstOrDefault(a => 
+                a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+
+            if (fallbackAsset != null)
+            {
+                UpdateDiagnostics.Log($"[DetermineDownload] Using fallback asset: {fallbackAsset.Name}");
+                return fallbackAsset.BrowserDownloadUrl;
+            }
+
+            UpdateDiagnostics.Log("[DetermineDownload] No suitable installer found");
+            return null;
+        }
+
+        private string GetCurrentVersion()
+        {
+            try
+            {
+                var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                if (version != null)
+                {
+                    return $"{version.Major}.{version.Minor}.{version.Build}";
+                }
+            }
+            catch
+            {
+                // Fallback if version can't be read
+            }
+
+            return "Unknown";
+        }
+
+        private bool IsStandaloneVersion()
+        {
+            try
+            {
+                // Check if we're running from a single-file publish
+                // In standalone, the main exe contains everything
+                var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                
+#pragma warning disable IL3000 // Assembly.Location is intentionally used to detect single-file bundle
+                var location = assembly.Location;
+#pragma warning restore IL3000
+                
+                UpdateDiagnostics.Log($"[IsStandalone] Assembly location: {location}");
+                
+                // If location is empty, we're likely in a single-file bundle
+                if (string.IsNullOrEmpty(location))
+                {
+                    UpdateDiagnostics.Log("[IsStandalone] Empty location - single file bundle detected");
+                    return true;
+                }
+                
+                // Check if SimControlCentre.dll exists alongside the exe
+                var exePath = Process.GetCurrentProcess().MainModule?.FileName;
+                if (string.IsNullOrEmpty(exePath))
+                {
+                    UpdateDiagnostics.Log("[IsStandalone] Could not get exe path");
+                    return false;
+                }
+                
+                var exeDir = Path.GetDirectoryName(exePath);
+                if (string.IsNullOrEmpty(exeDir))
+                {
+                    UpdateDiagnostics.Log("[IsStandalone] Could not get exe directory");
+                    return false;
+                }
+                
+                var dllPath = Path.Combine(exeDir, "SimControlCentre.dll");
+                bool dllExists = File.Exists(dllPath);
+                
+                UpdateDiagnostics.Log($"[IsStandalone] DLL path: {dllPath}");
+                UpdateDiagnostics.Log($"[IsStandalone] DLL exists: {dllExists}");
+                
+                // If .dll exists separately, it's NOT standalone
+                // If .dll doesn't exist, it's bundled in the exe (standalone)
+                return !dllExists;
+            }
+            catch (Exception ex)
+            {
+                UpdateDiagnostics.Log($"[IsStandalone] Error: {ex.Message}");
+                // Default to non-standalone on error
+                return false;
             }
         }
 
@@ -701,7 +985,9 @@ namespace SimControlCentre.Views.Tabs
                 {
                     if (enable)
                     {
+#pragma warning disable IL3000 // Assembly.Location usage is acceptable here for registry path
                         var exePath = System.Reflection.Assembly.GetExecutingAssembly().Location.Replace(".dll", ".exe");
+#pragma warning restore IL3000
                         key.SetValue("SimControlCentre", exePath);
                     }
                     else

@@ -24,6 +24,7 @@ public partial class App : Application
     private DirectInputService? _directInputService;
     private ControllerManager? _controllerManager;
     private iRacingMonitorService? _iRacingMonitor;
+    private UpdateCheckService? _updateCheckService;
     public AppSettings Settings { get; private set; } = new();
 
     public App()
@@ -80,6 +81,12 @@ public partial class App : Application
 
             // Initialize GoXLR service
             _goXLRService = new GoXLRService(Settings);
+
+            // Initialize update check service
+            _updateCheckService = new UpdateCheckService();
+            
+            // Subscribe to update available event
+            _updateCheckService.StatusChanged += OnUpdateStatusChanged;
 
             // Always warm up the GoXLR API connection on startup
             _ = Task.Run(async () =>
@@ -215,62 +222,16 @@ public partial class App : Application
             // Removed notification popup for hotkeys
             Console.WriteLine($"Registered {registeredCount} keyboard hotkeys");
             
-            // Check for updates if enabled (don't block startup)
-            if (Settings.General.CheckForUpdatesOnStartup)
-            {
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        // Wait a bit for app to fully start
-                        await Task.Delay(3000);
-                        
-                        Console.WriteLine("[App] Starting update check...");
-                        var updateService = new UpdateService();
-                        var updateInfo = await updateService.CheckForUpdateAsync();
-
-                        Console.WriteLine($"[App] Update check complete. IsAvailable: {updateInfo.IsAvailable}");
-
-                        if (updateInfo.IsAvailable && !string.IsNullOrEmpty(updateInfo.LatestVersion))
-                        {
-                            Dispatcher.Invoke(() =>
-                            {
-                                var result = System.Windows.MessageBox.Show(
-                                    $"A new version is available!\n\nCurrent: v{updateInfo.CurrentVersion}\nLatest: v{updateInfo.LatestVersion}\n\nWould you like to download it now?",
-                                    "Update Available",
-                                    System.Windows.MessageBoxButton.YesNo,
-                                    System.Windows.MessageBoxImage.Information);
-
-                                if (result == System.Windows.MessageBoxResult.Yes && !string.IsNullOrEmpty(updateInfo.ReleaseUrl))
-                                {
-                                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                                    {
-                                        FileName = updateInfo.ReleaseUrl,
-                                        UseShellExecute = true
-                                    });
-                                }
-                            });
-                        }
-                        else if (!string.IsNullOrEmpty(updateInfo.Error))
-                        {
-                            Console.WriteLine($"[App] Update check error: {updateInfo.Error}");
-                        }
-                        else
-                        {
-                            Console.WriteLine("[App] No updates available");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[App] Update check failed: {ex.Message}");
-                    }
-                });
-            }
-            
             // Show window if not set to start minimized
             if (!Settings.Window.StartMinimized)
             {
                 OpenSettingsWindow();
+            }
+            
+            // Start update check in background if enabled
+            if (Settings.General.CheckForUpdatesOnStartup && _updateCheckService != null)
+            {
+                _updateCheckService.StartCheckInBackground();
             }
         }
         catch (Exception ex)
@@ -278,6 +239,22 @@ public partial class App : Application
             MessageBox.Show($"Error starting application: {ex.Message}\n\n{ex.StackTrace}", 
                 "SimControlCentre Error", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown();
+        }
+    }
+
+    private void OnUpdateStatusChanged(object? sender, UpdateCheckStatusChangedEventArgs e)
+    {
+        // Only show popup if update is available
+        if (e.Status == UpdateCheckStatus.UpdateAvailable && e.UpdateInfo != null)
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                MessageBox.Show(
+                    $"A new version is available!\n\nCurrent: v{e.UpdateInfo.CurrentVersion}\nLatest: v{e.UpdateInfo.LatestVersion}\n\nOpen Settings and go to the About section to download the update.",
+                    "Update Available",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }));
         }
     }
 
@@ -389,6 +366,11 @@ public partial class App : Application
     public static DirectInputService? GetDirectInputService()
     {
         return ((App)Current)._directInputService;
+    }
+
+    public static UpdateCheckService? GetUpdateCheckService()
+    {
+        return ((App)Current)._updateCheckService;
     }
 
     private void ToggleHotkeys_Click(object sender, RoutedEventArgs e)
