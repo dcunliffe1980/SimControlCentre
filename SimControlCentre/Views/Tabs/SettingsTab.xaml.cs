@@ -613,6 +613,16 @@ namespace SimControlCentre.Views.Tabs
                     using var client = new System.Net.Http.HttpClient();
                     client.DefaultRequestHeaders.Add("User-Agent", "SimControlCentre");
                     
+                    // Test 0: Repository itself
+                    var url0 = "https://api.github.com/repos/dcunliffe1980/SimControlCentre";
+                    UpdateDiagnostics.Log($"[DEBUG] Testing: {url0}");
+                    
+                    var response0 = await client.GetAsync(url0);
+                    UpdateDiagnostics.Log($"[DEBUG] /repo Status: {response0.StatusCode}");
+                    
+                    var content0 = await response0.Content.ReadAsStringAsync();
+                    UpdateDiagnostics.Log($"[DEBUG] /repo Response: {content0}");
+                    
                     // Test 1: Latest release
                     var url1 = "https://api.github.com/repos/dcunliffe1980/SimControlCentre/releases/latest";
                     UpdateDiagnostics.Log($"[DEBUG] Testing: {url1}");
@@ -643,7 +653,7 @@ namespace SimControlCentre.Views.Tabs
                     var content3 = await response3.Content.ReadAsStringAsync();
                     UpdateDiagnostics.Log($"[DEBUG] /tags/v1.1.1 Response: {content3}");
                     
-                    MessageBox.Show($"/latest: {response1.StatusCode}\n/releases: {response2.StatusCode}\n/tags/v1.1.1: {response3.StatusCode}\n\nCheck logs folder for full responses",
+                    MessageBox.Show($"/repo: {response0.StatusCode}\n/latest: {response1.StatusCode}\n/releases: {response2.StatusCode}\n/tags/v1.1.1: {response3.StatusCode}\n\nCheck logs folder for full responses",
                         "API Test Results",
                         MessageBoxButton.OK,
                         MessageBoxImage.Information);
