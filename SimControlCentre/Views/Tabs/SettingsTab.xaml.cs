@@ -596,6 +596,50 @@ namespace SimControlCentre.Views.Tabs
             };
             SettingsContent.Children.Add(checkUpdateButton);
 
+            // Test GitHub API Button (for debugging)
+            var testApiButton = new Button
+            {
+                Content = "Test GitHub API (Debug)",
+                Padding = new Thickness(15, 8, 15, 8),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(10, 10, 0, 20)
+            };
+            testApiButton.Click += async (s, e) =>
+            {
+                testApiButton.IsEnabled = false;
+                
+                try
+                {
+                    using var client = new System.Net.Http.HttpClient();
+                    client.DefaultRequestHeaders.Add("User-Agent", "SimControlCentre");
+                    
+                    var url = "https://api.github.com/repos/dcunliffe1980/SimControlCentre/releases/latest";
+                    Console.WriteLine($"[DEBUG] Testing: {url}");
+                    
+                    var response = await client.GetAsync(url);
+                    Console.WriteLine($"[DEBUG] Status: {response.StatusCode}");
+                    
+                    var content = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"[DEBUG] Response: {content}");
+                    
+                    MessageBox.Show($"Status: {response.StatusCode}\n\nCheck console for full response",
+                        "API Test",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[DEBUG] Error: {ex.Message}");
+                    MessageBox.Show($"Error: {ex.Message}",
+                        "API Test Failed",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+                
+                testApiButton.IsEnabled = true;
+            };
+            SettingsContent.Children.Add(testApiButton);
+
             // Separator
             var separator = new System.Windows.Controls.Separator
             {

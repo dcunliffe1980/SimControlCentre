@@ -78,11 +78,25 @@ namespace SimControlCentre.Services
                 var response = await _httpClient.GetAsync(GitHubApiUrl);
                 
                 Console.WriteLine($"[UpdateService] Response status: {response.StatusCode}");
+                Console.WriteLine($"[UpdateService] Response headers: {response.Headers}");
                 
                 // Handle 404 - no releases exist yet
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
                     Console.WriteLine("[UpdateService] No releases found (404)");
+                    Console.WriteLine("[UpdateService] This could mean:");
+                    Console.WriteLine("  1. No releases published yet");
+                    Console.WriteLine("  2. All releases are drafts or pre-releases");
+                    Console.WriteLine("  3. Repository is private and needs authentication");
+                    
+                    // Try to get the error message from GitHub
+                    try
+                    {
+                        var errorBody = await response.Content.ReadAsStringAsync();
+                        Console.WriteLine($"[UpdateService] GitHub error: {errorBody}");
+                    }
+                    catch { }
+                    
                     return new UpdateInfo
                     {
                         IsAvailable = false,
