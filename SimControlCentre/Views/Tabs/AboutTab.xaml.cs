@@ -18,6 +18,9 @@ namespace SimControlCentre.Views.Tabs
             
             // Display config path
             ConfigPathText.Text = _configService.GetConfigFilePath();
+            
+            // Display log path
+            LogPathText.Text = Logger.GetLogFilePath();
         }
 
         private void OpenConfigFolder_Click(object sender, RoutedEventArgs e)
@@ -29,6 +32,11 @@ namespace SimControlCentre.Views.Tabs
             {
                 Process.Start("explorer.exe", folderPath);
             }
+        }
+
+        private void OpenLogsFolder_Click(object sender, RoutedEventArgs e)
+        {
+            Logger.OpenLogsFolder();
         }
 
         private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)

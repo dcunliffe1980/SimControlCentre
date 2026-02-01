@@ -12,5 +12,6 @@ public class AppSettings
     public Dictionary<string, ChannelHotkeys> VolumeHotkeys { get; set; } = new();
     public List<ControllerMapping> ControllerMappings { get; set; } = new();
     public WindowSettings Window { get; set; } = new();
+    public List<ExternalApp> ExternalApps { get; set; } = new(); // Apps to start/stop with iRacing
 }
 

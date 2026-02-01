@@ -36,6 +36,20 @@
                             Content="Open Config Folder" 
                             Click="OpenConfigFolder_Click"
                             Padding="10,5"
+                            Margin="0,0,0,10"
+                            HorizontalAlignment="Left"/>
+                    
+                    <TextBlock Text="Log File:" 
+                               FontWeight="Bold" 
+                               Margin="0,10,0,5"/>
+                    <TextBlock Name="LogPathText" 
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,10"/>
+                    
+                    <Button Name="OpenLogsFolderBtn" 
+                            Content="Open Logs Folder" 
+                            Click="OpenLogsFolder_Click"
+                            Padding="10,5"
                             HorizontalAlignment="Left"/>
                 </StackPanel>
             </GroupBox>

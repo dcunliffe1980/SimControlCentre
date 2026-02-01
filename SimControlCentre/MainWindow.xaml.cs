@@ -11,19 +11,22 @@ namespace SimControlCentre
         private readonly ConfigurationService _configService;
         private readonly AppSettings _settings;
         private readonly GoXLRService _goXLRService;
+        private readonly iRacingMonitorService? _iRacingMonitor;
         
         // Tab controls
         private GeneralTab? _generalTab;
         private HotkeysTab? _hotkeysTab;
         private ChannelsProfilesTab? _channelsProfilesTab;
         private ControllersTab? _controllersTab;
+        private ExternalAppsTab? _externalAppsTab;
         private AboutTab? _aboutTab;
 
-        public MainWindow(AppSettings settings, ConfigurationService configService, GoXLRService goXLRService)
+        public MainWindow(AppSettings settings, ConfigurationService configService, GoXLRService goXLRService, iRacingMonitorService? iRacingMonitor = null)
         {
             _settings = settings;
             _configService = configService;
             _goXLRService = goXLRService;
+            _iRacingMonitor = iRacingMonitor;
 
             InitializeComponent();
 
@@ -55,6 +58,13 @@ namespace SimControlCentre
             
             // Controllers Tab will be initialized later via InitializeControllersTab()
             // (DirectInputService is created after MainWindow in App.xaml.cs)
+            
+            // Create iRacing Tab
+            if (_iRacingMonitor != null)
+            {
+                _externalAppsTab = new ExternalAppsTab(_configService, _settings, _iRacingMonitor);
+                iRacingTabItem.Content = _externalAppsTab;
+            }
             
             // Create About Tab
             _aboutTab = new AboutTab(_configService);

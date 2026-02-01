@@ -21,6 +21,7 @@ public partial class App : Application
     private HotkeyManager? _hotkeyManager;
     private DirectInputService? _directInputService;
     private ControllerManager? _controllerManager;
+    private iRacingMonitorService? _iRacingMonitor;
     public AppSettings Settings { get; private set; } = new();
 
     public App()
@@ -191,8 +192,12 @@ public partial class App : Application
             // Double-click tray icon to open settings
             _notifyIcon.TrayLeftMouseDown += (s, args) => OpenSettingsWindow();
 
+            // Initialize iRacing monitor service
+            _iRacingMonitor = new iRacingMonitorService(Settings);
+            _iRacingMonitor.StartMonitoring();
+
             // Create main window but don't show it yet
-            _mainWindow = new MainWindow(Settings, _configService, _goXLRService);
+            _mainWindow = new MainWindow(Settings, _configService, _goXLRService, _iRacingMonitor);
             
             // Initialize hotkey service with main window handle
             var windowInterop = new System.Windows.Interop.WindowInteropHelper(_mainWindow);
@@ -242,6 +247,7 @@ public partial class App : Application
     {
         // Window settings are saved by MainWindow's OnClosed handler
         
+        _iRacingMonitor?.Dispose();
         _hotkeyManager?.Dispose();
         _hotkeyService?.Dispose();
         _controllerManager?.Dispose();
@@ -292,7 +298,7 @@ public partial class App : Application
     {
         if (_mainWindow == null)
         {
-            _mainWindow = new MainWindow(Settings, _configService, _goXLRService!);
+            _mainWindow = new MainWindow(Settings, _configService, _goXLRService!, _iRacingMonitor);
         }
 
         _mainWindow.Show();

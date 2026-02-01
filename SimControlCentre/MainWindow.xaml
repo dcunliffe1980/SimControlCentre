@@ -22,6 +22,9 @@
             <!-- Controllers Tab -->
             <TabItem Header="Controllers" x:Name="ControllersTabItem"/>
             
+            <!-- iRacing Tab -->
+            <TabItem Header="iRacing" x:Name="iRacingTabItem"/>
+            
             <!-- About Tab -->
             <TabItem Header="About" x:Name="AboutTabItem"/>
         </TabControl>
