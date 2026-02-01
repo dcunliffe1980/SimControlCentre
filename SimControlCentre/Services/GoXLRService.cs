@@ -20,7 +20,14 @@ public class GoXLRService : IDisposable
 
     private void InitializeClient()
     {
-        _apiClient?.Dispose();
+        // Only initialize once - prevent multiple instances
+        if (_apiClient != null)
+        {
+            Console.WriteLine("[GoXLRService] API client already initialized, skipping");
+            return;
+        }
+        
+        Console.WriteLine("[GoXLRService] Initializing new API client");
         _apiClient = new GoXLRApiClient(
             _settings.General.ApiEndpoint,
             _settings.General.VolumeCacheTimeMs
@@ -198,12 +205,17 @@ public class GoXLRService : IDisposable
     /// </summary>
     public void Reinitialize()
     {
+        Console.WriteLine("[GoXLRService] Reinitialize called - disposing old client and creating new one");
+        _apiClient?.Dispose();
+        _apiClient = null;
         InitializeClient();
     }
 
     public void Dispose()
     {
+        Console.WriteLine("[GoXLRService] Disposing service");
         _apiClient?.Dispose();
+        _apiClient = null;
     }
 }
 

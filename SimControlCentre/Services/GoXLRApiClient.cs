@@ -356,9 +356,16 @@ public class GoXLRApiClient : IDisposable
     /// </summary>
     public async Task<bool> IsConnectedAsync()
     {
+        // Only return true if connection is actually warmed
+        if (!_isConnectionWarmed)
+        {
+            return false;
+        }
+        
         try
         {
-            var response = await _httpClient.GetAsync("/api/get-devices");
+            using var cts = new CancellationTokenSource(2000); // 2 second timeout
+            var response = await _httpClient.GetAsync("/api/get-devices", cts.Token);
             return response.IsSuccessStatusCode;
         }
         catch
@@ -397,8 +404,19 @@ public class GoXLRApiClient : IDisposable
 
     public void Dispose()
     {
+        GoXLRDiagnostics.Info("GoXLRApiClient", "Disposing connection and stopping warmup timer");
+        
+        // Stop warmup timer first
         _connectionWarmupTimer?.Dispose();
+        _connectionWarmupTimer = null;
+        
+        // Give warmup tasks a moment to complete
+        Thread.Sleep(100);
+        
+        // Now dispose HttpClient
         _httpClient?.Dispose();
+        
+        _isConnectionWarmed = false;
     }
 
     private class CachedVolume
