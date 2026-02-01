@@ -74,6 +74,9 @@ public partial class App : Application
             
             // Initialize GoXLR diagnostics
             GoXLRDiagnostics.Initialize(logDirectory, Settings.General.EnableGoXLRDiagnostics);
+            
+            // Initialize update diagnostics
+            UpdateDiagnostics.Initialize(logDirectory);
 
             // Initialize GoXLR service
             _goXLRService = new GoXLRService(Settings);

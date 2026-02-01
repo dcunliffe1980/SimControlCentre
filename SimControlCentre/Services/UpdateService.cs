@@ -40,7 +40,7 @@ namespace SimControlCentre.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[UpdateService] Error getting version: {ex.Message}");
+                UpdateDiagnostics.Log($"Error getting version: {ex.Message}");
             }
             
             // Fallback to hardcoded version
@@ -54,19 +54,19 @@ namespace SimControlCentre.Services
         {
             try
             {
-                Console.WriteLine($"[UpdateService] Checking for updates at: {GitHubApiUrl}");
-                Console.WriteLine($"[UpdateService] Current version: {GetCurrentVersion()}");
+                UpdateDiagnostics.Log($"Checking for updates at: {GitHubApiUrl}");
+                UpdateDiagnostics.Log($"Current version: {GetCurrentVersion()}");
                 
                 // Test basic internet connectivity first
                 try
                 {
                     using var testClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
                     var testResponse = await testClient.GetAsync("https://www.google.com");
-                    Console.WriteLine($"[UpdateService] Internet connectivity test: {testResponse.StatusCode}");
+                    UpdateDiagnostics.Log($"Internet connectivity test: {testResponse.StatusCode}");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[UpdateService] Internet connectivity test failed: {ex.Message}");
+                    UpdateDiagnostics.Log($"Internet connectivity test failed: {ex.Message}");
                     return new UpdateInfo
                     {
                         IsAvailable = false,
@@ -77,23 +77,23 @@ namespace SimControlCentre.Services
                 
                 var response = await _httpClient.GetAsync(GitHubApiUrl);
                 
-                Console.WriteLine($"[UpdateService] Response status: {response.StatusCode}");
-                Console.WriteLine($"[UpdateService] Response headers: {response.Headers}");
+                UpdateDiagnostics.Log($"Response status: {response.StatusCode}");
+                UpdateDiagnostics.Log($"Response headers: {response.Headers}");
                 
                 // Handle 404 - no releases exist yet
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    Console.WriteLine("[UpdateService] No releases found (404)");
-                    Console.WriteLine("[UpdateService] This could mean:");
-                    Console.WriteLine("  1. No releases published yet");
-                    Console.WriteLine("  2. All releases are drafts or pre-releases");
-                    Console.WriteLine("  3. Repository is private and needs authentication");
+                    UpdateDiagnostics.Log("No releases found (404)");
+                    UpdateDiagnostics.Log("This could mean:");
+                    UpdateDiagnostics.Log("  1. No releases published yet");
+                    UpdateDiagnostics.Log("  2. All releases are drafts or pre-releases");
+                    UpdateDiagnostics.Log("  3. Repository is private and needs authentication");
                     
                     // Try to get the error message from GitHub
                     try
                     {
                         var errorBody = await response.Content.ReadAsStringAsync();
-                        Console.WriteLine($"[UpdateService] GitHub error: {errorBody}");
+                        UpdateDiagnostics.Log($"GitHub error: {errorBody}");
                     }
                     catch { }
                     
@@ -111,11 +111,11 @@ namespace SimControlCentre.Services
                 // Read and parse JSON
                 var releaseData = await response.Content.ReadFromJsonAsync<GitHubRelease>();
                 
-                Console.WriteLine($"[UpdateService] Successfully parsed release data");
+                UpdateDiagnostics.Log("Successfully parsed release data");
                 
                 if (releaseData == null || string.IsNullOrWhiteSpace(releaseData.tag_name))
                 {
-                    Console.WriteLine("[UpdateService] Release data is null or empty");
+                    UpdateDiagnostics.Log("Release data is null or empty");
                     return new UpdateInfo 
                     { 
                         IsAvailable = false, 
@@ -124,18 +124,18 @@ namespace SimControlCentre.Services
                     };
                 }
 
-                Console.WriteLine($"[UpdateService] Latest release tag: {releaseData.tag_name}");
+                UpdateDiagnostics.Log($"Latest release tag: {releaseData.tag_name}");
                 
                 // Remove 'v' prefix from tag name if present
                 var latestVersion = releaseData.tag_name.TrimStart('v');
                 var currentVersion = GetCurrentVersion();
 
-                Console.WriteLine($"[UpdateService] Comparing: Current={currentVersion}, Latest={latestVersion}");
+                UpdateDiagnostics.Log($"Comparing: Current={currentVersion}, Latest={latestVersion}");
                 
                 // Compare versions
                 var isNewer = IsVersionNewer(latestVersion, currentVersion);
 
-                Console.WriteLine($"[UpdateService] Is newer: {isNewer}");
+                UpdateDiagnostics.Log($"Is newer: {isNewer}");
 
                 return new UpdateInfo
                 {
@@ -148,7 +148,7 @@ namespace SimControlCentre.Services
             }
             catch (HttpRequestException ex)
             {
-                Console.WriteLine($"[UpdateService] HTTP error: {ex.Message}");
+                UpdateDiagnostics.Log($"HTTP error: {ex.Message}");
                 return new UpdateInfo
                 {
                     IsAvailable = false,
@@ -158,7 +158,7 @@ namespace SimControlCentre.Services
             }
             catch (TaskCanceledException ex)
             {
-                Console.WriteLine($"[UpdateService] Timeout: {ex.Message}");
+                UpdateDiagnostics.Log($"Timeout: {ex.Message}");
                 return new UpdateInfo
                 {
                     IsAvailable = false,
@@ -168,8 +168,8 @@ namespace SimControlCentre.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[UpdateService] Error: {ex.Message}");
-                Console.WriteLine($"[UpdateService] Stack: {ex.StackTrace}");
+                UpdateDiagnostics.Log($"Error: {ex.Message}");
+                UpdateDiagnostics.Log($"Stack: {ex.StackTrace}");
                 return new UpdateInfo
                 {
                     IsAvailable = false,

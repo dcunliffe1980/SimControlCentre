@@ -614,23 +614,23 @@ namespace SimControlCentre.Views.Tabs
                     client.DefaultRequestHeaders.Add("User-Agent", "SimControlCentre");
                     
                     var url = "https://api.github.com/repos/dcunliffe1980/SimControlCentre/releases/latest";
-                    Console.WriteLine($"[DEBUG] Testing: {url}");
+                    UpdateDiagnostics.Log($"[DEBUG] Testing: {url}");
                     
                     var response = await client.GetAsync(url);
-                    Console.WriteLine($"[DEBUG] Status: {response.StatusCode}");
+                    UpdateDiagnostics.Log($"[DEBUG] Status: {response.StatusCode}");
                     
                     var content = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"[DEBUG] Response: {content}");
+                    UpdateDiagnostics.Log($"[DEBUG] Response: {content}");
                     
-                    MessageBox.Show($"Status: {response.StatusCode}\n\nCheck console for full response",
+                    MessageBox.Show($"Status: {response.StatusCode}\n\nCheck logs folder for full response",
                         "API Test",
                         MessageBoxButton.OK,
                         MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[DEBUG] Error: {ex.Message}");
-                    MessageBox.Show($"Error: {ex.Message}",
+                    UpdateDiagnostics.Log($"[DEBUG] Error: {ex.Message}");
+                    MessageBox.Show($"Error: {ex.Message}\n\nCheck logs folder for details",
                         "API Test Failed",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
