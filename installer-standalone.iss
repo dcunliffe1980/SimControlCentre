@@ -2,7 +2,7 @@
 ; Includes .NET 8 runtime (larger file, but no dependencies)
 
 #define MyAppName "SimControlCentre"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.1.1"
 #define MyAppPublisher "Dave Cunliffe"
 #define MyAppURL "https://github.com/dcunliffe1980/SimControlCentre"
 #define MyAppExeName "SimControlCentre.exe"
