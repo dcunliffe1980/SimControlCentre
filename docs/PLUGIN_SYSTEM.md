@@ -29,6 +29,87 @@ LightingTab (UI)
 ??? Test controls
 ```
 
+## Architecture Principles
+
+### Single Source of Truth Pattern
+
+The plugin system follows the principle that **core services are the single source of truth** for hardware state:
+
+```
+GoXLRService (Core)
+??? Manages connection to GoXLR Utility
+??? Handles warmup and health checks
+??? Provides API access to all features
+??? Single point of failure handling
+
+GoXLRLightingPlugin (Extension)
+??? Receives GoXLRService instance
+??? Does NOT check hardware availability
+??? Trusts the core service
+??? API calls fail gracefully if disconnected
+```
+
+### Why Plugins Don't Check Hardware
+
+**Problem with duplicate checking:**
+```csharp
+// ? BAD: Duplicate connection checking
+public async Task InitializeAsync()
+{
+    if (await plugin.IsHardwareAvailableAsync()) // Redundant!
+    {
+        var device = plugin.CreateDevice();
+    }
+}
+```
+
+**Issues:**
+- Race conditions (GoXLR might connect during check)
+- Duplicate code (same logic in multiple places)
+- Slow initialization (waiting for multiple timeouts)
+- False negatives (hardware available but check fails)
+
+**Better approach:**
+```csharp
+// ? GOOD: Always create, fail gracefully
+public async Task InitializeAsync()
+{
+    var device = plugin.CreateDevice();
+    // Device handles connection state internally
+}
+```
+
+**Benefits:**
+- Single connection check in GoXLRService
+- Devices work whenever hardware becomes available
+- Faster initialization
+- More reliable
+
+### Graceful Failure Pattern
+
+```csharp
+public async Task SetButtonColorAsync(string buttonId, string color)
+{
+    if (!IsConfigured)
+    {
+        Logger.Warning("Not configured");
+        return; // Graceful exit
+    }
+
+    try
+    {
+        await _apiClient.SetButtonColourAsync(...);
+    }
+    catch (Exception ex)
+    {
+        Logger.Error("Error setting button color", ex);
+        // Doesn't crash - just logs
+    }
+}
+```
+
+The device **always exists** but operations **gracefully fail** if hardware unavailable.
+
 ## Creating a New Plugin
 
 ### 1. Implement ILightingDevicePlugin
@@ -43,19 +124,26 @@ public class MyDevicePlugin : ILightingDevicePlugin
 
     public async Task<bool> IsHardwareAvailableAsync()
     {
-        // Check if hardware is connected/available
-        return await CheckDeviceConnected();
+        // IMPORTANT: Only use this for device DISCOVERY
+        // Not for connection checking!
+        // 
+        // Good use case: Philips Hue bridge discovery
+        // Bad use case: Checking if shared service is connected
+        //
+        // For devices using a shared service (like GoXLRService),
+        // just return true - the service handles connection state
+        return await Task.FromResult(true);
     }
 
     public ILightingDevice CreateDevice()
     {
-        // Create and return device instance
+        // Always create the device
+        // It will handle connection failures gracefully
         return new MyLightingDevice(_config);
     }
 
     public IEnumerable<DeviceConfigOption> GetConfigOptions()
     {
-        // Return list of configuration options
         return new List<DeviceConfigOption>
         {
             new DeviceConfigOption
@@ -71,7 +159,6 @@ public class MyDevicePlugin : ILightingDevicePlugin
 
     public void ApplyConfiguration(Dictionary<string, object> config)
     {
-        // Apply configuration changes
         if (config.TryGetValue("brightness", out var brightness))
         {
             _brightness = (int)brightness;
@@ -79,6 +166,41 @@ public class MyDevicePlugin : ILightingDevicePlugin
     }
 }
 ```
+
+### When to Use IsHardwareAvailableAsync
+
+**? Use for device DISCOVERY:**
+```csharp
+// Philips Hue: Scan network for bridges
+public async Task<bool> IsHardwareAvailableAsync()
+{
+    var bridges = await ScanForHueBridges();
+    return bridges.Any();
+}
+
+// Nanoleaf: Discover panels on network
+public async Task<bool> IsHardwareAvailableAsync()
+{
+    return await DiscoverNanoleafDevices();
+}
+```
+
+**? Don't use for CONNECTION checking:**
+```csharp
+// BAD: Duplicate connection check
+public async Task<bool> IsHardwareAvailableAsync()
+{
+    return await _goXLRService.IsConnectedAsync(); // Redundant!
+}
+
+// GOOD: Trust the shared service
+public async Task<bool> IsHardwareAvailableAsync()
+{
+    return await Task.FromResult(_goXLRService != null);
+}
+```
+
+
 
 ### 2. Implement ILightingDevice
 
@@ -474,9 +596,179 @@ foreach (var file in pluginFiles)
 - Manage plugin dependencies
 - Version compatibility checking
 
+## Design Decisions & Best Practices
+
+### Why Not Make Volume Control a Plugin?
+
+**Question**: Should volume control, profile switching, etc. also use the plugin system?
+
+**Answer**: No - here's the reasoning:
+
+#### Core vs Extension Features
+
+**Core Features** (Direct usage):
+```csharp
+// These are fundamental GoXLR features
+_hotkeyManager = new HotkeyManager(_goXLRService);
+_profileManager = new ProfileManager(_goXLRService);
+```
+
+- Always available when GoXLR is present
+- Not optional - users expect these to work
+- Part of the core application functionality
+- No need for enable/disable
+
+**Extension Features** (Plugins):
+```csharp
+// These are optional enhancements
+_lightingService.RegisterPlugin(new GoXLRLightingPlugin(_goXLRService));
+_lightingService.RegisterPlugin(new PhilipsHuePlugin(...));
+```
+
+- Optional - users might not want them
+- Can be enabled/disabled
+- Extend core functionality
+- Multiple implementations possible
+
+### Single Source of Truth Architecture
+
+```
+???????????????????????????????????????
+?        GoXLRService (Core)          ?
+?  - Connection management            ?
+?  - API access                       ?
+?  - Health checking                  ?
+???????????????????????????????????????
+                  ?
+                  ? (shared instance)
+                  ?
+        ??????????????????????
+        ?                    ?
+???????????????    ???????????????????
+?  Core       ?    ?  Extensions     ?
+?  Features   ?    ?  (Plugins)      ?
+???????????????    ???????????????????
+? - Volume    ?    ? - Lighting      ?
+? - Profiles  ?    ? - Automations   ?
+? - Routing   ?    ? - Integrations  ?
+???????????????    ???????????????????
+```
+
+### Initialization Order
+
+```csharp
+// App.xaml.cs - Startup
+
+// 1. Core service (always first)
+_goXLRService = new GoXLRService(Settings);
+
+// 2. Core features (use service directly)
+_hotkeyManager = new HotkeyManager(_goXLRService);
+
+// 3. Extension plugins (receive service)
+_lightingService = new LightingService();
+_lightingService.RegisterPlugin(new GoXLRLightingPlugin(_goXLRService, Settings));
+
+// 4. Initialize plugins in background
+_ = Task.Run(async () => await _lightingService.InitializeAsync());
+
+// 5. Warmup happens once for everything
+_ = Task.Run(async () => await WaitForGoXLRUtilityIndefinitely());
+```
+
+### Benefits of This Approach
+
+? **No Duplicate Initialization**
+- GoXLRService initializes once
+- All features use the same instance
+- Single warmup sequence
+
+? **Clear Separation**
+- Core = Always on, direct usage
+- Plugins = Optional, can be disabled
+
+? **Graceful Degradation**
+- If GoXLR disconnects, core features retry
+- Plugins fail gracefully
+- No cascading failures
+
+? **Easy to Understand**
+- Clear which features are essential
+- Clear which are extensions
+- Easy to maintain
+
+### Anti-Patterns to Avoid
+
+? **Don't duplicate connection checking:**
+```csharp
+// BAD
+if (await _goXLRService.IsConnectedAsync()) // Check 1
+{
+    if (await plugin.IsHardwareAvailableAsync()) // Check 2 - redundant!
+    {
+        var device = plugin.CreateDevice();
+    }
+}
+```
+
+? **Don't make core features optional:**
+```csharp
+// BAD - Volume control should always work
+_volumeService.RegisterPlugin(new VolumePlugin(...));
+```
+
+? **Don't create separate service instances:**
+```csharp
+// BAD - Multiple instances
+_goXLRService1 = new GoXLRService(...); // For volume
+_goXLRService2 = new GoXLRService(...); // For lighting
+```
+
+? **Do share the single instance:**
+```csharp
+// GOOD - Single source of truth
+_goXLRService = new GoXLRService(...);
+_hotkeyManager = new HotkeyManager(_goXLRService);
+_lightingPlugin = new GoXLRLightingPlugin(_goXLRService, Settings);
+```
+
+### Future Considerations
+
+If you need to make core features pluggable later:
+
+1. **Create a base plugin for the service itself:**
+```csharp
+public interface IAudioMixerPlugin : IPlugin
+{
+    IAudioMixerService CreateService();
+}
+
+// Then register different mixers
+_mixerService = new AudioMixerService();
+_mixerService.RegisterPlugin(new GoXLRMixerPlugin());
+_mixerService.RegisterPlugin(new WaveXLRPlugin());
+```
+
+2. **Use a strategy pattern for the core:**
+```csharp
+public class VolumeController
+{
+    private IVolumeStrategy _strategy;
+    
+    public VolumeController(IVolumeStrategy strategy)
+    {
+        _strategy = strategy; // Could be GoXLR, WaveXLR, etc.
+    }
+}
+```
+
+But only do this **when you actually need multiple implementations** of core functionality.
+
 ---
 
 **Status**: Implemented ?  
 **Version**: 1.0  
 **Last Updated**: February 2026
+
+
 

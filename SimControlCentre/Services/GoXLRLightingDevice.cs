@@ -36,12 +36,17 @@ namespace SimControlCentre.Services
 
             var goxlrColor = MapToGoXLRColor(color);
             
+            Logger.Info("GoXLR Lighting", $"Setting color {color} (hex: {goxlrColor}) on {_activeButtons.Count} button(s)");
+            
             // Set all active buttons to the same color
             foreach (var button in _activeButtons)
             {
+                Logger.Debug("GoXLR Lighting", $"Setting {button} to {goxlrColor}");
                 await SetButtonColorAsync(button, goxlrColor);
                 await Task.Delay(50); // Rate limiting
             }
+            
+            Logger.Info("GoXLR Lighting", $"Color update complete for {color}");
         }
 
         public Task StartFlashingAsync(LightingColor color1, LightingColor color2, int intervalMs)

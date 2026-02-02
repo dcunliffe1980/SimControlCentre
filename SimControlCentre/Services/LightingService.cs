@@ -41,29 +41,34 @@ namespace SimControlCentre.Services
 
         /// <summary>
         /// Initialize all enabled plugins and create their devices
+        /// Devices will handle connection failures gracefully
         /// </summary>
         public async Task InitializeAsync()
         {
+            Logger.Info("Lighting Service", "Starting device initialization...");
+            
             foreach (var plugin in _plugins.Where(p => p.IsEnabled))
             {
                 try
                 {
-                    if (await plugin.IsHardwareAvailableAsync())
-                    {
-                        var device = plugin.CreateDevice();
-                        RegisterDevice(device);
-                        Logger.Info("Lighting Service", $"Initialized device from plugin: {plugin.DisplayName}");
-                    }
-                    else
-                    {
-                        Logger.Warning("Lighting Service", $"Hardware not available for plugin: {plugin.DisplayName}");
-                    }
+                    Logger.Info("Lighting Service", $"Creating device for plugin: {plugin.DisplayName}");
+                    
+                    // Always create the device - let it handle connection state internally
+                    // This avoids duplicate connection checks and race conditions
+                    var device = plugin.CreateDevice();
+                    RegisterDevice(device);
+                    
+                    Logger.Info("Lighting Service", $"? Device registered: {plugin.DisplayName}");
                 }
                 catch (Exception ex)
                 {
                     Logger.Error("Lighting Service", $"Error initializing plugin {plugin.DisplayName}", ex);
                 }
             }
+            
+            Logger.Info("Lighting Service", $"Initialization complete. {_devices.Count} device(s) registered");
+            
+            await Task.CompletedTask;
         }
 
         /// <summary>
@@ -86,8 +91,13 @@ namespace SimControlCentre.Services
         /// </summary>
         public async Task UpdateForFlagAsync(FlagStatus flag)
         {
+            Logger.Info("Lighting Service", $"UpdateForFlagAsync called with: {flag}, current: {_currentFlag}, devices: {_devices.Count}");
+            
             if (flag == _currentFlag)
+            {
+                Logger.Debug("Lighting Service", "Flag unchanged, skipping");
                 return; // No change
+            }
 
             Logger.Info("Lighting Service", $"Flag changed: {_currentFlag} ? {flag}");
 

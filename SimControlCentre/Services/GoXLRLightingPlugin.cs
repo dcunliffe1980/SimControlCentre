@@ -42,7 +42,9 @@ namespace SimControlCentre.Services
 
         public async Task<bool> IsHardwareAvailableAsync()
         {
-            return await _goXLRService.IsConnectedAsync();
+            // Don't wait for connection - GoXLR might still be warming up
+            // Just return true if GoXLR service exists
+            return await Task.FromResult(_goXLRService != null);
         }
 
         public ILightingDevice CreateDevice()
