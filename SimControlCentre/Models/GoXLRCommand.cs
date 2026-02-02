@@ -69,7 +69,38 @@ public class GoXLRCommandRequest
             }
         };
     }
+
+    public static GoXLRCommandRequest SetSimpleColor(string serialNumber, string target, string colour)
+    {
+        return new GoXLRCommandRequest
+        {
+            Command = new object[]
+            {
+                serialNumber,
+                new Dictionary<string, object[]>
+                {
+                    { "SetSimpleColour", new object[] { target, colour } }
+                }
+            }
+        };
+    }
+
+    public static GoXLRCommandRequest SetFaderColors(string serialNumber, string faderName, string colourOne, string colourTwo)
+    {
+        return new GoXLRCommandRequest
+        {
+            Command = new object[]
+            {
+                serialNumber,
+                new Dictionary<string, object[]>
+                {
+                    { "SetFaderColours", new object[] { faderName, colourOne, colourTwo } }
+                }
+            }
+        };
+    }
 }
+
 
 
 

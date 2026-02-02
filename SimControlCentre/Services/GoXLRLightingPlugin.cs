@@ -36,9 +36,13 @@ namespace SimControlCentre.Services
             "EffectSelect4", "EffectSelect5", "EffectSelect6",
             
             // Effect Type Buttons (physical hardware - Full-size only)
-            "EffectFx", "EffectMegaphone", "EffectRobot", "EffectHardTune"
+            "EffectFx", "EffectMegaphone", "EffectRobot", "EffectHardTune",
             
-            // Note: Sampler buttons are virtual/software - not included
+            // Simple Color Controls (global lighting)
+            "Simple:Global", "Simple:Accent",
+            
+            // Fader Display Colors (fader scribble strips)
+            "Fader:A", "Fader:B", "Fader:C", "Fader:D"
         };
 
         private static readonly List<string> MiniButtons = new()
@@ -47,10 +51,13 @@ namespace SimControlCentre.Services
             "Fader1Mute", "Fader2Mute", "Fader3Mute",
             
             // Function Buttons (physical hardware)
-            "Bleep", "Cough"
+            "Bleep", "Cough",
             
-            // Note: Mini doesn't have effect buttons or fader 4
-            // Sampler buttons are virtual - not included
+            // Simple Color Controls (global lighting)
+            "Simple:Global", "Simple:Accent",
+            
+            // Fader Display Colors (fader scribble strips - Mini has 3)
+            "Fader:A", "Fader:B", "Fader:C"
         };
 
         // Exposed list of available buttons based on device type

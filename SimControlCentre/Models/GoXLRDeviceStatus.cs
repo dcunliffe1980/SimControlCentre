@@ -39,6 +39,12 @@ public class GoXLRHardware
 {
     [JsonPropertyName("serial_number")]
     public string SerialNumber { get; set; } = string.Empty;
+
+    [JsonPropertyName("device_type")]
+    public string DeviceType { get; set; } = string.Empty; // "Full" or "Mini"
+
+    [JsonPropertyName("colour_way")]
+    public string ColourWay { get; set; } = string.Empty; // "Black" or "White"
 }
 
 /// <summary>

@@ -426,6 +426,68 @@ public class GoXLRApiClient : IDisposable
     }
 
     /// <summary>
+    /// Sets a simple color (Global or Accent)
+    /// </summary>
+    public async Task<bool> SetSimpleColorAsync(string serialNumber, string target, string colour)
+    {
+        try
+        {
+            Console.WriteLine($"[GoXLR] SetSimpleColor - Target: {target}, Colour: {colour}");
+            
+            var command = GoXLRCommandRequest.SetSimpleColor(serialNumber, target, colour);
+            var response = await _httpClient.PostAsJsonAsync("/api/command", command);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"[GoXLR] Simple color set successfully");
+                return true;
+            }
+            else
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[GoXLR] Error response: {errorBody}");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[GoXLR] Error setting simple color: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Sets fader colors
+    /// </summary>
+    public async Task<bool> SetFaderColorsAsync(string serialNumber, string faderName, string colourOne, string colourTwo)
+    {
+        try
+        {
+            Console.WriteLine($"[GoXLR] SetFaderColors - Fader: {faderName}, Colour1: {colourOne}, Colour2: {colourTwo}");
+            
+            var command = GoXLRCommandRequest.SetFaderColors(serialNumber, faderName, colourOne, colourTwo);
+            var response = await _httpClient.PostAsJsonAsync("/api/command", command);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"[GoXLR] Fader colors set successfully");
+                return true;
+            }
+            else
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[GoXLR] Error response: {errorBody}");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[GoXLR] Error setting fader colors: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Updates volume cache from device status
     /// </summary>
     private void UpdateVolumeCacheFromDevice(GoXLRDevice device)

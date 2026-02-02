@@ -45,8 +45,7 @@ public class GoXLRService : IDisposable
     public bool IsConfigured => !string.IsNullOrWhiteSpace(SerialNumber);
 
     /// <summary>
-    /// Get the GoXLR device type (Full or Mini) by checking for Fader4
-    /// Mini has 3 faders, Full has 4 faders
+    /// Get the GoXLR device type (Full or Mini) from hardware info
     /// </summary>
     public async Task<string> GetDeviceTypeAsync()
     {
@@ -56,20 +55,11 @@ public class GoXLRService : IDisposable
         try
         {
             var status = await _apiClient.GetDeviceStatusAsync(SerialNumber);
-            if (status != null && status.ButtonDown != null)
+            if (status?.Hardware?.DeviceType != null)
             {
-                // Mini has Fader1-3 only
-                // Full has Fader1-4
-                // This is the most reliable way to detect hardware type
-                
-                if (status.ButtonDown.ContainsKey("Fader4Mute"))
-                {
-                    Logger.Info("GoXLR Service", "Detected Full-size GoXLR (has Fader4Mute)");
-                    return "Full";
-                }
-                
-                Logger.Info("GoXLR Service", "Detected GoXLR Mini (no Fader4Mute)");
-                return "Mini";
+                var deviceType = status.Hardware.DeviceType;
+                Logger.Info("GoXLR Service", $"Detected device type: {deviceType}");
+                return deviceType;
             }
         }
         catch (Exception ex)
@@ -251,6 +241,7 @@ public class GoXLRService : IDisposable
 
     /// <summary>
     /// Set button color (for lighting integration)
+    /// Supports buttons, simple colors (Global/Accent), and fader colors
     /// </summary>
     public async Task SetButtonColorAsync(string buttonId, string color)
     {
@@ -262,12 +253,27 @@ public class GoXLRService : IDisposable
 
         try
         {
-            Logger.Debug("GoXLR Service", $"Setting button {buttonId} to color {color}");
+            Logger.Debug("GoXLR Service", $"Setting {buttonId} to color {color}");
             
             if (_apiClient != null)
             {
-                // Pass color for both colour_one and colour_two (optional)
-                await _apiClient.SetButtonColourAsync(SerialNumber, buttonId, color, color);
+                // Check if it's a simple color (Global/Accent)
+                if (buttonId.StartsWith("Simple:"))
+                {
+                    var target = buttonId.Replace("Simple:", ""); // "Global" or "Accent"
+                    await _apiClient.SetSimpleColorAsync(SerialNumber, target, color);
+                }
+                // Check if it's a fader color
+                else if (buttonId.StartsWith("Fader:"))
+                {
+                    var faderName = buttonId.Replace("Fader:", ""); // "A", "B", "C", or "D"
+                    await _apiClient.SetFaderColorsAsync(SerialNumber, faderName, color, color);
+                }
+                // Regular button
+                else
+                {
+                    await _apiClient.SetButtonColourAsync(SerialNumber, buttonId, color, color);
+                }
             }
         }
         catch (Exception ex)
