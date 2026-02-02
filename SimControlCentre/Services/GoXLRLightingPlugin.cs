@@ -38,11 +38,11 @@ namespace SimControlCentre.Services
             // Effect Type Buttons (physical hardware - Full-size only)
             "EffectFx", "EffectMegaphone", "EffectRobot", "EffectHardTune",
             
-            // Simple Color Controls (global lighting)
-            "Simple:Global", "Simple:Accent",
+            // Global Color Controls (affects all LEDs)
+            "Global", "Accent",
             
-            // Fader Display Colors (fader scribble strips)
-            "Fader:A", "Fader:B", "Fader:C", "Fader:D"
+            // Fader Display Colors (scribble strip colors)
+            "FaderA", "FaderB", "FaderC", "FaderD"
         };
 
         private static readonly List<string> MiniButtons = new()
@@ -53,11 +53,11 @@ namespace SimControlCentre.Services
             // Function Buttons (physical hardware)
             "Bleep", "Cough",
             
-            // Simple Color Controls (global lighting)
-            "Simple:Global", "Simple:Accent",
+            // Global Color Controls (affects all LEDs)
+            "Global", "Accent",
             
-            // Fader Display Colors (fader scribble strips - Mini has 3)
-            "Fader:A", "Fader:B", "Fader:C"
+            // Fader Display Colors (scribble strip colors - Mini has 3)
+            "FaderA", "FaderB", "FaderC"
         };
 
         // Exposed list of available buttons based on device type

@@ -257,16 +257,15 @@ public class GoXLRService : IDisposable
             
             if (_apiClient != null)
             {
-                // Check if it's a simple color (Global/Accent)
-                if (buttonId.StartsWith("Simple:"))
+                // Check if it's a global color (Global/Accent)
+                if (buttonId == "Global" || buttonId == "Accent")
                 {
-                    var target = buttonId.Replace("Simple:", ""); // "Global" or "Accent"
-                    await _apiClient.SetSimpleColorAsync(SerialNumber, target, color);
+                    await _apiClient.SetSimpleColorAsync(SerialNumber, buttonId, color);
                 }
                 // Check if it's a fader color
-                else if (buttonId.StartsWith("Fader:"))
+                else if (buttonId.StartsWith("Fader") && buttonId.Length == 6) // FaderA, FaderB, etc.
                 {
-                    var faderName = buttonId.Replace("Fader:", ""); // "A", "B", "C", or "D"
+                    var faderName = buttonId.Substring(5); // Extract "A", "B", "C", or "D"
                     await _apiClient.SetFaderColorsAsync(SerialNumber, faderName, color, color);
                 }
                 // Regular button
