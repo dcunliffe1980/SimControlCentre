@@ -45,6 +45,44 @@ public class GoXLRService : IDisposable
     public bool IsConfigured => !string.IsNullOrWhiteSpace(SerialNumber);
 
     /// <summary>
+    /// Get the GoXLR device type (Full or Mini) by checking for Fader4
+    /// Mini has 3 faders, Full has 4 faders
+    /// </summary>
+    public async Task<string> GetDeviceTypeAsync()
+    {
+        if (!IsConfigured || _apiClient == null)
+            return "Unknown";
+
+        try
+        {
+            var status = await _apiClient.GetDeviceStatusAsync(SerialNumber);
+            if (status != null && status.ButtonDown != null)
+            {
+                // Mini has Fader1-3 only
+                // Full has Fader1-4
+                // This is the most reliable way to detect hardware type
+                
+                if (status.ButtonDown.ContainsKey("Fader4Mute"))
+                {
+                    Logger.Info("GoXLR Service", "Detected Full-size GoXLR (has Fader4Mute)");
+                    return "Full";
+                }
+                
+                Logger.Info("GoXLR Service", "Detected GoXLR Mini (no Fader4Mute)");
+                return "Mini";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("GoXLR Service", "Error getting device type", ex);
+        }
+
+        // Default to Mini to be conservative (show fewer buttons)
+        Logger.Warning("GoXLR Service", "Could not detect device type, defaulting to Mini");
+        return "Mini";
+    }
+
+    /// <summary>
     /// Checks if the connection to GoXLR is warmed and ready
     /// </summary>
     public bool IsConnectionWarmed => _apiClient?.IsConnectionWarmed ?? false;

@@ -14,57 +14,71 @@ namespace SimControlCentre.Services
         private readonly GoXLRService _goXLRService;
         private readonly AppSettings _settings;
         private List<string> _selectedButtons = new();
+        private string _deviceType = "Full"; // Default to Full
 
         public string PluginId => "goxlr";
         public string DisplayName => "GoXLR";
         public string Description => "GoXLR fader mute button LEDs";
         public bool IsEnabled { get; set; } = true;
 
-        // Available GoXLR buttons (all controllable LEDs)
-        public static readonly List<string> AvailableButtons = new()
+        // All available buttons (will be filtered by device type)
+        // Note: Sampler buttons are virtual (software) and not useful for lighting
+        private static readonly List<string> FullSizeButtons = new()
         {
-            // Fader Mute Buttons (most visible)
-            "Fader1Mute",
-            "Fader2Mute",
-            "Fader3Mute",
-            "Fader4Mute",
+            // Fader Mute Buttons (physical hardware - best for lighting)
+            "Fader1Mute", "Fader2Mute", "Fader3Mute", "Fader4Mute",
             
-            // Function Buttons
-            "Bleep",
-            "Cough",
+            // Function Buttons (physical hardware)
+            "Bleep", "Cough",
             
-            // Effect Selection Buttons
-            "EffectSelect1",
-            "EffectSelect2",
-            "EffectSelect3",
-            "EffectSelect4",
-            "EffectSelect5",
-            "EffectSelect6",
+            // Effect Selection Buttons (physical hardware - Full-size only)
+            "EffectSelect1", "EffectSelect2", "EffectSelect3",
+            "EffectSelect4", "EffectSelect5", "EffectSelect6",
             
-            // Effect Type Buttons
-            "EffectFx",
-            "EffectMegaphone",
-            "EffectRobot",
-            "EffectHardTune",
+            // Effect Type Buttons (physical hardware - Full-size only)
+            "EffectFx", "EffectMegaphone", "EffectRobot", "EffectHardTune"
             
-            // Sampler Buttons (if you have full-size GoXLR)
-            "SamplerSelectA",
-            "SamplerSelectB",
-            "SamplerSelectC",
-            "SamplerTopLeft",
-            "SamplerTopRight",
-            "SamplerBottomLeft",
-            "SamplerBottomRight",
-            "SamplerClear"
+            // Note: Sampler buttons are virtual/software - not included
         };
+
+        private static readonly List<string> MiniButtons = new()
+        {
+            // Fader Mute Buttons (physical hardware)
+            "Fader1Mute", "Fader2Mute", "Fader3Mute",
+            
+            // Function Buttons (physical hardware)
+            "Bleep", "Cough"
+            
+            // Note: Mini doesn't have effect buttons or fader 4
+            // Sampler buttons are virtual - not included
+        };
+
+        // Exposed list of available buttons based on device type
+        public static List<string> AvailableButtons { get; private set; } = FullSizeButtons;
 
         public GoXLRLightingPlugin(GoXLRService goXLRService, AppSettings settings)
         {
             _goXLRService = goXLRService;
             _settings = settings;
             
-            // Default to all fader buttons
-            _selectedButtons = new List<string> { "Fader1Mute", "Fader2Mute", "Fader3Mute", "Fader4Mute" };
+            // Initialize with detection
+            _ = Task.Run(async () => await DetectDeviceTypeAsync());
+        }
+
+        private async Task DetectDeviceTypeAsync()
+        {
+            _deviceType = await _goXLRService.GetDeviceTypeAsync();
+            
+            // Update available buttons based on device type
+            AvailableButtons = _deviceType == "Mini" ? MiniButtons : FullSizeButtons;
+            
+            // Default selection based on device type
+            _selectedButtons = _deviceType == "Mini"
+                ? new List<string> { "Fader1Mute", "Fader2Mute", "Fader3Mute" }
+                : new List<string> { "Fader1Mute", "Fader2Mute", "Fader3Mute", "Fader4Mute" };
+            
+            Logger.Info("GoXLR Plugin", $"Detected device type: {_deviceType}");
+            Logger.Info("GoXLR Plugin", $"Available buttons: {string.Join(", ", AvailableButtons)}");
         }
 
         public async Task<bool> IsHardwareAvailableAsync()

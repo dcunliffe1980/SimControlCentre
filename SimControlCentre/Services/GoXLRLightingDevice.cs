@@ -36,30 +36,51 @@ namespace SimControlCentre.Services
 
             var goxlrColor = MapToGoXLRColor(color);
             
-            Logger.Info("GoXLR Lighting", $"Setting color {color} (hex: {goxlrColor}) on {_activeButtons.Count} button(s)");
+            Logger.Info("GoXLR Lighting", $"SetColorAsync: {color} (hex: {goxlrColor}) on {_activeButtons.Count} button(s)");
+            Logger.Info("GoXLR Lighting", $"Buttons: {string.Join(", ", _activeButtons)}");
             
             // Send all commands at once (parallel) for instant update
-            // No delays - let the API handle rate limiting
-            var tasks = _activeButtons.Select(button => SetButtonColorAsync(button, goxlrColor)).ToList();
-            await Task.WhenAll(tasks);
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var tasks = _activeButtons.Select(button => 
+            {
+                Logger.Debug("GoXLR Lighting", $"Queuing {button}");
+                return SetButtonColorAsync(button, goxlrColor);
+            }).ToList();
             
-            Logger.Info("GoXLR Lighting", $"Color update complete for {color}");
+            Logger.Info("GoXLR Lighting", $"Waiting for {tasks.Count} parallel tasks...");
+            await Task.WhenAll(tasks);
+            sw.Stop();
+            
+            Logger.Info("GoXLR Lighting", $"Color update complete in {sw.ElapsedMilliseconds}ms");
         }
 
         public Task StartFlashingAsync(LightingColor color1, LightingColor color2, int intervalMs)
         {
+            Logger.Info("GoXLR Lighting", $"Starting flash: {color1}/{color2} at {intervalMs}ms interval");
+            
             _isFlashing = true;
             _flashColor1 = color1;
             _flashColor2 = color2;
             _flashState = false;
 
+            // Stop existing timer if any
+            _flashTimer?.Dispose();
+            
+            // Create and start new timer
             _flashTimer = new Timer(async _ => await FlashUpdate(), null, 0, intervalMs);
+            
+            Logger.Info("GoXLR Lighting", "Flash timer started");
             
             return Task.CompletedTask;
         }
 
         public Task StopFlashingAsync()
         {
+            if (_isFlashing)
+            {
+                Logger.Info("GoXLR Lighting", "Stopping flash");
+            }
+            
             _isFlashing = false;
             _flashTimer?.Change(Timeout.Infinite, Timeout.Infinite);
             _flashTimer?.Dispose();
@@ -110,7 +131,11 @@ namespace SimControlCentre.Services
 
         private async Task FlashUpdate()
         {
-            if (!_isFlashing) return;
+            if (!_isFlashing)
+            {
+                Logger.Debug("GoXLR Lighting", "Flash update called but not flashing");
+                return;
+            }
 
             try
             {
@@ -118,9 +143,13 @@ namespace SimControlCentre.Services
                 var color = _flashState ? _flashColor1 : _flashColor2;
                 var goxlrColor = MapToGoXLRColor(color);
 
+                Logger.Debug("GoXLR Lighting", $"Flash update: state={_flashState}, color={color}, hex={goxlrColor}");
+
                 // Send all commands at once for synchronized flashing
                 var tasks = _activeButtons.Select(button => SetButtonColorAsync(button, goxlrColor)).ToList();
                 await Task.WhenAll(tasks);
+                
+                Logger.Debug("GoXLR Lighting", $"Flash update complete: {tasks.Count} buttons updated");
             }
             catch (Exception ex)
             {

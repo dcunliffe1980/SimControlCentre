@@ -27,6 +27,9 @@ public class GoXLRDevice
 
     [JsonPropertyName("hardware")]
     public GoXLRHardware Hardware { get; set; } = new();
+
+    [JsonPropertyName("button_down")]
+    public Dictionary<string, bool> ButtonDown { get; set; } = new();
 }
 
 /// <summary>
