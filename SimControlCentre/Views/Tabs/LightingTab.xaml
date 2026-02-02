@@ -1,0 +1,220 @@
+<UserControl x:Class="SimControlCentre.Views.Tabs.LightingTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="20">
+            <!-- Title -->
+            <TextBlock Text="Flag Lighting" 
+                       FontSize="24" 
+                       FontWeight="Bold" 
+                       Margin="0,0,0,20"/>
+
+            <!-- Enable/Disable -->
+            <GroupBox Header="Settings" Padding="10" Margin="0,0,0,15">
+                <StackPanel>
+                    <CheckBox x:Name="EnableLightingCheckBox"
+                              Content="Enable flag lighting"
+                              Margin="0,0,0,10"
+                              Checked="EnableLighting_Changed"
+                              Unchecked="EnableLighting_Changed"/>
+                    
+                    <TextBlock Text="When enabled, connected lighting devices will display racing flag colors."
+                               TextWrapping="Wrap"
+                               Foreground="Gray"
+                               FontSize="11"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Connected Devices -->
+            <GroupBox Header="Connected Devices" Padding="10" Margin="0,0,0,15">
+                <StackPanel x:Name="DevicesPanel">
+                    <TextBlock Text="No devices registered" 
+                               Foreground="Gray"
+                               FontStyle="Italic"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Current Status -->
+            <GroupBox Header="Current Status" Padding="10" Margin="0,0,0,15">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" 
+                               Text="Active Flag: " 
+                               FontWeight="Bold" 
+                               Margin="0,0,10,10"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" 
+                               x:Name="CurrentFlagText" 
+                               Text="None"
+                               Margin="0,0,0,10"/>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" 
+                               Text="Status: " 
+                               FontWeight="Bold" 
+                               Margin="0,0,10,0"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" 
+                               x:Name="StatusText" 
+                               Text="Ready"
+                               Foreground="Green"/>
+                </Grid>
+            </GroupBox>
+
+            <!-- Test Buttons -->
+            <GroupBox Header="Test Flag Lighting" Padding="10" Margin="0,0,0,15">
+                <StackPanel>
+                    <TextBlock Text="Click buttons to test flag lighting (useful for testing without iRacing)"
+                               TextWrapping="Wrap"
+                               Foreground="Gray"
+                               FontSize="11"
+                               Margin="0,0,0,10"/>
+
+                    <!-- Row 1 -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button Content="Green Flag" 
+                                Click="TestFlag_Click" 
+                                Tag="Green"
+                                Width="120" 
+                                Padding="10,5"
+                                Margin="0,0,10,0"
+                                Background="#FF4CAF50"
+                                Foreground="White"/>
+                        
+                        <Button Content="Yellow Flag" 
+                                Click="TestFlag_Click" 
+                                Tag="Yellow"
+                                Width="120" 
+                                Padding="10,5"
+                                Margin="0,0,10,0"
+                                Background="#FFFFC107"
+                                Foreground="Black"/>
+                        
+                        <Button Content="Yellow Waving" 
+                                Click="TestFlag_Click" 
+                                Tag="YellowWaving"
+                                Width="120" 
+                                Padding="10,5"
+                                Background="#FFFFC107"
+                                Foreground="Black"/>
+                    </StackPanel>
+
+                    <!-- Row 2 -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button Content="Red Flag" 
+                                Click="TestFlag_Click" 
+                                Tag="Red"
+                                Width="120" 
+                                Padding="10,5"
+                                Margin="0,0,10,0"
+                                Background="#FFF44336"
+                                Foreground="White"/>
+                        
+                        <Button Content="Blue Flag" 
+                                Click="TestFlag_Click" 
+                                Tag="Blue"
+                                Width="120" 
+                                Padding="10,5"
+                                Margin="0,0,10,0"
+                                Background="#FF2196F3"
+                                Foreground="White"/>
+                        
+                        <Button Content="White Flag" 
+                                Click="TestFlag_Click" 
+                                Tag="White"
+                                Width="120" 
+                                Padding="10,5"
+                                Background="White"
+                                Foreground="Black"/>
+                    </StackPanel>
+
+                    <!-- Row 3 -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button Content="Checkered Flag" 
+                                Click="TestFlag_Click" 
+                                Tag="Checkered"
+                                Width="120" 
+                                Padding="10,5"
+                                Margin="0,0,10,0"
+                                Background="WhiteSmoke"
+                                Foreground="Black"/>
+                        
+                        <Button Content="Black Flag" 
+                                Click="TestFlag_Click" 
+                                Tag="Black"
+                                Width="120" 
+                                Padding="10,5"
+                                Margin="0,0,10,0"
+                                Background="Black"
+                                Foreground="White"/>
+                        
+                        <Button Content="Debris Flag" 
+                                Click="TestFlag_Click" 
+                                Tag="Debris"
+                                Width="120" 
+                                Padding="10,5"
+                                Background="#FFFF9800"
+                                Foreground="Black"/>
+                    </StackPanel>
+
+                    <!-- Row 4 -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button Content="One Lap to Green" 
+                                Click="TestFlag_Click" 
+                                Tag="OneLapToGreen"
+                                Width="120" 
+                                Padding="10,5"
+                                Margin="0,0,10,0"
+                                Background="#FF8BC34A"
+                                Foreground="White"/>
+                        
+                        <Button Content="Clear Flag" 
+                                Click="TestFlag_Click" 
+                                Tag="None"
+                                Width="120" 
+                                Padding="10,5"
+                                Background="Gray"
+                                Foreground="White"/>
+                    </StackPanel>
+
+                    <TextBlock Text="Note: Flashing flags will flash on your devices. Click 'Clear Flag' to stop."
+                               TextWrapping="Wrap"
+                               Foreground="Orange"
+                               FontSize="11"
+                               FontStyle="Italic"
+                               Margin="0,10,0,0"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Info -->
+            <GroupBox Header="Information" Padding="10">
+                <StackPanel>
+                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,5">
+                        <Run FontWeight="Bold">How it works:</Run>
+                        <LineBreak/>
+                        When you're racing in iRacing, the system automatically detects flag changes and updates your lighting devices. No manual input needed!
+                    </TextBlock>
+                    
+                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,5">
+                        <Run FontWeight="Bold">Supported Devices:</Run>
+                        <LineBreak/>
+                        - GoXLR (Fader mute button LEDs)
+                        <LineBreak/>
+                        - More devices coming soon (Philips Hue, Nanoleaf, etc.)
+                    </TextBlock>
+
+                    <TextBlock TextWrapping="Wrap">
+                        <Run FontWeight="Bold">Flashing Flags:</Run>
+                        <LineBreak/>
+                        Some flags flash like in real racing: Yellow Waving, Checkered, Black Flag, and One Lap to Green.
+                    </TextBlock>
+                </StackPanel>
+            </GroupBox>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

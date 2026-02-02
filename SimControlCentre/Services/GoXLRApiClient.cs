@@ -386,6 +386,46 @@ public class GoXLRApiClient : IDisposable
     }
 
     /// <summary>
+    /// Sets a button color on the GoXLR
+    /// </summary>
+    public async Task<bool> SetButtonColourAsync(string serialNumber, string buttonId, string colourOne, string? colourTwo = null)
+    {
+        try
+        {
+            Console.WriteLine($"[GoXLR] SetButtonColour - Button: {buttonId}, Colour1: {colourOne}, Colour2: {colourTwo ?? "null"}");
+            
+            var command = GoXLRCommandRequest.SetButtonColours(serialNumber, buttonId, colourOne, colourTwo);
+            
+            var json = System.Text.Json.JsonSerializer.Serialize(command);
+            Console.WriteLine($"[GoXLR] Sending command: {json}");
+            
+            var response = await _httpClient.PostAsJsonAsync("/api/command", command);
+            
+            Console.WriteLine($"[GoXLR] Response status: {response.StatusCode}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var responseBody = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[GoXLR] Response body: {responseBody}");
+                return true;
+            }
+            else
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[GoXLR] Error response: {errorBody}");
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[GoXLR] Error setting button color: {ex.Message}");
+            Console.WriteLine($"[GoXLR] Stack trace: {ex.StackTrace}");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Updates volume cache from device status
     /// </summary>
     private void UpdateVolumeCacheFromDevice(GoXLRDevice device)

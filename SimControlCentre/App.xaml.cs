@@ -25,6 +25,8 @@ public partial class App : Application
     private ControllerManager? _controllerManager;
     private iRacingMonitorService? _iRacingMonitor;
     private UpdateCheckService? _updateCheckService;
+    private TelemetryService? _telemetryService;
+    private LightingService? _lightingService;
     public AppSettings Settings { get; private set; } = new();
 
     public App()
@@ -87,6 +89,32 @@ public partial class App : Application
             
             // Subscribe to update available event
             _updateCheckService.StatusChanged += OnUpdateStatusChanged;
+
+            // Initialize telemetry service
+            _telemetryService = new TelemetryService();
+            
+            // Register iRacing telemetry provider
+            var iRacingProvider = new iRacingTelemetryProvider();
+            _telemetryService.RegisterProvider(iRacingProvider);
+            
+            // Start telemetry monitoring
+            _telemetryService.StartAll();
+            Logger.Info("App", "Telemetry service started");
+
+            // Initialize lighting service
+            _lightingService = new LightingService();
+            
+            // Register GoXLR as a lighting device
+            var goxlrLighting = new GoXLRLightingDevice(_goXLRService, Settings);
+            _lightingService.RegisterDevice(goxlrLighting);
+            
+            // Subscribe to flag changes and update lighting
+            _telemetryService.FlagChanged += async (s, e) =>
+            {
+                await _lightingService.UpdateForFlagAsync(e.NewFlag);
+            };
+            
+            Logger.Info("App", "Lighting service initialized and connected to telemetry");
 
             // Always warm up the GoXLR API connection on startup
             _ = Task.Run(async () =>
@@ -262,6 +290,7 @@ public partial class App : Application
     {
         // Window settings are saved by MainWindow's OnClosed handler
         
+        _telemetryService?.Dispose();
         _iRacingMonitor?.Dispose();
         _hotkeyManager?.Dispose();
         _hotkeyService?.Dispose();
@@ -371,6 +400,16 @@ public partial class App : Application
     public static UpdateCheckService? GetUpdateCheckService()
     {
         return ((App)Current)._updateCheckService;
+    }
+
+    public static TelemetryService? GetTelemetryService()
+    {
+        return ((App)Current)._telemetryService;
+    }
+
+    public static LightingService? GetLightingService()
+    {
+        return ((App)Current)._lightingService;
     }
 
     private void ToggleHotkeys_Click(object sender, RoutedEventArgs e)

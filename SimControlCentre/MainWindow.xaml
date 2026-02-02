@@ -18,6 +18,9 @@
             
             <!-- Application Manager Tab -->
             <TabItem Header="Application Manager" x:Name="iRacingTabItem"/>
+            
+            <!-- Flag Lighting Tab -->
+            <TabItem Header="Flag Lighting" x:Name="LightingTabItem"/>
         </TabControl>
     </Grid>
 </Window>

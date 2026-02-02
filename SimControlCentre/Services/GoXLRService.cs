@@ -211,6 +211,33 @@ public class GoXLRService : IDisposable
         InitializeClient();
     }
 
+    /// <summary>
+    /// Set button color (for lighting integration)
+    /// </summary>
+    public async Task SetButtonColorAsync(string buttonId, string color)
+    {
+        if (!IsConfigured)
+        {
+            Logger.Warning("GoXLR Service", "Cannot set button color - not configured");
+            return;
+        }
+
+        try
+        {
+            Logger.Debug("GoXLR Service", $"Setting button {buttonId} to color {color}");
+            
+            if (_apiClient != null)
+            {
+                // Pass color for both colour_one and colour_two (optional)
+                await _apiClient.SetButtonColourAsync(SerialNumber, buttonId, color, color);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("GoXLR Service", $"Error setting button color", ex);
+        }
+    }
+
     public void Dispose()
     {
         Console.WriteLine("[GoXLRService] Disposing service");

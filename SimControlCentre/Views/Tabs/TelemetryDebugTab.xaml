@@ -1,0 +1,204 @@
+<UserControl x:Class="SimControlCentre.Views.Tabs.TelemetryDebugTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Title -->
+        <TextBlock Grid.Row="0" 
+                   Text="Telemetry Debug" 
+                   FontSize="24" 
+                   FontWeight="Bold" 
+                   Margin="0,0,0,20"/>
+
+        <!-- Status and Controls -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,20">
+            <!-- Connection Status -->
+            <GroupBox Header="Connection Status" Padding="10" Margin="0,0,0,15">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="Status: " FontWeight="Bold"/>
+                        <TextBlock x:Name="StatusText" Text="Disconnected" Foreground="Orange"/>
+                    </StackPanel>
+                    
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="Active Sim: " FontWeight="Bold"/>
+                        <TextBlock x:Name="SimNameText" Text="None"/>
+                    </StackPanel>
+                    
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Last Update: " FontWeight="Bold"/>
+                        <TextBlock x:Name="LastUpdateText" Text="Never"/>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+            
+            <!-- Recording Controls -->
+            <GroupBox Header="Recording" Padding="10" Margin="0,0,0,15">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button x:Name="StartRecordingButton" 
+                                Content="Start Recording" 
+                                Click="StartRecording_Click"
+                                Width="110"
+                                Padding="5"
+                                Margin="0,0,5,0"/>
+                        <Button x:Name="StopRecordingButton" 
+                                Content="Stop Recording" 
+                                Click="StopRecording_Click"
+                                Width="110"
+                                Padding="5"
+                                IsEnabled="False"/>
+                    </StackPanel>
+                    
+                    <TextBlock x:Name="RecordingStatusText" 
+                               Text="Not recording" 
+                               FontSize="11" 
+                               Foreground="Gray"/>
+                </StackPanel>
+            </GroupBox>
+            
+            <!-- Playback Controls -->
+            <GroupBox Header="Playback" Padding="10">
+                <StackPanel>
+                    <ComboBox x:Name="RecordingsComboBox" 
+                              Margin="0,0,0,10"
+                              SelectionChanged="RecordingsComboBox_SelectionChanged"/>
+                    
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button x:Name="PlayButton" 
+                                Content="Play" 
+                                Click="Play_Click"
+                                Width="70"
+                                Padding="5"
+                                Margin="0,0,5,0"
+                                IsEnabled="False"/>
+                        <Button x:Name="StopPlaybackButton" 
+                                Content="Stop" 
+                                Click="StopPlayback_Click"
+                                Width="70"
+                                Padding="5"
+                                Margin="0,0,5,0"
+                                IsEnabled="False"/>
+                        <Button x:Name="DeleteRecordingButton" 
+                                Content="Delete" 
+                                Click="DeleteRecording_Click"
+                                Width="70"
+                                Padding="5"
+                                IsEnabled="False"/>
+                    </StackPanel>
+                    
+                    <CheckBox x:Name="LoopCheckBox" 
+                              Content="Loop playback"
+                              VerticalAlignment="Center"
+                              Margin="0,0,0,10"/>
+                    
+                    <TextBlock x:Name="PlaybackStatusText" 
+                               Text="No recording selected" 
+                               FontSize="11" 
+                               Foreground="Gray"/>
+                </StackPanel>
+            </GroupBox>
+        </StackPanel>
+
+        <!-- Telemetry Data -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- Flag Status -->
+                <GroupBox Header="Flag Status" Padding="10" Margin="0,0,0,15">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Current Flag:" FontWeight="Bold" Margin="0,5,10,5"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" x:Name="FlagText" Text="None" FontSize="16" Foreground="White" Margin="0,5"/>
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Under Caution:" FontWeight="Bold" Margin="0,5,10,5"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" x:Name="CautionText" Text="No" Margin="0,5"/>
+                    </Grid>
+                </GroupBox>
+
+                <!-- Session Info -->
+                <GroupBox Header="Session Info" Padding="10" Margin="0,0,0,15">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Session Type:" FontWeight="Bold" Margin="0,5"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" x:Name="SessionTypeText" Text="-" Margin="0,5"/>
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Session State:" FontWeight="Bold" Margin="0,5"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" x:Name="SessionStateText" Text="-" Margin="0,5"/>
+                        
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Current Lap:" FontWeight="Bold" Margin="0,5"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" x:Name="LapText" Text="-" Margin="0,5"/>
+                        
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Position:" FontWeight="Bold" Margin="0,5"/>
+                        <TextBlock Grid.Row="3" Grid.Column="1" x:Name="PositionText" Text="-" Margin="0,5"/>
+                        
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Track:" FontWeight="Bold" Margin="0,5"/>
+                        <TextBlock Grid.Row="4" Grid.Column="1" x:Name="TrackText" Text="-" Margin="0,5"/>
+                    </Grid>
+                </GroupBox>
+
+                <!-- Car Data -->
+                <GroupBox Header="Car Data" Padding="10" Margin="0,0,0,15">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Speed:" FontWeight="Bold" Margin="0,5"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" x:Name="SpeedText" Text="-" Margin="0,5"/>
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="RPM:" FontWeight="Bold" Margin="0,5"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" x:Name="RpmText" Text="-" Margin="0,5"/>
+                        
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Gear:" FontWeight="Bold" Margin="0,5"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" x:Name="GearText" Text="-" Margin="0,5"/>
+                        
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="In Pits:" FontWeight="Bold" Margin="0,5"/>
+                        <TextBlock Grid.Row="3" Grid.Column="1" x:Name="PitsText" Text="-" Margin="0,5"/>
+                    </Grid>
+                </GroupBox>
+
+                <!-- Raw Data -->
+                <GroupBox Header="Raw Data (Last 20 Updates)" Padding="10">
+                    <ScrollViewer Height="200" VerticalScrollBarVisibility="Auto">
+                        <TextBlock x:Name="RawDataText" 
+                                   FontFamily="Consolas" 
+                                   FontSize="10" 
+                                   TextWrapping="Wrap"
+                                   Text="Waiting for data..."/>
+                    </ScrollViewer>
+                </GroupBox>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

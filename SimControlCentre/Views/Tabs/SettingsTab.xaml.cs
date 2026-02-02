@@ -105,6 +105,9 @@ namespace SimControlCentre.Views.Tabs
                 case "Controllers":
                     LoadControllersSettings();
                     break;
+                case "Telemetry":
+                    LoadTelemetryDebug();
+                    break;
                 case "Logs":
                     LoadLogsSettings();
                     break;
@@ -529,6 +532,27 @@ namespace SimControlCentre.Views.Tabs
                 }
             };
             SettingsContent.Children.Add(openLogsButton);
+        }
+
+        private void LoadTelemetryDebug()
+        {
+            var telemetryService = App.GetTelemetryService();
+            
+            if (telemetryService == null)
+            {
+                var errorText = new TextBlock
+                {
+                    Text = "Telemetry service not available",
+                    Foreground = System.Windows.Media.Brushes.Red,
+                    FontSize = 14
+                };
+                SettingsContent.Children.Add(errorText);
+                return;
+            }
+
+            // Embed the TelemetryDebugTab
+            var telemetryTab = new TelemetryDebugTab(telemetryService);
+            SettingsContent.Children.Add(telemetryTab);
         }
 
         private void LoadAboutSettings()

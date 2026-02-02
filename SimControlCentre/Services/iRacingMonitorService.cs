@@ -16,10 +16,12 @@ namespace SimControlCentre.Services
     {
         private readonly AppSettings _settings;
         private Timer? _monitorTimer;
+        private Timer? _watchdogTimer;
         private bool _iRacingWasRunning = false;
         private readonly Dictionary<string, int> _runningApps = new(); // ExternalApp.Name -> ProcessId
         private bool _isDisposed = false;
         private CancellationTokenSource? _stopAppsCancellation;
+        private const int MaxRestartAttempts = 3; // Maximum restart attempts before giving up
 
         // Windows API for minimizing windows
         [DllImport("user32.dll")]
@@ -39,7 +41,12 @@ namespace SimControlCentre.Services
         public void StartMonitoring(int intervalMs = 3000)
         {
             _monitorTimer = new Timer(CheckiRacingState, null, 0, intervalMs);
+            
+            // Start watchdog timer to monitor running apps (check every 10 seconds)
+            _watchdogTimer = new Timer(WatchdogCheck, null, 10000, 10000);
+            
             Logger.Info("iRacingMonitor", $"Started monitoring (checking every {intervalMs}ms)");
+            Logger.Info("iRacingMonitor", "Started watchdog timer (checking every 10s)");
         }
 
         /// <summary>
@@ -48,6 +55,7 @@ namespace SimControlCentre.Services
         public void StopMonitoring()
         {
             _monitorTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+            _watchdogTimer?.Change(Timeout.Infinite, Timeout.Infinite);
             Logger.Info("iRacingMonitor", "Stopped monitoring");
         }
 
@@ -169,14 +177,15 @@ namespace SimControlCentre.Services
         }
 
         /// <summary>
-        /// Start all configured external applications
+        /// Start all configured external applications with dependency ordering
         /// </summary>
         private async Task StartExternalApps(bool disconnected)
         {
             Logger.Info("iRacingMonitor", $"StartExternalApps called (disconnected: {disconnected})");
             
             var appsToStart = _settings.ExternalApps
-                .Where(a => a.AppType == ExternalAppType.StartWithRacing)
+                .Where(a => a.AppType == ExternalAppType.StartWithRacing && a.StartWithiRacing)
+                .OrderBy(a => a.StartOrder) // Sort by start order
                 .ToList();
             
             Logger.Info("iRacingMonitor", $"Found {appsToStart.Count} app(s) configured to start");
@@ -187,91 +196,62 @@ namespace SimControlCentre.Services
                 return;
             }
 
-            foreach (var app in appsToStart)
+            // Group apps by start order for parallel execution within same order
+            var orderGroups = appsToStart.GroupBy(a => a.StartOrder).OrderBy(g => g.Key);
+            
+            foreach (var group in orderGroups)
             {
-                try
+                Logger.Info("iRacingMonitor", $"Starting apps in order group {group.Key}...");
+                
+                var startTasks = new List<Task>();
+                
+                foreach (var app in group)
                 {
-                    Logger.Debug("iRacingMonitor", $"Processing app: {app.Name}");
-                    Logger.Debug("iRacingMonitor", $"  - StartWithiRacing: {app.StartWithiRacing}");
-                    Logger.Debug("iRacingMonitor", $"  - DelayStartSeconds: {app.DelayStartSeconds}");
+                    // Check dependency
+                    if (!string.IsNullOrEmpty(app.DependsOnApp))
+                    {
+                        var dependency = _settings.ExternalApps.FirstOrDefault(a => a.Name == app.DependsOnApp);
+                        if (dependency != null)
+                        {
+                            if (!_runningApps.ContainsKey(dependency.Name))
+                            {
+                                Logger.Warning("iRacingMonitor", $"{app.Name} depends on {app.DependsOnApp} which is not running yet - waiting");
+                                
+                                // Wait up to 30 seconds for dependency
+                                int waitTime = 0;
+                                while (!_runningApps.ContainsKey(dependency.Name) && waitTime < 30000)
+                                {
+                                    await Task.Delay(1000);
+                                    waitTime += 1000;
+                                }
+                                
+                                if (!_runningApps.ContainsKey(dependency.Name))
+                                {
+                                    Logger.Error("iRacingMonitor", $"{app.Name} dependency {app.DependsOnApp} failed to start - skipping");
+                                    continue;
+                                }
+                                
+                                Logger.Info("iRacingMonitor", $"Dependency {app.DependsOnApp} is now running");
+                            }
+                        }
+                    }
                     
-                    // Check if this specific app is enabled
-                    if (!app.StartWithiRacing)
-                    {
-                        Logger.Debug("iRacingMonitor", $"Skipping {app.Name} - StartWithiRacing is disabled");
-                        continue;
-                    }
-
-                    // Check if already running
-                    if (_runningApps.ContainsKey(app.Name))
-                    {
-                        Logger.Info("iRacingMonitor", $"{app.Name} already running (PID: {_runningApps[app.Name]})");
-                        continue;
-                    }
-
-                    // Apply delay
+                    // Apply individual app delay
                     if (app.DelayStartSeconds > 0)
                     {
                         Logger.Info("iRacingMonitor", $"Delaying start of {app.Name} by {app.DelayStartSeconds}s");
                         await Task.Delay(app.DelayStartSeconds * 1000);
                     }
-
-                    Logger.Info("iRacingMonitor", $"Starting {app.Name}...");
-                    Logger.Debug("iRacingMonitor", $"  - Path: {app.ExecutablePath}");
-                    Logger.Debug("iRacingMonitor", $"  - Args: {app.Arguments}");
-                    Logger.Debug("iRacingMonitor", $"  - Hidden: {app.StartHidden}");
-
-                    // Start the app
-                    var startInfo = new ProcessStartInfo
-                    {
-                        FileName = app.ExecutablePath,
-                        Arguments = app.Arguments,
-                        UseShellExecute = true,
-                        WorkingDirectory = System.IO.Path.GetDirectoryName(app.ExecutablePath) ?? ""
-                    };
-
-                    if (app.StartHidden)
-                    {
-                        startInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                    }
-
-                    var process = Process.Start(startInfo);
-                    if (process != null)
-                    {
-                        var initialPid = process.Id;
-                        Logger.Info("iRacingMonitor", $"Initial process started for {app.Name} (PID: {initialPid})");
-                        
-                        // Wait a bit to see if it spawns child processes (like SimHub does)
-                        await Task.Delay(2000);
-                        
-                        // Check if the process still exists or if children were spawned
-                        var actualProcess = await FindActualProcess(app.ExecutablePath, initialPid);
-                        
-                        _runningApps[app.Name] = actualProcess.Id;
-                        app.ProcessId = actualProcess.Id;
-                        app.IsRunning = true;
-                        
-                        if (actualProcess.Id != initialPid)
-                        {
-                            Logger.Info("iRacingMonitor", $"Detected child process for {app.Name} (PID: {actualProcess.Id})");
-                        }
-                        
-                        // Force minimize if start hidden is enabled
-                        if (app.StartHidden)
-                        {
-                            await MinimizeProcessWindow(actualProcess, app.Name);
-                        }
-                        
-                        Logger.Info("iRacingMonitor", $"? Started {app.Name} (PID: {actualProcess.Id})");
-                    }
-                    else
-                    {
-                        Logger.Error("iRacingMonitor", $"? Failed to start {app.Name} - Process.Start returned null");
-                    }
+                    
+                    // Start the app (parallel within same order group)
+                    startTasks.Add(StartSingleApp(app, disconnected));
                 }
-                catch (Exception ex)
+                
+                // Wait for all apps in this order group to start before moving to next group
+                if (startTasks.Count > 0)
                 {
-                    Logger.Error("iRacingMonitor", $"? Failed to start {app.Name}", ex);
+                    await Task.WhenAll(startTasks);
+                    Logger.Info("iRacingMonitor", $"Completed starting {startTasks.Count} app(s) in order group {group.Key}");
                 }
             }
             
@@ -306,20 +286,60 @@ namespace SimControlCentre.Services
                             await Task.Delay(app.DelayStopSeconds * 1000);
                         }
 
-                        // Stop the app
-                        var processId = _runningApps[app.Name];
+                        Process? process = null;
+                        int processId = 0;
+                        
+                        // First, check if we're tracking this app (started by us)
+                        if (_runningApps.ContainsKey(app.Name))
+                        {
+                            processId = _runningApps[app.Name];
+                            Logger.Info("iRacingMonitor", $"Found tracked instance of {app.Name} (PID: {processId})");
+                            
+                            try
+                            {
+                                process = Process.GetProcessById(processId);
+                            }
+                            catch (ArgumentException)
+                            {
+                                Logger.Info("iRacingMonitor", $"Tracked instance of {app.Name} already exited");
+                                _runningApps.Remove(app.Name);
+                                process = null;
+                            }
+                        }
+                        
+                        // If not tracked or already exited, search for any running instance
+                        if (process == null)
+                        {
+                            Logger.Info("iRacingMonitor", $"Searching for any running instance of {app.Name}...");
+                            var exeName = System.IO.Path.GetFileNameWithoutExtension(app.ExecutablePath);
+                            var runningProcesses = Process.GetProcessesByName(exeName);
+                            
+                            if (runningProcesses.Length > 0)
+                            {
+                                process = runningProcesses[0];
+                                processId = process.Id;
+                                Logger.Info("iRacingMonitor", $"Found running instance of {app.Name} (PID: {processId}) - will stop it");
+                            }
+                            else
+                            {
+                                Logger.Info("iRacingMonitor", $"No running instance of {app.Name} found - nothing to stop");
+                                return;
+                            }
+                        }
+
+                        // Stop the process
                         try
                         {
-                            var process = Process.GetProcessById(processId);
-                            
                             // Try graceful shutdown first
                             Logger.Info("iRacingMonitor", $"Attempting graceful shutdown of {app.Name} (PID: {processId})");
                             bool closedGracefully = process.CloseMainWindow();
                             
                             if (closedGracefully)
                             {
-                                // Wait up to 5 seconds for graceful exit
-                                bool exited = process.WaitForExit(5000);
+                                // Wait for configured timeout period for graceful exit
+                                int timeoutMs = app.GracefulShutdownTimeoutSeconds * 1000;
+                                Logger.Debug("iRacingMonitor", $"Waiting up to {app.GracefulShutdownTimeoutSeconds}s for graceful exit");
+                                bool exited = process.WaitForExit(timeoutMs);
                                 
                                 if (exited)
                                 {
@@ -327,7 +347,7 @@ namespace SimControlCentre.Services
                                 }
                                 else
                                 {
-                                    Logger.Warning("iRacingMonitor", $"{app.Name} did not exit gracefully, forcing kill");
+                                    Logger.Warning("iRacingMonitor", $"{app.Name} did not exit gracefully within {app.GracefulShutdownTimeoutSeconds}s, forcing kill");
                                     process.Kill();
                                     Logger.Info("iRacingMonitor", $"? Forcefully killed {app.Name}");
                                 }
@@ -348,6 +368,7 @@ namespace SimControlCentre.Services
                         _runningApps.Remove(app.Name);
                         app.ProcessId = 0;
                         app.IsRunning = false;
+                        app.RestartAttempts = 0; // Reset restart counter when manually stopped
                     }
                     catch (Exception ex)
                     {
@@ -508,12 +529,16 @@ namespace SimControlCentre.Services
                             {
                                 Logger.Info("iRacingMonitor", $"Stopping {app.Name} (PID: {process.Id}) for racing...");
                                 
+                                // Mark that it was running before we stopped it
+                                app.WasRunningBeforeStoppingForRacing = true;
+                                
                                 // Try graceful shutdown first
                                 bool closedGracefully = process.CloseMainWindow();
                                 
                                 if (closedGracefully)
                                 {
-                                    bool exited = process.WaitForExit(3000);
+                                    int timeoutMs = app.GracefulShutdownTimeoutSeconds * 1000;
+                                    bool exited = process.WaitForExit(timeoutMs);
                                     if (exited)
                                     {
                                         Logger.Info("iRacingMonitor", $"? {app.Name} closed gracefully");
@@ -564,7 +589,9 @@ namespace SimControlCentre.Services
             Logger.Info("iRacingMonitor", "RestartStoppedApps called");
             
             var appsToRestart = _settings.ExternalApps
-                .Where(a => a.WasStoppedByUs && a.RestartWhenIRacingStops)
+                .Where(a => a.WasStoppedByUs && 
+                           a.WasRunningBeforeStoppingForRacing && 
+                           a.RestartWhenIRacingStops)
                 .ToList();
             
             if (appsToRestart.Count == 0)
@@ -623,13 +650,201 @@ namespace SimControlCentre.Services
             Logger.Info("iRacingMonitor", "RestartStoppedApps completed");
         }
 
+        /// <summary>
+        /// Watchdog timer callback - checks if tracked apps are still running
+        /// </summary>
+        private void WatchdogCheck(object? state)
+        {
+            if (!_iRacingWasRunning)
+                return; // Only monitor when iRacing is running
+
+            try
+            {
+                var appsToCheck = _settings.ExternalApps
+                    .Where(a => a.AppType == ExternalAppType.StartWithRacing && 
+                                a.EnableWatchdog && 
+                                _runningApps.ContainsKey(a.Name))
+                    .ToList();
+
+                foreach (var app in appsToCheck)
+                {
+                    var processId = _runningApps[app.Name];
+                    
+                    try
+                    {
+                        var process = Process.GetProcessById(processId);
+                        
+                        // Process exists - perform health check if enabled
+                        if (app.VerifyStartup)
+                        {
+                            if (!process.Responding)
+                            {
+                                Logger.Warning("iRacingMonitor", $"[Watchdog] {app.Name} is not responding");
+                            }
+                        }
+                        
+                        app.LastHealthCheck = DateTime.Now;
+                    }
+                    catch (ArgumentException)
+                    {
+                        // Process no longer exists - it crashed!
+                        Logger.Warning("iRacingMonitor", $"[Watchdog] {app.Name} has crashed (PID: {processId})");
+                        _runningApps.Remove(app.Name);
+                        app.IsRunning = false;
+                        app.ProcessId = 0;
+                        
+                        // Attempt to restart if under retry limit
+                        if (app.RestartAttempts < MaxRestartAttempts)
+                        {
+                            app.RestartAttempts++;
+                            Logger.Info("iRacingMonitor", $"[Watchdog] Attempting to restart {app.Name} (attempt {app.RestartAttempts}/{MaxRestartAttempts})");
+                            
+                            _ = Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    await Task.Delay(2000); // Brief delay before restart
+                                    await StartSingleApp(app, disconnected: false);
+                                    
+                                    if (app.IsRunning)
+                                    {
+                                        Logger.Info("iRacingMonitor", $"[Watchdog] Successfully restarted {app.Name}");
+                                        app.RestartAttempts = 0; // Reset counter on successful restart
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logger.Error("iRacingMonitor", $"[Watchdog] Failed to restart {app.Name}", ex);
+                                }
+                            });
+                        }
+                        else
+                        {
+                            Logger.Error("iRacingMonitor", $"[Watchdog] {app.Name} exceeded max restart attempts ({MaxRestartAttempts})");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("iRacingMonitor", "[Watchdog] Error during watchdog check", ex);
+            }
+        }
+
+        /// <summary>
+        /// Start a single app with health checking
+        /// </summary>
+        private async Task StartSingleApp(ExternalApp app, bool disconnected)
+        {
+            try
+            {
+                // Check if already running
+                if (_runningApps.ContainsKey(app.Name))
+                {
+                    Logger.Info("iRacingMonitor", $"{app.Name} already running (PID: {_runningApps[app.Name]})");
+                    return;
+                }
+
+                Logger.Info("iRacingMonitor", $"Starting {app.Name}...");
+                Logger.Debug("iRacingMonitor", $"  - Path: {app.ExecutablePath}");
+                Logger.Debug("iRacingMonitor", $"  - Args: {app.Arguments}");
+                Logger.Debug("iRacingMonitor", $"  - Hidden: {app.StartHidden}");
+
+                // Start the app
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = app.ExecutablePath,
+                    Arguments = app.Arguments,
+                    UseShellExecute = true,
+                    WorkingDirectory = System.IO.Path.GetDirectoryName(app.ExecutablePath) ?? ""
+                };
+
+                if (app.StartHidden)
+                {
+                    startInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                }
+
+                var process = Process.Start(startInfo);
+                if (process != null)
+                {
+                    var initialPid = process.Id;
+                    Logger.Info("iRacingMonitor", $"Initial process started for {app.Name} (PID: {initialPid})");
+                    
+                    // Wait a bit to see if it spawns child processes (like SimHub does)
+                    await Task.Delay(2000);
+                    
+                    // Check if the process still exists or if children were spawned
+                    var actualProcess = await FindActualProcess(app.ExecutablePath, initialPid);
+                    
+                    _runningApps[app.Name] = actualProcess.Id;
+                    app.ProcessId = actualProcess.Id;
+                    app.IsRunning = true;
+                    app.LastHealthCheck = DateTime.Now;
+                    
+                    if (actualProcess.Id != initialPid)
+                    {
+                        Logger.Info("iRacingMonitor", $"Detected child process for {app.Name} (PID: {actualProcess.Id})");
+                    }
+                    
+                    // Force minimize if start hidden is enabled
+                    if (app.StartHidden)
+                    {
+                        await MinimizeProcessWindow(actualProcess, app.Name);
+                    }
+                    
+                    // Verify startup if enabled
+                    if (app.VerifyStartup)
+                    {
+                        await Task.Delay(3000); // Wait for app to fully initialize
+                        
+                        try
+                        {
+                            actualProcess.Refresh();
+                            if (actualProcess.HasExited)
+                            {
+                                Logger.Error("iRacingMonitor", $"{app.Name} started but exited immediately");
+                                _runningApps.Remove(app.Name);
+                                app.IsRunning = false;
+                                return;
+                            }
+                            
+                            if (!actualProcess.Responding)
+                            {
+                                Logger.Warning("iRacingMonitor", $"{app.Name} started but is not responding");
+                            }
+                            else
+                            {
+                                Logger.Info("iRacingMonitor", $"? {app.Name} startup verified - process is healthy");
+                            }
+                        }
+                        catch
+                        {
+                            Logger.Warning("iRacingMonitor", $"Could not verify {app.Name} startup");
+                        }
+                    }
+                    
+                    Logger.Info("iRacingMonitor", $"? Started {app.Name} (PID: {actualProcess.Id})");
+                }
+                else
+                {
+                    Logger.Error("iRacingMonitor", $"? Failed to start {app.Name} - Process.Start returned null");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("iRacingMonitor", $"? Failed to start {app.Name}", ex);
+            }
+        }
+
         public void Dispose()
         {
             if (_isDisposed)
                 return;
 
             _monitorTimer?.Dispose();
+            _watchdogTimer?.Dispose();
             _monitorTimer = null;
+            _watchdogTimer = null;
             _isDisposed = true;
         }
 

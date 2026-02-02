@@ -16,4 +16,21 @@
     <PackageReference Include="SharpDX.DirectInput" Version="4.2.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Resources\Documentation\Example C# Wrapper\" />
+    <Folder Include="Resources\Documentation\Telemetry\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Resources\Documentation\**" />
+    <EmbeddedResource Remove="Resources\Documentation\**" />
+    <None Remove="Resources\Documentation\**" />
+    <Page Remove="Resources\Documentation\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Resources\Documentation\IRACING_VARIABLES_REFERENCE.md" />
+  </ItemGroup>
+
 </Project>
+

@@ -3,6 +3,18 @@ using System.Text.Json.Serialization;
 namespace SimControlCentre.Models;
 
 /// <summary>
+/// Button color configuration
+/// </summary>
+public class ButtonColours
+{
+    [JsonPropertyName("colour_one")]
+    public string ColourOne { get; set; } = "000000";
+
+    [JsonPropertyName("colour_two")]
+    public string ColourTwo { get; set; } = "000000";
+}
+
+/// <summary>
 /// Base command structure for GoXLR API
 /// </summary>
 public class GoXLRCommandRequest
@@ -39,4 +51,25 @@ public class GoXLRCommandRequest
             }
         };
     }
+
+    public static GoXLRCommandRequest SetButtonColours(string serialNumber, string buttonId, string colourOne, string? colourTwo = null)
+    {
+        // If colourTwo is not provided, use colourOne for both
+        var colours = colourTwo != null ? new object[] { buttonId, colourOne, colourTwo } : new object[] { buttonId, colourOne };
+        
+        return new GoXLRCommandRequest
+        {
+            Command = new object[]
+            {
+                serialNumber,
+                new Dictionary<string, object[]>
+                {
+                    { "SetButtonColours", colours }
+                }
+            }
+        };
+    }
 }
+
+
+

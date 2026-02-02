@@ -31,6 +31,13 @@ namespace SimControlCentre.Models
         public bool RestartHidden { get; set; } = true; // Restart minimized
         public int DelayRestartSeconds { get; set; } = 2; // Small delay before restart
         
+        // Advanced options
+        public int StartOrder { get; set; } = 0; // Lower numbers start first (0 = no specific order)
+        public string? DependsOnApp { get; set; } = null; // Name of app that must start first
+        public int GracefulShutdownTimeoutSeconds { get; set; } = 5; // How long to wait for graceful exit
+        public bool EnableWatchdog { get; set; } = true; // Monitor and restart if crashed
+        public bool VerifyStartup { get; set; } = true; // Check if app actually started successfully
+        
         // For UI display
         public string IconPath { get; set; } = string.Empty;
         
@@ -43,6 +50,15 @@ namespace SimControlCentre.Models
         
         [System.Text.Json.Serialization.JsonIgnore]
         public bool WasStoppedByUs { get; set; } = false;
+        
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool WasRunningBeforeStoppingForRacing { get; set; } = false;
+        
+        [System.Text.Json.Serialization.JsonIgnore]
+        public DateTime? LastHealthCheck { get; set; } = null;
+        
+        [System.Text.Json.Serialization.JsonIgnore]
+        public int RestartAttempts { get; set; } = 0;
     }
 }
 
