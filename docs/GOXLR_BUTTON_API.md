@@ -362,19 +362,38 @@ Returns full device state including all button colors.
 - Gradient modifiers (Mod 1, Mod 2)
 - Waterfall settings
 
-### Global Color Command
+### Global Color Command - ? Verified Working
+
 The `Global` color uses a different command than other simple colors:
-- **Global**: Uses `SetGlobalColour(String)` - affects all LEDs
-- **Accent**: Uses `SetSimpleColour("Accent", String)` - accent color
+- **Global**: Uses `SetGlobalColour(String)` - affects all LEDs ? **TESTED AND WORKING**
+- **Accent**: Uses `SetSimpleColour("Accent", String)` - accent color ? **TESTED AND WORKING**
 
 **Example (Global)**:
 ```json
 {"Command":["S220202153DI7",{"SetGlobalColour":"FF0000"}]}
 ```
+**Result**: All LEDs on the device turn red. Confirmed working on GoXLR Mini.
 
 **Example (Accent)**:
 ```json
 {"Command":["S220202153DI7",{"SetSimpleColour":["Accent","FF00C8"]}]}
+```
+**Result**: Accent color changes. Confirmed working on GoXLR Mini.
+
+**Testing Confirmation**:
+```powershell
+# All three commands tested and confirmed working:
+# 1. Global Red - ? LEDs changed to red
+$body = '{"Command":["S220202153DI7",{"SetGlobalColour":"FF0000"}]}'
+Invoke-RestMethod -Uri "http://localhost:14564/api/command" -Method Post -ContentType "application/json" -Body $body
+
+# 2. Global Green - ? LEDs changed to green  
+$body = '{"Command":["S220202153DI7",{"SetGlobalColour":"00FF00"}]}'
+Invoke-RestMethod -Uri "http://localhost:14564/api/command" -Method Post -ContentType "application/json" -Body $body
+
+# 3. Accent Orange - ? Accent color changed
+$body = '{"Command":["S220202153DI7",{"SetSimpleColour":["Accent","FF8800"]}]}'
+Invoke-RestMethod -Uri "http://localhost:14564/api/command" -Method Post -ContentType "application/json" -Body $body
 ```
 
 The Global color visibly applies to the hardware and affects the overall lighting scheme.
