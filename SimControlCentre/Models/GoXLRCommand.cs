@@ -85,6 +85,21 @@ public class GoXLRCommandRequest
         };
     }
 
+    public static GoXLRCommandRequest SetGlobalColour(string serialNumber, string colour)
+    {
+        return new GoXLRCommandRequest
+        {
+            Command = new object[]
+            {
+                serialNumber,
+                new Dictionary<string, object[]>
+                {
+                    { "SetGlobalColour", new object[] { colour } }
+                }
+            }
+        };
+    }
+
     public static GoXLRCommandRequest SetFaderColors(string serialNumber, string faderName, string colourOne, string colourTwo)
     {
         return new GoXLRCommandRequest

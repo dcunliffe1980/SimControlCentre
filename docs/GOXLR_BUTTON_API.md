@@ -351,25 +351,39 @@ Returns full device state including all button colors.
 - [ ] HTTP Content-Type is `application/json`
 - [ ] No rate limiting (add delays if sending many commands)
 
-## GoXLR Mini Limitations
+## GoXLR Mini Support
 
-### Animation Modes Not Supported
-The GoXLR Mini does not support animation modes (Ripple, Rainbow, etc.). Only the Full-size GoXLR has animation support.
+### Animation Modes ARE Supported
+**Correction**: The GoXLR Mini DOES support animation modes! Available modes include:
+- None
+- Rainbow Retro
+- Rainbow Bright  
+- Rainbow Dark
+- Gradient modifiers (Mod 1, Mod 2)
+- Waterfall settings
 
-### Global/Accent Colors
-The `Global` and `Accent` simple colors can be set via the API:
+### Global Color Command
+The `Global` color uses a different command than other simple colors:
+- **Global**: Uses `SetGlobalColour(String)` - affects all LEDs
+- **Accent**: Uses `SetSimpleColour("Accent", String)` - accent color
+
+**Example (Global)**:
 ```json
-{"Command":["SERIAL",{"SetSimpleColour":["Global","FF0000"]}]}
+{"Command":["S220202153DI7",{"SetGlobalColour":"FF0000"}]}
 ```
 
-However, on the GoXLR Mini, these colors may not visibly apply to the hardware. The values are stored in the GoXLR Utility configuration but do not affect the LEDs directly without animation mode support.
+**Example (Accent)**:
+```json
+{"Command":["S220202153DI7",{"SetSimpleColour":["Accent","FF00C8"]}]}
+```
 
-**Workaround for Mini**: Use individual button colors (`SetButtonColours`) or fader colors (`SetFaderColours`) for visible LED changes.
+The Global color visibly applies to the hardware and affects the overall lighting scheme.
 
 ### Available LEDs on Mini
 - **Fader Mute Buttons**: Fader1Mute, Fader2Mute, Fader3Mute (no Fader4)
 - **Function Buttons**: Bleep, Cough
 - **Fader Strips**: FaderA, FaderB, FaderC (scribble strip colors)
+- **Global Lighting**: Global (affects all LEDs), Accent (accent color)
 
 ### Available LEDs on Full-Size
 All Mini LEDs plus:

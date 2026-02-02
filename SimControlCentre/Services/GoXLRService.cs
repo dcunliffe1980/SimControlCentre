@@ -241,7 +241,7 @@ public class GoXLRService : IDisposable
 
     /// <summary>
     /// Set button color (for lighting integration)
-    /// Supports buttons, simple colors (Global/Accent), and fader colors
+    /// Supports buttons, global/accent colors, and fader colors
     /// </summary>
     public async Task SetButtonColorAsync(string buttonId, string color)
     {
@@ -257,10 +257,15 @@ public class GoXLRService : IDisposable
             
             if (_apiClient != null)
             {
-                // Check if it's a global color (Global/Accent)
-                if (buttonId == "Global" || buttonId == "Accent")
+                // Check if it's the global color
+                if (buttonId == "Global")
                 {
-                    await _apiClient.SetSimpleColorAsync(SerialNumber, buttonId, color);
+                    await _apiClient.SetGlobalColourAsync(SerialNumber, color);
+                }
+                // Check if it's accent (uses SetSimpleColour with Accent target)
+                else if (buttonId == "Accent")
+                {
+                    await _apiClient.SetSimpleColorAsync(SerialNumber, "Accent", color);
                 }
                 // Check if it's a fader color
                 else if (buttonId.StartsWith("Fader") && buttonId.Length == 6) // FaderA, FaderB, etc.

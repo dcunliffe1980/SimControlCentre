@@ -457,6 +457,37 @@ public class GoXLRApiClient : IDisposable
     }
 
     /// <summary>
+    /// Sets the global color (affects all LEDs)
+    /// </summary>
+    public async Task<bool> SetGlobalColourAsync(string serialNumber, string colour)
+    {
+        try
+        {
+            Console.WriteLine($"[GoXLR] SetGlobalColour - Colour: {colour}");
+            
+            var command = GoXLRCommandRequest.SetGlobalColour(serialNumber, colour);
+            var response = await _httpClient.PostAsJsonAsync("/api/command", command);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"[GoXLR] Global color set successfully");
+                return true;
+            }
+            else
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[GoXLR] Error response: {errorBody}");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[GoXLR] Error setting global color: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Sets fader colors
     /// </summary>
     public async Task<bool> SetFaderColorsAsync(string serialNumber, string faderName, string colourOne, string colourTwo)
