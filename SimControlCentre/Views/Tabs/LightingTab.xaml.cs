@@ -27,7 +27,13 @@ namespace SimControlCentre.Views.Tabs
             
             LoadSettings();
             UpdateDevicesList();
-            LoadButtonSelection();
+            
+            // Load button selection after a short delay to allow device detection
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(1000); // Wait for device type detection
+                Dispatcher.Invoke(() => LoadButtonSelection());
+            });
         }
 
         private void LoadButtonSelection()

@@ -61,12 +61,15 @@ namespace SimControlCentre.Services
         };
 
         // Exposed list of available buttons based on device type
-        public static List<string> AvailableButtons { get; private set; } = FullSizeButtons;
+        public List<string> AvailableButtons { get; private set; } = new();
 
         public GoXLRLightingPlugin(GoXLRService goXLRService, AppSettings settings)
         {
             _goXLRService = goXLRService;
             _settings = settings;
+            
+            // Start with Mini buttons (safer default)
+            AvailableButtons = new List<string>(MiniButtons);
             
             // Initialize with detection
             _ = Task.Run(async () => await DetectDeviceTypeAsync());
@@ -77,9 +80,11 @@ namespace SimControlCentre.Services
             _deviceType = await _goXLRService.GetDeviceTypeAsync();
             
             // Update available buttons based on device type
-            AvailableButtons = _deviceType == "Mini" ? MiniButtons : FullSizeButtons;
+            AvailableButtons = _deviceType == "Mini" 
+                ? new List<string>(MiniButtons) 
+                : new List<string>(FullSizeButtons);
             
-            // Default selection based on device type
+            // Update default selection based on device type
             _selectedButtons = _deviceType == "Mini"
                 ? new List<string> { "Fader1Mute", "Fader2Mute", "Fader3Mute" }
                 : new List<string> { "Fader1Mute", "Fader2Mute", "Fader3Mute", "Fader4Mute" };
