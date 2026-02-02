@@ -463,26 +463,37 @@ public class GoXLRApiClient : IDisposable
     {
         try
         {
-            Console.WriteLine($"[GoXLR] SetGlobalColour - Colour: {colour}");
+            Console.WriteLine($"[GoXLR] ========================================");
+            Console.WriteLine($"[GoXLR] SetGlobalColour CALLED");
+            Console.WriteLine($"[GoXLR] Serial: {serialNumber}");
+            Console.WriteLine($"[GoXLR] Colour: {colour}");
             
             var command = GoXLRCommandRequest.SetGlobalColour(serialNumber, colour);
+            var json = System.Text.Json.JsonSerializer.Serialize(command);
+            Console.WriteLine($"[GoXLR] JSON: {json}");
+            
             var response = await _httpClient.PostAsJsonAsync("/api/command", command);
+            Console.WriteLine($"[GoXLR] HTTP Status: {response.StatusCode}");
+            
+            var responseBody = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"[GoXLR] Response Body: {responseBody}");
+            Console.WriteLine($"[GoXLR] ========================================");
             
             if (response.IsSuccessStatusCode)
             {
-                Console.WriteLine($"[GoXLR] Global color set successfully");
+                Console.WriteLine($"[GoXLR] ? Global color set successfully");
                 return true;
             }
             else
             {
-                var errorBody = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[GoXLR] Error response: {errorBody}");
+                Console.WriteLine($"[GoXLR] ? Failed to set global color");
                 return false;
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[GoXLR] Error setting global color: {ex.Message}");
+            Console.WriteLine($"[GoXLR] ? Exception setting global color: {ex.Message}");
+            Console.WriteLine($"[GoXLR] Stack: {ex.StackTrace}");
             return false;
         }
     }

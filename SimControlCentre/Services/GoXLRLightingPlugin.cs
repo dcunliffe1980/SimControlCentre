@@ -47,8 +47,8 @@ namespace SimControlCentre.Services
 
         private static readonly List<string> MiniButtons = new()
         {
-            // Fader Mute Buttons (physical hardware)
-            "Fader1Mute", "Fader2Mute", "Fader3Mute",
+            // Fader Mute Buttons (physical hardware - Mini has 4 faders!)
+            "Fader1Mute", "Fader2Mute", "Fader3Mute", "Fader4Mute",
             
             // Function Buttons (physical hardware)
             "Bleep", "Cough",
@@ -56,8 +56,8 @@ namespace SimControlCentre.Services
             // Global Color Controls (affects all LEDs)
             "Global", "Accent",
             
-            // Fader Display Colors (scribble strip colors - Mini has 3)
-            "FaderA", "FaderB", "FaderC"
+            // Fader Display Colors (scribble strip colors - Mini has 4)
+            "FaderA", "FaderB", "FaderC", "FaderD"
         };
 
         // Exposed list of available buttons based on device type

@@ -380,10 +380,12 @@ The `Global` color uses a different command than other simple colors:
 The Global color visibly applies to the hardware and affects the overall lighting scheme.
 
 ### Available LEDs on Mini
-- **Fader Mute Buttons**: Fader1Mute, Fader2Mute, Fader3Mute (no Fader4)
+- **Fader Mute Buttons**: Fader1Mute, Fader2Mute, Fader3Mute, **Fader4Mute** (Mini has 4 faders!)
 - **Function Buttons**: Bleep, Cough
-- **Fader Strips**: FaderA, FaderB, FaderC (scribble strip colors)
+- **Fader Strips**: FaderA, FaderB, FaderC, FaderD (scribble strip colors)
 - **Global Lighting**: Global (affects all LEDs), Accent (accent color)
+
+**Note**: Mini does NOT have effect buttons (EffectSelect1-6, EffectFx, etc.)
 
 ### Available LEDs on Full-Size
 All Mini LEDs plus:

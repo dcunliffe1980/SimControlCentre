@@ -46,6 +46,7 @@ public class GoXLRService : IDisposable
 
     /// <summary>
     /// Get the GoXLR device type (Full or Mini) from hardware info
+    /// Uses the device_type field which is most reliable
     /// </summary>
     public async Task<string> GetDeviceTypeAsync()
     {
@@ -58,7 +59,7 @@ public class GoXLRService : IDisposable
             if (status?.Hardware?.DeviceType != null)
             {
                 var deviceType = status.Hardware.DeviceType;
-                Logger.Info("GoXLR Service", $"Detected device type: {deviceType}");
+                Logger.Info("GoXLR Service", $"Detected device type from hardware: {deviceType}");
                 return deviceType;
             }
         }
@@ -67,7 +68,7 @@ public class GoXLRService : IDisposable
             Logger.Error("GoXLR Service", "Error getting device type", ex);
         }
 
-        // Default to Mini to be conservative (show fewer buttons)
+        // Default to Mini to be conservative (show fewer effect buttons)
         Logger.Warning("GoXLR Service", "Could not detect device type, defaulting to Mini");
         return "Mini";
     }
