@@ -351,8 +351,35 @@ Returns full device state including all button colors.
 - [ ] HTTP Content-Type is `application/json`
 - [ ] No rate limiting (add delays if sending many commands)
 
+## GoXLR Mini Limitations
+
+### Animation Modes Not Supported
+The GoXLR Mini does not support animation modes (Ripple, Rainbow, etc.). Only the Full-size GoXLR has animation support.
+
+### Global/Accent Colors
+The `Global` and `Accent` simple colors can be set via the API:
+```json
+{"Command":["SERIAL",{"SetSimpleColour":["Global","FF0000"]}]}
+```
+
+However, on the GoXLR Mini, these colors may not visibly apply to the hardware. The values are stored in the GoXLR Utility configuration but do not affect the LEDs directly without animation mode support.
+
+**Workaround for Mini**: Use individual button colors (`SetButtonColours`) or fader colors (`SetFaderColours`) for visible LED changes.
+
+### Available LEDs on Mini
+- **Fader Mute Buttons**: Fader1Mute, Fader2Mute, Fader3Mute (no Fader4)
+- **Function Buttons**: Bleep, Cough
+- **Fader Strips**: FaderA, FaderB, FaderC (scribble strip colors)
+
+### Available LEDs on Full-Size
+All Mini LEDs plus:
+- **Fader4Mute**
+- **Effect Selection**: EffectSelect1-6
+- **Effect Types**: EffectFx, EffectMegaphone, EffectRobot, EffectHardTune
+- **Fader Strip**: FaderD
+
 ---
 
 **Last Updated**: February 2026  
 **API Version**: GoXLR Utility (Compatible with current releases)  
-**Verified Working**: Yes (tested with PowerShell and C#)
+**Verified Working**: Yes (tested with Mini and Full-size)
