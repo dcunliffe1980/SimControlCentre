@@ -153,49 +153,58 @@ namespace SimControlCentre.Services
             switch (flag)
             {
                 case FlagStatus.Green:
+                    // Solid green - race start / clear track
                     await device.SetColorAsync(LightingColor.Green);
                     break;
 
                 case FlagStatus.Yellow:
-                    // Solid yellow for caution
+                    // Solid yellow - caution / no passing
                     await device.SetColorAsync(LightingColor.Yellow);
                     break;
 
                 case FlagStatus.YellowWaving:
-                    // Flashing yellow for waving yellow flag
+                    // Slow flashing yellow (1 second cycle) - danger ahead
                     await device.StartFlashingAsync(LightingColor.Yellow, LightingColor.Off, 500);
                     break;
 
-                case FlagStatus.Red:
-                    await device.SetColorAsync(LightingColor.Red);
-                    break;
-
                 case FlagStatus.Blue:
+                    // Solid blue - being lapped, hold your line
                     await device.SetColorAsync(LightingColor.Blue);
                     break;
 
                 case FlagStatus.White:
+                    // Solid white - final lap
                     await device.SetColorAsync(LightingColor.White);
                     break;
 
                 case FlagStatus.Checkered:
-                    // Flash white/off for checkered flag effect
-                    await device.StartFlashingAsync(LightingColor.White, LightingColor.Off, 300);
+                    // Fast flashing white (SimHub style: 250ms) - race end
+                    await device.StartFlashingAsync(LightingColor.White, LightingColor.Off, 250);
+                    break;
+
+                case FlagStatus.Red:
+                    // Solid red - session stopped
+                    await device.SetColorAsync(LightingColor.Red);
                     break;
 
                 case FlagStatus.Black:
-                    // Use red flashing for black flag (warning)
-                    await device.StartFlashingAsync(LightingColor.Red, LightingColor.Off, 500);
+                    // Solid red (SimHub uses red for black flag visibility)
+                    await device.SetColorAsync(LightingColor.Red);
                     break;
 
                 case FlagStatus.Debris:
-                    // Orange/yellow for debris
-                    await device.SetColorAsync(LightingColor.Orange);
+                    // Slow flashing orange - debris/surface warning
+                    await device.StartFlashingAsync(LightingColor.Orange, LightingColor.Off, 500);
                     break;
 
                 case FlagStatus.OneLapToGreen:
-                    // Flashing green
+                    // Medium flashing green (700ms) - one lap to restart
                     await device.StartFlashingAsync(LightingColor.Green, LightingColor.Off, 700);
+                    break;
+
+                case FlagStatus.Crossed:
+                    // Solid yellow - unclear conditions (default to caution)
+                    await device.SetColorAsync(LightingColor.Yellow);
                     break;
 
                 case FlagStatus.None:

@@ -38,13 +38,10 @@ namespace SimControlCentre.Services
             
             Logger.Info("GoXLR Lighting", $"Setting color {color} (hex: {goxlrColor}) on {_activeButtons.Count} button(s)");
             
-            // Set all active buttons to the same color
-            foreach (var button in _activeButtons)
-            {
-                Logger.Debug("GoXLR Lighting", $"Setting {button} to {goxlrColor}");
-                await SetButtonColorAsync(button, goxlrColor);
-                await Task.Delay(50); // Rate limiting
-            }
+            // Send all commands at once (parallel) for instant update
+            // No delays - let the API handle rate limiting
+            var tasks = _activeButtons.Select(button => SetButtonColorAsync(button, goxlrColor)).ToList();
+            await Task.WhenAll(tasks);
             
             Logger.Info("GoXLR Lighting", $"Color update complete for {color}");
         }
@@ -121,10 +118,9 @@ namespace SimControlCentre.Services
                 var color = _flashState ? _flashColor1 : _flashColor2;
                 var goxlrColor = MapToGoXLRColor(color);
 
-                foreach (var button in _activeButtons)
-                {
-                    await SetButtonColorAsync(button, goxlrColor);
-                }
+                // Send all commands at once for synchronized flashing
+                var tasks = _activeButtons.Select(button => SetButtonColorAsync(button, goxlrColor)).ToList();
+                await Task.WhenAll(tasks);
             }
             catch (Exception ex)
             {

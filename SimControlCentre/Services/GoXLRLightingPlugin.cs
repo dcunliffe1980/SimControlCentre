@@ -20,15 +20,42 @@ namespace SimControlCentre.Services
         public string Description => "GoXLR fader mute button LEDs";
         public bool IsEnabled { get; set; } = true;
 
-        // Available GoXLR buttons
+        // Available GoXLR buttons (all controllable LEDs)
         public static readonly List<string> AvailableButtons = new()
         {
+            // Fader Mute Buttons (most visible)
             "Fader1Mute",
             "Fader2Mute",
             "Fader3Mute",
             "Fader4Mute",
+            
+            // Function Buttons
             "Bleep",
-            "Cough"
+            "Cough",
+            
+            // Effect Selection Buttons
+            "EffectSelect1",
+            "EffectSelect2",
+            "EffectSelect3",
+            "EffectSelect4",
+            "EffectSelect5",
+            "EffectSelect6",
+            
+            // Effect Type Buttons
+            "EffectFx",
+            "EffectMegaphone",
+            "EffectRobot",
+            "EffectHardTune",
+            
+            // Sampler Buttons (if you have full-size GoXLR)
+            "SamplerSelectA",
+            "SamplerSelectB",
+            "SamplerSelectC",
+            "SamplerTopLeft",
+            "SamplerTopRight",
+            "SamplerBottomLeft",
+            "SamplerBottomRight",
+            "SamplerClear"
         };
 
         public GoXLRLightingPlugin(GoXLRService goXLRService, AppSettings settings)

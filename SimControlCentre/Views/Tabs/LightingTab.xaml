@@ -88,7 +88,7 @@
                                FontSize="11"
                                Margin="0,0,0,10"/>
 
-                    <!-- Row 1 -->
+                    <!-- Row 1: Primary Racing Flags -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <Button Content="Green Flag" 
                                 Click="TestFlag_Click" 
@@ -97,7 +97,8 @@
                                 Padding="10,5"
                                 Margin="0,0,10,0"
                                 Background="#FF4CAF50"
-                                Foreground="White"/>
+                                Foreground="White"
+                                ToolTip="Race start / Track clear"/>
                         
                         <Button Content="Yellow Flag" 
                                 Click="TestFlag_Click" 
@@ -106,7 +107,8 @@
                                 Padding="10,5"
                                 Margin="0,0,10,0"
                                 Background="#FFFFC107"
-                                Foreground="Black"/>
+                                Foreground="Black"
+                                ToolTip="Caution / No passing"/>
                         
                         <Button Content="Yellow Waving" 
                                 Click="TestFlag_Click" 
@@ -114,10 +116,43 @@
                                 Width="120" 
                                 Padding="10,5"
                                 Background="#FFFFC107"
-                                Foreground="Black"/>
+                                Foreground="Black"
+                                ToolTip="Danger ahead / No passing"/>
                     </StackPanel>
 
-                    <!-- Row 2 -->
+                    <!-- Row 2: Informational Flags -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button Content="Blue Flag" 
+                                Click="TestFlag_Click" 
+                                Tag="Blue"
+                                Width="120" 
+                                Padding="10,5"
+                                Margin="0,0,10,0"
+                                Background="#FF2196F3"
+                                Foreground="White"
+                                ToolTip="Being lapped / Hold your line"/>
+                        
+                        <Button Content="White Flag" 
+                                Click="TestFlag_Click" 
+                                Tag="White"
+                                Width="120" 
+                                Padding="10,5"
+                                Margin="0,0,10,0"
+                                Background="White"
+                                Foreground="Black"
+                                ToolTip="Final lap"/>
+                        
+                        <Button Content="Debris Flag" 
+                                Click="TestFlag_Click" 
+                                Tag="Debris"
+                                Width="120" 
+                                Padding="10,5"
+                                Background="#FFFF9800"
+                                Foreground="Black"
+                                ToolTip="Surface / Debris on track"/>
+                    </StackPanel>
+
+                    <!-- Row 3: Session Control Flags -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <Button Content="Red Flag" 
                                 Click="TestFlag_Click" 
@@ -126,36 +161,8 @@
                                 Padding="10,5"
                                 Margin="0,0,10,0"
                                 Background="#FFF44336"
-                                Foreground="White"/>
-                        
-                        <Button Content="Blue Flag" 
-                                Click="TestFlag_Click" 
-                                Tag="Blue"
-                                Width="120" 
-                                Padding="10,5"
-                                Margin="0,0,10,0"
-                                Background="#FF2196F3"
-                                Foreground="White"/>
-                        
-                        <Button Content="White Flag" 
-                                Click="TestFlag_Click" 
-                                Tag="White"
-                                Width="120" 
-                                Padding="10,5"
-                                Background="White"
-                                Foreground="Black"/>
-                    </StackPanel>
-
-                    <!-- Row 3 -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <Button Content="Checkered Flag" 
-                                Click="TestFlag_Click" 
-                                Tag="Checkered"
-                                Width="120" 
-                                Padding="10,5"
-                                Margin="0,0,10,0"
-                                Background="WhiteSmoke"
-                                Foreground="Black"/>
+                                Foreground="White"
+                                ToolTip="Session stopped"/>
                         
                         <Button Content="Black Flag" 
                                 Click="TestFlag_Click" 
@@ -164,27 +171,30 @@
                                 Padding="10,5"
                                 Margin="0,0,10,0"
                                 Background="Black"
-                                Foreground="White"/>
+                                Foreground="White"
+                                ToolTip="Disqualification / Penalty"/>
                         
-                        <Button Content="Debris Flag" 
+                        <Button Content="Checkered Flag" 
                                 Click="TestFlag_Click" 
-                                Tag="Debris"
+                                Tag="Checkered"
                                 Width="120" 
                                 Padding="10,5"
-                                Background="#FFFF9800"
-                                Foreground="Black"/>
+                                Background="WhiteSmoke"
+                                Foreground="Black"
+                                ToolTip="Session end"/>
                     </StackPanel>
 
-                    <!-- Row 4 -->
+                    <!-- Row 4: Special Flags -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <Button Content="One Lap to Green" 
                                 Click="TestFlag_Click" 
                                 Tag="OneLapToGreen"
-                                Width="120" 
+                                Width="140" 
                                 Padding="10,5"
                                 Margin="0,0,10,0"
                                 Background="#FF8BC34A"
-                                Foreground="White"/>
+                                Foreground="White"
+                                ToolTip="One lap until race restart"/>
                         
                         <Button Content="Clear Flag" 
                                 Click="TestFlag_Click" 
@@ -192,7 +202,8 @@
                                 Width="120" 
                                 Padding="10,5"
                                 Background="Gray"
-                                Foreground="White"/>
+                                Foreground="White"
+                                ToolTip="Turn off all flag lights"/>
                     </StackPanel>
 
                     <TextBlock Text="Note: Flashing flags will flash on your devices. Click 'Clear Flag' to stop."
