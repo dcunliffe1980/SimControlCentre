@@ -14,6 +14,7 @@ User-facing guides and getting started documentation:
 ### Technical Documentation (`/docs/`)
 Developer-focused technical references and specifications:
 - **[GOXLR_API_COMPLETE.md](./GOXLR_API_COMPLETE.md)** - **START HERE**: Complete GoXLR Utility API reference with exact command structures
+- **[PLUGIN_SYSTEM.md](./PLUGIN_SYSTEM.md)** - Plugin architecture for extensible lighting devices (and future use)
 - **[GOXLR_BUTTON_API.md](./GOXLR_BUTTON_API.md)** - Detailed button color API reference
 - **[IRACING_VARIABLES_REFERENCE.md](./IRACING_VARIABLES_REFERENCE.md)** - Complete iRacing telemetry variable reference (327 variables)
 - **[TELEMETRY_RECORDING.md](./TELEMETRY_RECORDING.md)** - Telemetry recording and playback system

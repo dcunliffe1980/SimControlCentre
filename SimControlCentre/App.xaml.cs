@@ -104,9 +104,12 @@ public partial class App : Application
             // Initialize lighting service
             _lightingService = new LightingService();
             
-            // Register GoXLR as a lighting device
-            var goxlrLighting = new GoXLRLightingDevice(_goXLRService, Settings);
-            _lightingService.RegisterDevice(goxlrLighting);
+            // Register GoXLR lighting plugin
+            var goxlrPlugin = new GoXLRLightingPlugin(_goXLRService, Settings);
+            _lightingService.RegisterPlugin(goxlrPlugin);
+            
+            // Initialize all plugins (creates devices) - async in background
+            _ = Task.Run(async () => await _lightingService.InitializeAsync());
             
             // Subscribe to flag changes and update lighting
             _telemetryService.FlagChanged += async (s, e) =>
@@ -114,7 +117,7 @@ public partial class App : Application
                 await _lightingService.UpdateForFlagAsync(e.NewFlag);
             };
             
-            Logger.Info("App", "Lighting service initialized and connected to telemetry");
+            Logger.Info("App", "Lighting service initialized with plugin system");
 
             // Always warm up the GoXLR API connection on startup
             _ = Task.Run(async () =>

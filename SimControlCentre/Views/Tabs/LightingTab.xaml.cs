@@ -13,6 +13,7 @@ namespace SimControlCentre.Views.Tabs
     {
         private readonly LightingService _lightingService;
         private readonly TelemetryService _telemetryService;
+        private GoXLRLightingPlugin? _goxlrPlugin;
 
         public LightingTab(LightingService lightingService, TelemetryService telemetryService)
         {
@@ -26,6 +27,68 @@ namespace SimControlCentre.Views.Tabs
             
             LoadSettings();
             UpdateDevicesList();
+            LoadButtonSelection();
+        }
+
+        private void LoadButtonSelection()
+        {
+            ButtonSelectionPanel.Children.Clear();
+
+            // Find GoXLR plugin
+            _goxlrPlugin = _lightingService.Plugins.OfType<GoXLRLightingPlugin>().FirstOrDefault();
+            
+            if (_goxlrPlugin != null)
+            {
+                var configOptions = _goxlrPlugin.GetConfigOptions();
+                var buttonOption = configOptions.FirstOrDefault(o => o.Key == "selected_buttons");
+                
+                if (buttonOption != null && buttonOption.AvailableOptions != null)
+                {
+                    var currentSelection = (List<string>?)buttonOption.DefaultValue ?? new List<string>();
+                    
+                    foreach (var button in buttonOption.AvailableOptions)
+                    {
+                        var checkbox = new CheckBox
+                        {
+                            Content = button,
+                            IsChecked = currentSelection.Contains(button),
+                            Margin = new Thickness(0, 0, 15, 5)
+                        };
+                        
+                        checkbox.Checked += ButtonSelection_Changed;
+                        checkbox.Unchecked += ButtonSelection_Changed;
+                        
+                        ButtonSelectionPanel.Children.Add(checkbox);
+                    }
+                }
+            }
+        }
+
+        private void ButtonSelection_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_goxlrPlugin == null) return;
+
+            // Collect selected buttons
+            var selectedButtons = ButtonSelectionPanel.Children
+                .OfType<CheckBox>()
+                .Where(cb => cb.IsChecked == true)
+                .Select(cb => cb.Content.ToString())
+                .Where(s => s != null)
+                .Cast<string>()
+                .ToList();
+
+            // Apply configuration
+            var config = new Dictionary<string, object>
+            {
+                { "selected_buttons", selectedButtons }
+            };
+            
+            _goxlrPlugin.ApplyConfiguration(config);
+            
+            // Reinitialize devices
+            _ = Task.Run(async () => await _lightingService.InitializeAsync());
+            
+            Logger.Info("Lighting Tab", $"Button selection updated: {string.Join(", ", selectedButtons)}");
         }
 
         private void LoadSettings()

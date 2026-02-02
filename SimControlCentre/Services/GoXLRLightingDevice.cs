@@ -12,6 +12,7 @@ namespace SimControlCentre.Services
     {
         private readonly GoXLRService _goXLRService;
         private readonly AppSettings _settings;
+        private readonly List<string> _activeButtons;
         private Timer? _flashTimer;
         private bool _isFlashing;
         private LightingColor _flashColor1;
@@ -22,17 +23,11 @@ namespace SimControlCentre.Services
         public string DeviceName => "GoXLR";
         public bool IsAvailable => _goXLRService != null;
 
-        // Which GoXLR buttons to use for flag indicators
-        // Using Fader buttons as they're most visible
-        private const string Button1 = "Fader1Mute";
-        private const string Button2 = "Fader2Mute";
-        private const string Button3 = "Fader3Mute";
-        private const string Button4 = "Fader4Mute";
-
-        public GoXLRLightingDevice(GoXLRService goXLRService, AppSettings settings)
+        public GoXLRLightingDevice(GoXLRService goXLRService, AppSettings settings, List<string> activeButtons)
         {
             _goXLRService = goXLRService;
             _settings = settings;
+            _activeButtons = activeButtons ?? new List<string> { "Fader1Mute", "Fader2Mute", "Fader3Mute", "Fader4Mute" };
         }
 
         public async Task SetColorAsync(LightingColor color)
@@ -41,11 +36,12 @@ namespace SimControlCentre.Services
 
             var goxlrColor = MapToGoXLRColor(color);
             
-            // Set all fader mute buttons to the same color
-            await SetButtonColorAsync(Button1, goxlrColor);
-            await SetButtonColorAsync(Button2, goxlrColor);
-            await SetButtonColorAsync(Button3, goxlrColor);
-            await SetButtonColorAsync(Button4, goxlrColor);
+            // Set all active buttons to the same color
+            foreach (var button in _activeButtons)
+            {
+                await SetButtonColorAsync(button, goxlrColor);
+                await Task.Delay(50); // Rate limiting
+            }
         }
 
         public Task StartFlashingAsync(LightingColor color1, LightingColor color2, int intervalMs)
@@ -120,10 +116,10 @@ namespace SimControlCentre.Services
                 var color = _flashState ? _flashColor1 : _flashColor2;
                 var goxlrColor = MapToGoXLRColor(color);
 
-                await SetButtonColorAsync(Button1, goxlrColor);
-                await SetButtonColorAsync(Button2, goxlrColor);
-                await SetButtonColorAsync(Button3, goxlrColor);
-                await SetButtonColorAsync(Button4, goxlrColor);
+                foreach (var button in _activeButtons)
+                {
+                    await SetButtonColorAsync(button, goxlrColor);
+                }
             }
             catch (Exception ex)
             {

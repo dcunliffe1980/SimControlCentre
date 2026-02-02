@@ -12,12 +12,58 @@ namespace SimControlCentre.Services
     public class LightingService : IDisposable
     {
         private readonly List<ILightingDevice> _devices = new();
+        private readonly List<ILightingDevicePlugin> _plugins = new();
         private FlagStatus _currentFlag = FlagStatus.None;
         private bool _isDisposed;
+
+        public IReadOnlyList<ILightingDevicePlugin> Plugins => _plugins.AsReadOnly();
+        public IReadOnlyList<ILightingDevice> Devices => _devices.AsReadOnly();
 
         public LightingService()
         {
             Logger.Info("Lighting Service", "Lighting service initialized");
+        }
+
+        /// <summary>
+        /// Register a plugin (but don't create device yet)
+        /// </summary>
+        public void RegisterPlugin(ILightingDevicePlugin plugin)
+        {
+            if (_plugins.Any(p => p.PluginId == plugin.PluginId))
+            {
+                Logger.Warning("Lighting Service", $"Plugin {plugin.PluginId} already registered");
+                return;
+            }
+
+            Logger.Info("Lighting Service", $"Registering plugin: {plugin.DisplayName}");
+            _plugins.Add(plugin);
+        }
+
+        /// <summary>
+        /// Initialize all enabled plugins and create their devices
+        /// </summary>
+        public async Task InitializeAsync()
+        {
+            foreach (var plugin in _plugins.Where(p => p.IsEnabled))
+            {
+                try
+                {
+                    if (await plugin.IsHardwareAvailableAsync())
+                    {
+                        var device = plugin.CreateDevice();
+                        RegisterDevice(device);
+                        Logger.Info("Lighting Service", $"Initialized device from plugin: {plugin.DisplayName}");
+                    }
+                    else
+                    {
+                        Logger.Warning("Lighting Service", $"Hardware not available for plugin: {plugin.DisplayName}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Lighting Service", $"Error initializing plugin {plugin.DisplayName}", ex);
+                }
+            }
         }
 
         /// <summary>
