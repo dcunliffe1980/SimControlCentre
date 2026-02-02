@@ -47,6 +47,10 @@ namespace SimControlCentre.Services
         {
             Logger.Info("Lighting Service", "Starting device initialization...");
             
+            // Clear existing devices first
+            _devices.Clear();
+            Logger.Info("Lighting Service", "Cleared existing devices");
+            
             foreach (var plugin in _plugins.Where(p => p.IsEnabled))
             {
                 try
