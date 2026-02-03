@@ -632,10 +632,16 @@ namespace SimControlCentre.Plugins.GoXLR.Views
                 var eventInfo = directInputService.GetType().GetEvent("ButtonPressed");
                 if (eventInfo != null)
                 {
-                    var handler = Delegate.CreateDelegate(eventInfo.EventHandlerType!, this, nameof(OnCombinedButtonCaptured));
-                    eventInfo.AddEventHandler(directInputService, handler);
+                    var methodInfo = GetType().GetMethod(nameof(OnCombinedButtonCaptured), 
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    if (methodInfo != null)
+                    {
+                        var handler = Delegate.CreateDelegate(eventInfo.EventHandlerType!, this, methodInfo);
+                        eventInfo.AddEventHandler(directInputService, handler);
+                    }
                 }
             }
+
 
 
             
@@ -811,10 +817,16 @@ namespace SimControlCentre.Plugins.GoXLR.Views
                 var eventInfo = directInputService.GetType().GetEvent("ButtonPressed");
                 if (eventInfo != null)
                 {
-                    var handler = Delegate.CreateDelegate(eventInfo.EventHandlerType!, this, nameof(OnCombinedButtonCaptured));
-                    eventInfo.RemoveEventHandler(directInputService, handler);
+                    var methodInfo = GetType().GetMethod(nameof(OnCombinedButtonCaptured), 
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    if (methodInfo != null)
+                    {
+                        var handler = Delegate.CreateDelegate(eventInfo.EventHandlerType!, this, methodInfo);
+                        eventInfo.RemoveEventHandler(directInputService, handler);
+                    }
                 }
             }
+
 
 
         }
