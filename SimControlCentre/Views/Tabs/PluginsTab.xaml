@@ -63,7 +63,7 @@
                                        Margin="15,5,0,0"/>
                         </StackPanel>
 
-                        <!-- Device Control Component (Future) -->
+                        <!-- Device Control Component -->
                         <StackPanel Margin="0,0,0,0">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -72,18 +72,18 @@
                                 </Grid.ColumnDefinitions>
                                 
                                 <TextBlock Text="* " 
-                                           Foreground="Gray" 
+                                           Foreground="#4CAF50" 
                                            FontSize="14"
                                            VerticalAlignment="Center"
                                            Grid.Column="0"/>
                                 
-                                <TextBlock Grid.Column="1">
-                                    <Run Text="Device Control " FontWeight="SemiBold"/>
-                                    <Run Text="(Coming Soon)" Foreground="Gray" FontStyle="Italic"/>
-                                </TextBlock>
+                                <TextBlock Text="Device Control" 
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"
+                                           Grid.Column="1"/>
                             </Grid>
                             
-                            <TextBlock Text="Will provide profile switching and channel control via hotkeys."
+                            <TextBlock Text="Provides profile switching, volume control, and channel muting via hotkeys."
                                        TextWrapping="Wrap"
                                        Foreground="Gray"
                                        FontSize="11"

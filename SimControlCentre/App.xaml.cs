@@ -27,6 +27,7 @@ public partial class App : Application
     private UpdateCheckService? _updateCheckService;
     private TelemetryService? _telemetryService;
     private LightingService? _lightingService;
+    private DeviceControlService? _deviceControlService;
     public AppSettings Settings { get; private set; } = new();
 
     /// <summary>
@@ -169,6 +170,25 @@ public partial class App : Application
             };
             
             Logger.Info("App", "Lighting service initialized with plugin system");
+
+            // Initialize device control service
+            var deviceControlService = new DeviceControlService();
+            
+            // Register GoXLR device control plugin if enabled
+            if (Settings.General.GoXLREnabled)
+            {
+                Logger.Info("App", "GoXLR device control plugin enabled, registering...");
+                var goxlrControlPlugin = new GoXLRDeviceControlPlugin(_goXLRService, Settings);
+                deviceControlService.RegisterPlugin(goxlrControlPlugin);
+                Logger.Info("App", "✓ GoXLR device control plugin registered");
+            }
+            else
+            {
+                Logger.Info("App", "GoXLR device control plugin disabled in settings");
+            }
+            
+            // Store service for later access
+            _deviceControlService = deviceControlService;
 
             // Always warm up the GoXLR API connection on startup
             _ = Task.Run(async () =>
@@ -478,6 +498,11 @@ public partial class App : Application
     public static LightingService? GetLightingService()
     {
         return ((App)Current)._lightingService;
+    }
+
+    public static DeviceControlService? GetDeviceControlService()
+    {
+        return ((App)Current)._deviceControlService;
     }
 
     private void ToggleHotkeys_Click(object sender, RoutedEventArgs e)
