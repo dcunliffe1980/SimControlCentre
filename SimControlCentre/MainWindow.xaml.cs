@@ -45,8 +45,8 @@ namespace SimControlCentre
             _settingsTab = new SettingsTab(_configService, _settings, _goXLRService, this);
             SettingsTabItem.Content = _settingsTab;
             
-            // Create Device Control Tab (only if plugins enabled)
-            UpdateDeviceControlTabVisibility();
+            // Create Device Control Tab (always visible like Lighting tab)
+            InitializeDeviceControlTab();
             
             // Initialize Channels & Profiles in Settings Tab
             _settingsTab.InitializeChannelsProfilesTab();
@@ -76,27 +76,25 @@ namespace SimControlCentre
             _settingsTab?.InitializeControllersTab(directInputService);
         }
 
+        public void InitializeDeviceControlTab()
+        {
+            // Always create and show Device Control tab (like Lighting tab)
+            // The tab itself will show a warning if no plugins are available
+            if (_hotkeysTab == null)
+            {
+                _hotkeysTab = new HotkeysTab(_configService, _settings);
+                DeviceControlTabItem.Content = _hotkeysTab;
+            }
+            DeviceControlTabItem.Visibility = Visibility.Visible;
+        }
+
         public void UpdateDeviceControlTabVisibility()
         {
-            var deviceControlService = App.GetDeviceControlService();
-            bool hasEnabledPlugins = deviceControlService?.Plugins.Any(p => p.IsEnabled) ?? false;
-            
-            if (hasEnabledPlugins)
-            {
-                // Show Device Control tab
-                if (_hotkeysTab == null)
-                {
-                    _hotkeysTab = new HotkeysTab(_configService, _settings);
-                    DeviceControlTabItem.Content = _hotkeysTab;
-                }
-                DeviceControlTabItem.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                // Hide Device Control tab
-                DeviceControlTabItem.Visibility = Visibility.Collapsed;
-            }
+            // This method is kept for backward compatibility but now just refreshes
+            // The tab is always visible now, warnings are handled inside the tab
+            _hotkeysTab?.CheckPluginAvailability();
         }
+
 
         public void RefreshHotkeysTab()
         {

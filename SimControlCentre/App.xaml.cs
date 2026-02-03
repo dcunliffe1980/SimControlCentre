@@ -327,12 +327,16 @@ public partial class App : Application
             // Create main window but don't show it yet
             _mainWindow = new MainWindow(Settings, _configService, _goXLRService, _iRacingMonitor);
             
+            // Refresh Device Control tab now that plugins are loaded
+            _mainWindow.UpdateDeviceControlTabVisibility();
+            
             // Initialize hotkey service with main window handle
             var windowInterop = new System.Windows.Interop.WindowInteropHelper(_mainWindow);
             windowInterop.EnsureHandle(); // Force window handle creation
             
             _hotkeyService = new HotkeyService();
             _hotkeyService.Initialize(windowInterop.Handle);
+
             
             // Initialize hotkey manager with device control service
             _hotkeyManager = new HotkeyManager(_hotkeyService, _deviceControlService!, Settings);
