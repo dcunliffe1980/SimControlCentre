@@ -161,6 +161,13 @@ namespace SimControlCentre.Services
         public static List<IDeviceControlPlugin> GetDeviceControlPlugins(List<IPlugin> plugins)
         {
             Logger.Info("Plugin Loader", $"GetDeviceControlPlugins called with {plugins.Count} plugins");
+            
+            // Get the IDeviceControlPlugin type that the main app is using
+            var mainAppType = typeof(IDeviceControlPlugin);
+            Logger.Info("Plugin Loader", $"Main app IDeviceControlPlugin type:");
+            Logger.Info("Plugin Loader", $"  Assembly: {mainAppType.Assembly.FullName}");
+            Logger.Info("Plugin Loader", $"  Location: {mainAppType.Assembly.Location}");
+            
             foreach (var plugin in plugins)
             {
                 Logger.Info("Plugin Loader", $"Plugin '{plugin.PluginId}' type: {plugin.GetType().Name}");
@@ -172,6 +179,16 @@ namespace SimControlCentre.Services
                 foreach (var iface in interfaces)
                 {
                     Logger.Info("Plugin Loader", $"    - {iface.FullName}");
+                    Logger.Info("Plugin Loader", $"      Assembly: {iface.Assembly.FullName}");
+                    Logger.Info("Plugin Loader", $"      Location: {iface.Assembly.Location}");
+                    
+                    // Check if this interface name matches but is from different assembly
+                    if (iface.Name == "IDeviceControlPlugin" && iface != mainAppType)
+                    {
+                        Logger.Warning("Plugin Loader", $"      ?? ASSEMBLY MISMATCH! Plugin interface != Main app interface");
+                        Logger.Warning("Plugin Loader", $"         Plugin sees: {iface.Assembly.FullName}");
+                        Logger.Warning("Plugin Loader", $"         Main app has: {mainAppType.Assembly.FullName}");
+                    }
                 }
             }
             
