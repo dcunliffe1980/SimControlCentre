@@ -100,25 +100,38 @@ bin\Debug\net8.0-windows\
 
 ## Status
 
-**Phase 2.5 Progress**: 40% Complete (Part 1-2/5)
+**Phase 2.5 Progress**: 60% Complete (Part 1-2/5)
 
 **Completed:**
 - ? Part 1: Created Contracts project with plugin interfaces
-- ? Part 2: Created GoXLR plugin project structure
+- ? Part 2: Created GoXLR plugin project structure AND moved all GoXLR code
   - Added reference to Contracts
   - Enabled WPF support for UI controls
   - Created Models and Services folders
+  - Copied all 8 GoXLR files to plugin project
+  - Updated all namespaces to SimControlCentre.Plugins.GoXLR
+  - Updated plugins to implement new Contracts interfaces
+  - Added Initialize, Shutdown, GetConfigurationControl methods
+
+**Files Moved to Plugin:**
+- Models: GoXLRCommand.cs, GoXLRDeviceStatus.cs
+- Services: GoXLRService.cs, GoXLRApiClient.cs
+- Plugins: GoXLRLightingPlugin.cs, GoXLRDeviceControlPlugin.cs
+- Devices: GoXLRLightingDevice.cs
+- Utilities: GoXLRDiagnostics.cs
 
 **Next:**
-- ? Part 2 (cont): Move GoXLR files to plugin project
-- ? Part 3: Implement Plugin Loader
-- ? Part 4: Update Main App
-- ? Part 5: Build Configuration
+- ? Part 3: Implement Plugin Loader service
+- ? Part 4: Update Main App to remove old GoXLR files and use plugins
+- ? Part 5: Build Configuration and testing
 
 **Commits:**
 - `c9a36f7` - Phase 2.5: Plugin System Foundation - Part 1
 - `8778e6f` - Docs: Added Phase 2.5 plugin system implementation plan
 - `6242ea1` - Phase 2.5 Part 2: Created GoXLR plugin project
+- `69dc6a3` - Docs: Updated Phase 2.5 progress to 40% complete
+- `033fe15` - Phase 2.5 Part 2: Moved GoXLR code to plugin project
 
-**Next Session**: Move GoXLR-specific code from main app to plugin project
+**Next Session**: Implement PluginLoader and update main app
+
 
