@@ -24,6 +24,10 @@ namespace SimControlCentre.Plugins.GoXLR.Views
         private string? _captureChannel;
         private string? _captureAction;
         private int _captureTextBoxHash;
+        
+        // Store the delegate so we can unsubscribe later
+        private Delegate? _buttonPressedHandler;
+
 
         public GoXLRDeviceControlPanel(IPluginContext context, GoXLRDeviceControlPlugin plugin)
         {
@@ -632,15 +636,22 @@ namespace SimControlCentre.Plugins.GoXLR.Views
                 var eventInfo = directInputService.GetType().GetEvent("ButtonPressed");
                 if (eventInfo != null)
                 {
-                    var methodInfo = GetType().GetMethod(nameof(OnCombinedButtonCaptured), 
-                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                    if (methodInfo != null)
+                    // Create a lambda wrapper to avoid signature matching issues
+                    // EventHandler<string> signature: (object? sender, string e)
+                    Action<object?, string> wrapper = (sender, buttonString) =>
                     {
-                        var handler = Delegate.CreateDelegate(eventInfo.EventHandlerType!, this, methodInfo);
-                        eventInfo.AddEventHandler(directInputService, handler);
-                    }
+                        OnCombinedButtonCaptured(sender, buttonString);
+                    };
+                    
+                    _buttonPressedHandler = Delegate.CreateDelegate(
+                        eventInfo.EventHandlerType!, 
+                        wrapper.Target, 
+                        wrapper.Method);
+                    
+                    eventInfo.AddEventHandler(directInputService, _buttonPressedHandler);
                 }
             }
+
 
 
 
@@ -810,22 +821,18 @@ namespace SimControlCentre.Plugins.GoXLR.Views
             _captureAction = null;
             _captureTextBoxHash = 0;
             
-            // Unsubscribe from DirectInput using reflection
+            // Unsubscribe from DirectInput using stored delegate
             var directInputService = GetDirectInputService();
-            if (directInputService != null)
+            if (directInputService != null && _buttonPressedHandler != null)
             {
                 var eventInfo = directInputService.GetType().GetEvent("ButtonPressed");
                 if (eventInfo != null)
                 {
-                    var methodInfo = GetType().GetMethod(nameof(OnCombinedButtonCaptured), 
-                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                    if (methodInfo != null)
-                    {
-                        var handler = Delegate.CreateDelegate(eventInfo.EventHandlerType!, this, methodInfo);
-                        eventInfo.RemoveEventHandler(directInputService, handler);
-                    }
+                    eventInfo.RemoveEventHandler(directInputService, _buttonPressedHandler);
+                    _buttonPressedHandler = null;
                 }
             }
+
 
 
 
