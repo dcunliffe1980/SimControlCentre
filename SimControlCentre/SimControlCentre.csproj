@@ -32,5 +32,9 @@
     <None Include="Resources\Documentation\IRACING_VARIABLES_REFERENCE.md" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SimControlCentre.Contracts\SimControlCentre.Contracts.csproj" />
+  </ItemGroup>
+
 </Project>
 
