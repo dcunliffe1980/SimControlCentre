@@ -902,11 +902,30 @@ namespace SimControlCentre.Views.Tabs
             }
 
             // Look for the appropriate installer
-            string searchPattern = isStandalone ? "standalone" : "setup";
+            // For standalone: must contain "standalone"
+            // For framework-dependent: must NOT contain "standalone" but must contain "setup"
             
-            var matchingAsset = updateInfo.Assets.FirstOrDefault(a => 
-                a.Name.Contains(searchPattern, StringComparison.OrdinalIgnoreCase) &&
-                a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+            ReleaseAsset? matchingAsset = null;
+            
+            if (isStandalone)
+            {
+                // Look for standalone installer
+                matchingAsset = updateInfo.Assets.FirstOrDefault(a => 
+                    a.Name.Contains("standalone", StringComparison.OrdinalIgnoreCase) &&
+                    a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+                
+                UpdateDiagnostics.Log($"[DetermineDownload] Looking for standalone installer");
+            }
+            else
+            {
+                // Look for framework-dependent installer (setup but NOT standalone)
+                matchingAsset = updateInfo.Assets.FirstOrDefault(a => 
+                    a.Name.Contains("setup", StringComparison.OrdinalIgnoreCase) &&
+                    !a.Name.Contains("standalone", StringComparison.OrdinalIgnoreCase) &&
+                    a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+                
+                UpdateDiagnostics.Log($"[DetermineDownload] Looking for framework-dependent installer (setup without standalone)");
+            }
 
             if (matchingAsset != null)
             {

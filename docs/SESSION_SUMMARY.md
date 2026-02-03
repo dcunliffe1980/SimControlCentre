@@ -461,7 +461,14 @@ All core lighting features are implemented and tested. Next thread can focus on:
 ### Documentation Created
 
 - `docs/BUILD_INSTRUCTIONS.md` - Complete build and release guide
+- `docs/RELEASE_PROCESS.md` - **Complete release workflow for AI assistants**
 - `RELEASE_NOTES_v1.2.0.md` - Comprehensive release notes
 - `GITHUB_RELEASE_v1.2.0.md` - GitHub release template
+
+**Important for Next AI Thread**:
+- Read `docs/RELEASE_PROCESS.md` for complete release instructions
+- User expects AI to create Git tags automatically
+- User expects AI to display release notes in conversation
+- Tag format: v1.2.0 (no markdown formatting)
 
 ---
