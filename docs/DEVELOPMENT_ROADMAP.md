@@ -12,42 +12,37 @@ This roadmap outlines the evolution of SimControlCentre from a GoXLR-focused app
 
 ---
 
-## Phase 1: Quick Wins & Foundation (1-2 sessions) ? CURRENT
+## Phase 1: Quick Wins & Foundation (1-2 sessions) ? IN PROGRESS
 
-### 1.1 Lighting Tab Cleanup ? IN PROGRESS
+### 1.1 Lighting Tab Cleanup ? COMPLETE (Commit: b8829d4)
 **Goal**: Make the lighting tab more professional and user-friendly
 
-**Changes**:
-- ? Remove "coming soon" devices (Hue, Nanoleaf)
-- ? Remove "Connected Devices" section (pointless)
-- ? Improve button layout and formatting
-- ? Add friendly display names (Fader1Mute ? Fader 1 Mute)
-- ? Reorder buttons logically: Global, Accent, Faders 1-4, Fader Mutes 1-4, Bleep, Cough
-- ? Better test flags layout (more even spacing)
-- ? Move/remove "How It Works" section
+**Completed Changes**:
+- ? Removed "coming soon" devices (Hue, Nanoleaf)
+- ? Removed "Connected Devices" section (unnecessary)
+- ? Improved button layout and formatting
+- ? Added friendly display names (Fader1Mute ? Fader 1 Mute)
+- ? Reordered buttons logically: Global, Accent, Faders 1-4, Fader Mutes 1-4, Bleep, Cough
+- ? Better test flags layout (UniformGrid, 4 columns, consistent sizing)
+- ? Renamed "Flag Lighting" ? "Lighting"
 
-**Display Name Mapping**:
-```csharp
-"Global" ? "Global"
-"Accent" ? "Accent"
-"FaderA" ? "Fader 1"
-"FaderB" ? "Fader 2"
-"FaderC" ? "Fader 3"
-"FaderD" ? "Fader 4"
-"Fader1Mute" ? "Fader 1 Mute"
-"Fader2Mute" ? "Fader 2 Mute"
-"Fader3Mute" ? "Fader 3 Mute"
-"Fader4Mute" ? "Fader 4 Mute"
-"Bleep" ? "Bleep"
-"Cough" ? "Cough"
-```
+**Files Modified**:
+- `SimControlCentre\Services\GoXLRLightingPlugin.cs` - Display name mapping
+- `SimControlCentre\Views\Tabs\LightingTab.xaml` - Layout improvements
+- `SimControlCentre\Views\Tabs\LightingTab.xaml.cs` - Tag-based selection
+- `SimControlCentre\MainWindow.xaml` - Tab rename
 
-**Rename**: "Flag Lighting" tab ? "Lighting" tab
-
-### 1.2 Plugin Settings Architecture
+### 1.2 Plugin Settings Architecture ?? NEXT
 **Goal**: Establish consistent plugin management
 
-**Decision**: Centralized "Plugins" tab
+**To Do**:
+- [ ] Create centralized "Plugins" tab
+- [ ] Move GoXLR plugin enable/disable from Lighting tab
+- [ ] Structure for plugin components (Device Control + Lighting)
+- [ ] Save settings properly
+- [ ] Test enable/disable functionality
+
+**Decision**: Centralized "Plugins" tab ? APPROVED
 
 **Structure**:
 ```
