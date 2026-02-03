@@ -1,21 +1,35 @@
 using System.Net.Http;
 using System.Net.Http.Json;
 using SimControlCentre.Plugins.GoXLR.Models;
+using SimControlCentre.Contracts;
 
 namespace SimControlCentre.Plugins.GoXLR.Services;
 
 /// <summary>
-/// Service for managing GoXLR API client with application settings
+/// Service for managing GoXLR API client with plugin context
 /// </summary>
 public class GoXLRService : IDisposable
 {
-    private readonly AppSettings _settings;
+    private readonly IPluginContext _context;
     private GoXLRApiClient? _apiClient;
+    private string? _apiEndpoint;
+    private int _volumeCacheTimeMs;
+    private string? _serialNumber;
 
-    public GoXLRService(AppSettings settings)
+    public bool IsConnected => _apiClient?.IsConnectionWarmed ?? false;
+
+    public GoXLRService(IPluginContext context)
     {
-        _settings = settings;
+        _context = context;
+        LoadSettings();
         InitializeClient();
+    }
+
+    private void LoadSettings()
+    {
+        _apiEndpoint = _context.Settings.GetValue<string>("GoXLR.ApiEndpoint") ?? "http://localhost:14564";
+        _volumeCacheTimeMs = _context.Settings.GetValue<int>("GoXLR.VolumeCacheTimeMs");
+        _serialNumber = _context.Settings.GetValue<string>("GoXLR.SerialNumber");
     }
 
     private void InitializeClient()
@@ -23,21 +37,22 @@ public class GoXLRService : IDisposable
         // Only initialize once - prevent multiple instances
         if (_apiClient != null)
         {
-            Console.WriteLine("[GoXLRService] API client already initialized, skipping");
+            _context.LogInfo("GoXLR Service", "API client already initialized, skipping");
             return;
         }
         
-        Console.WriteLine("[GoXLRService] Initializing new API client");
+        _context.LogInfo("GoXLR Service", "Initializing new API client");
         _apiClient = new GoXLRApiClient(
-            _settings.General.ApiEndpoint,
-            _settings.General.VolumeCacheTimeMs
+            _apiEndpoint ?? "http://localhost:14564",
+            _volumeCacheTimeMs > 0 ? _volumeCacheTimeMs : 5000,
+            _context
         );
     }
 
     /// <summary>
     /// Gets the configured serial number from settings
     /// </summary>
-    private string SerialNumber => _settings.General.SerialNumber;
+    private string SerialNumber => _serialNumber ?? string.Empty;
 
     /// <summary>
     /// Checks if serial number is configured

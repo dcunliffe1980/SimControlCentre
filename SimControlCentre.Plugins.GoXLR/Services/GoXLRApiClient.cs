@@ -2,6 +2,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using SimControlCentre.Plugins.GoXLR.Models;
+using SimControlCentre.Contracts;
 
 namespace SimControlCentre.Plugins.GoXLR.Services;
 
@@ -13,6 +14,7 @@ public class GoXLRApiClient : IDisposable
     private readonly HttpClient _httpClient;
     private readonly string _apiEndpoint;
     private readonly int _cacheTimeMs;
+    private readonly IPluginContext _context;
     private Timer? _connectionWarmupTimer;
     private bool _isConnectionWarmed = false;
     
@@ -24,10 +26,13 @@ public class GoXLRApiClient : IDisposable
     private GoXLRDevice? _cachedDeviceStatus;
     private DateTime _lastStatusRefresh = DateTime.MinValue;
 
-    public GoXLRApiClient(string apiEndpoint, int cacheTimeMs = 5000)
+    public bool IsConnectionWarmed => _isConnectionWarmed;
+
+    public GoXLRApiClient(string apiEndpoint, int cacheTimeMs, IPluginContext context)
     {
         _apiEndpoint = apiEndpoint;
         _cacheTimeMs = cacheTimeMs;
+        _context = context;
         
         // Use SocketsHttpHandler for better connection pooling
         var handler = new SocketsHttpHandler
@@ -37,6 +42,7 @@ public class GoXLRApiClient : IDisposable
             MaxConnectionsPerServer = 10,
             EnableMultipleHttp2Connections = true
         };
+        
         
         _httpClient = new HttpClient(handler)
         {

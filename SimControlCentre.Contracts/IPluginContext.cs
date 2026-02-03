@@ -6,9 +6,9 @@ namespace SimControlCentre.Contracts
     public interface IPluginContext
     {
         /// <summary>
-        /// Application settings (shared across all plugins)
+        /// Application settings accessor
         /// </summary>
-        object Settings { get; }
+        IPluginSettings Settings { get; }
 
         /// <summary>
         /// Save the current settings to disk
@@ -31,8 +31,14 @@ namespace SimControlCentre.Contracts
         void LogWarning(string category, string message);
 
         /// <summary>
+        /// Log a debug message
+        /// </summary>
+        void LogDebug(string category, string message);
+
+        /// <summary>
         /// Get the plugin data directory for storing plugin-specific files
         /// </summary>
         string GetPluginDataDirectory(string pluginId);
     }
 }
+
