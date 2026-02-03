@@ -79,15 +79,20 @@ namespace SimControlCentre.Views.Tabs
                         _settings.Lighting.EnableFlagLighting = false;
                         _configService.Save(_settings);
                     }
-                    
-                    // Notify MainWindow to refresh LightingTab
-                    _mainWindow?.RefreshLightingTab();
                 }
                 
                 // Update UI visibility
                 if (pluginId == "goxlr")
                 {
                     UpdateGoXlrComponentsVisibility();
+                }
+                
+                // Notify MainWindow to refresh LightingTab after a short delay to ensure plugin state is updated
+                if (_mainWindow != null)
+                {
+                    System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
+                        new Action(() => _mainWindow.RefreshLightingTab()),
+                        System.Windows.Threading.DispatcherPriority.Background);
                 }
                 
                 Logger.Info("Plugins", $"Plugin '{pluginId}' {(isEnabled ? "enabled" : "disabled")}");

@@ -39,7 +39,14 @@ namespace SimControlCentre.Views.Tabs
         public void CheckPluginAvailability()
         {
             // Check if any lighting plugins are enabled
-            bool hasEnabledPlugins = _lightingService.Plugins.Any(p => p.IsEnabled);
+            var enabledPlugins = _lightingService.Plugins.Where(p => p.IsEnabled).ToList();
+            bool hasEnabledPlugins = enabledPlugins.Any();
+            
+            Logger.Info("Lighting Tab", $"Checking plugin availability. Total plugins: {_lightingService.Plugins.Count}, Enabled: {enabledPlugins.Count}");
+            foreach (var plugin in _lightingService.Plugins)
+            {
+                Logger.Info("Lighting Tab", $"Plugin '{plugin.PluginId}': IsEnabled={plugin.IsEnabled}");
+            }
             
             if (!hasEnabledPlugins)
             {
@@ -52,12 +59,16 @@ namespace SimControlCentre.Views.Tabs
                 var app = (App)Application.Current;
                 app.Settings.Lighting.EnableFlagLighting = false;
                 app.SaveSettings();
+                
+                Logger.Info("Lighting Tab", "No enabled plugins - lighting disabled");
             }
             else
             {
                 // Enable the checkbox
                 EnableLightingCheckBox.IsEnabled = true;
                 NoPluginsWarning.Visibility = Visibility.Collapsed;
+                
+                Logger.Info("Lighting Tab", "Enabled plugins found - lighting can be enabled");
             }
         }
 
