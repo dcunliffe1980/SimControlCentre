@@ -38,11 +38,15 @@ namespace SimControlCentre.Views.Tabs
 
         public void CheckPluginAvailability()
         {
-            // Check if any lighting plugins are enabled
-            var enabledPlugins = _lightingService.Plugins.Where(p => p.IsEnabled).ToList();
-            bool hasEnabledPlugins = enabledPlugins.Any();
+            // Check if lighting component is specifically enabled
+            var app = (App)Application.Current;
+            bool lightingComponentEnabled = app.Settings.Lighting?.EnabledPlugins?.GetValueOrDefault("goxlr-lighting", true) ?? true;
             
-            Logger.Info("Lighting Tab", $"Checking plugin availability. Total plugins: {_lightingService.Plugins.Count}, Enabled: {enabledPlugins.Count}");
+            // Also check if any lighting plugins are actually enabled
+            var enabledPlugins = _lightingService.Plugins.Where(p => p.IsEnabled).ToList();
+            bool hasEnabledPlugins = enabledPlugins.Any() && lightingComponentEnabled;
+            
+            Logger.Info("Lighting Tab", $"Checking plugin availability. Total plugins: {_lightingService.Plugins.Count}, Enabled: {enabledPlugins.Count}, Component enabled: {lightingComponentEnabled}");
             foreach (var plugin in _lightingService.Plugins)
             {
                 Logger.Info("Lighting Tab", $"Plugin '{plugin.PluginId}': IsEnabled={plugin.IsEnabled}");
@@ -54,9 +58,9 @@ namespace SimControlCentre.Views.Tabs
                 EnableLightingCheckBox.IsEnabled = false;
                 EnableLightingCheckBox.IsChecked = false;
                 NoPluginsWarning.Visibility = Visibility.Visible;
+                GoXlrSpecificPanel.Visibility = Visibility.Collapsed;
                 
                 // Also disable flag lighting in settings
-                var app = (App)Application.Current;
                 app.Settings.Lighting.EnableFlagLighting = false;
                 app.SaveSettings();
                 
@@ -68,7 +72,12 @@ namespace SimControlCentre.Views.Tabs
                 EnableLightingCheckBox.IsEnabled = true;
                 NoPluginsWarning.Visibility = Visibility.Collapsed;
                 
-                Logger.Info("Lighting Tab", "Enabled plugins found - lighting can be enabled");
+                // Show GoXLR-specific panel only if GoXLR lighting plugin is enabled
+                var goxlrPlugin = _lightingService.Plugins.FirstOrDefault(p => p.PluginId == "goxlr");
+                bool goxlrEnabled = goxlrPlugin?.IsEnabled ?? false;
+                GoXlrSpecificPanel.Visibility = goxlrEnabled ? Visibility.Visible : Visibility.Collapsed;
+                
+                Logger.Info("Lighting Tab", $"Enabled plugins found - lighting can be enabled. GoXLR-specific controls: {(goxlrEnabled ? "Visible" : "Hidden")}");
             }
         }
 

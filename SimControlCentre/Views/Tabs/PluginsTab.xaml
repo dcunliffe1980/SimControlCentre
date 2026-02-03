@@ -39,7 +39,7 @@
                         <!-- Lighting Component -->
                         <StackPanel Margin="0,0,0,10">
                             <CheckBox x:Name="EnableLightingComponentCheckBox"
-                                      Content="Lighting (Flag-based)"
+                                      Content="Lighting"
                                       FontWeight="SemiBold"
                                       Checked="ComponentEnabled_Changed"
                                       Unchecked="ComponentEnabled_Changed"

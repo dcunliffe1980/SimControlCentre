@@ -32,11 +32,36 @@ namespace SimControlCentre.Views.Tabs
             // Add key event handler for hotkey capture
             PreviewKeyDown += HotkeysTab_PreviewKeyDown;
             
+            CheckPluginAvailability();
             PopulateHotkeyEditor();
+        }
+
+        public void CheckPluginAvailability()
+        {
+            // Check if device control component is specifically enabled
+            bool deviceControlComponentEnabled = _settings.Lighting?.EnabledPlugins?.GetValueOrDefault("goxlr-device-control", true) ?? true;
+            
+            // Also check if any device control plugins are actually available
+            var deviceControlService = App.GetDeviceControlService();
+            bool hasEnabledPlugins = deviceControlService?.Plugins.Any(p => p.IsEnabled) ?? false;
+            
+            bool pluginsAvailable = hasEnabledPlugins && deviceControlComponentEnabled;
+            
+            if (!pluginsAvailable)
+            {
+                NoPluginsWarning.Visibility = Visibility.Visible;
+                HotkeysContentPanel.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                NoPluginsWarning.Visibility = Visibility.Collapsed;
+                HotkeysContentPanel.Visibility = Visibility.Visible;
+            }
         }
 
         public void RefreshHotkeys()
         {
+            CheckPluginAvailability();
             PopulateHotkeyEditor();
         }
 

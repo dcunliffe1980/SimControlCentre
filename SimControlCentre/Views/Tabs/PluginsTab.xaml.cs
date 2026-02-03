@@ -165,6 +165,9 @@ namespace SimControlCentre.Views.Tabs
                     {
                         deviceControlPlugin.IsEnabled = isEnabled;
                     }
+                    
+                    // Notify device control tab
+                    _mainWindow?.RefreshHotkeysTab();
                 }
                 
                 Logger.Info("Plugins", $"Component '{componentId}' {(isEnabled ? "enabled" : "disabled")}");

@@ -1,23 +1,45 @@
 <UserControl x:Class="SimControlCentre.Views.Tabs.HotkeysTab"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             mc:Ignorable="d" 
-             d:DesignHeight="600" d:DesignWidth="800">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="10">
-            <TextBlock Text="Hotkeys Configuration" 
-                       FontSize="20" 
-                       FontWeight="Bold" 
-                       Margin="0,0,0,20"/>
+         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+         mc:Ignorable="d" 
+         d:DesignHeight="600" d:DesignWidth="800">
+<ScrollViewer VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="10">
+        <TextBlock Text="Device Control" 
+                   FontSize="20" 
+                   FontWeight="Bold" 
+                   Margin="0,0,0,20"/>
             
-            <!-- Volume Hotkeys -->
-            <GroupBox Header="Volume Hotkeys" Padding="10" Margin="0,0,0,20">
-                <StackPanel Name="VolumeHotkeysPanel">
-                    <!-- Will be populated dynamically -->
-                </StackPanel>
-            </GroupBox>
+        <!-- No plugins available warning -->
+        <Border x:Name="NoPluginsWarning"
+                Background="#FFEBEE"
+                BorderBrush="#D32F2F"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="12"
+                Margin="0,0,0,15"
+                Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock FontWeight="SemiBold" Foreground="#D32F2F" Margin="0,0,0,5">
+                    No Device Control Plugins Available
+                </TextBlock>
+                <TextBlock TextWrapping="Wrap" Foreground="#D32F2F" FontSize="11">
+                    No device control plugins are currently enabled. Enable a plugin in Settings > Plugins to configure hotkeys and device control.
+                </TextBlock>
+            </StackPanel>
+        </Border>
+            
+        <!-- Hotkeys content panel -->
+        <StackPanel x:Name="HotkeysContentPanel">
+            
+        <!-- Volume Hotkeys -->
+        <GroupBox Header="Volume Hotkeys" Padding="10" Margin="0,0,0,20">
+            <StackPanel Name="VolumeHotkeysPanel">
+                <!-- Will be populated dynamically -->
+            </StackPanel>
+        </GroupBox>
             
             <!-- Profile Hotkeys -->
             <GroupBox Header="Profile Hotkeys" Padding="10">
@@ -25,6 +47,7 @@
                     <!-- Will be populated dynamically -->
                 </StackPanel>
             </GroupBox>
+            </StackPanel> <!-- End HotkeysContentPanel -->
         </StackPanel>
     </ScrollViewer>
 </UserControl>
