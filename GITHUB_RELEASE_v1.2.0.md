@@ -51,17 +51,38 @@ Your GoXLR LEDs now automatically change colors based on track flags:
 
 ## ?? Installation
 
-### Option 1: Self-Contained (Recommended)
-Download `SimControlCentre-v1.2.0.zip` - includes everything needed, no installation required.
+### Option 1: Standalone Installer (Recommended - 70MB)
+**Download**: `SimControlCentre-Setup-Standalone-v1.2.0.exe`
+- Includes .NET 8 Runtime
+- No prerequisites required
+- Single installer, everything included
 
-### Option 2: Framework-Dependent
-Download `SimControlCentre-v1.2.0-framework.zip` - requires .NET 8 Runtime installed separately.
+### Option 2: Small Installer (3MB)
+**Download**: `SimControlCentre-Setup-v1.2.0.exe`
+- Requires .NET 8 Runtime already installed
+- Smaller download if you already have .NET 8
 
 ## ?? Requirements
 - Windows 10/11
-- .NET 8 Runtime (if using framework-dependent build)
+- .NET 8 Runtime (if using small installer - [Download here](https://dotnet.microsoft.com/download/dotnet/8.0))
 - GoXLR with GoXLR Utility running
 - iRacing (for flag lighting)
+
+## ?? Build Information
+
+**Installers created with Inno Setup**:
+- Location: `Installers/` folder
+- Standalone: ~70MB (includes .NET 8)
+- Framework-dependent: ~3MB (requires .NET 8)
+
+## ?? GitHub Release Tag
+**Tag**: `v1.2.0` (NOT the filename!)
+
+When creating the release:
+1. Tag: `v1.2.0`
+2. Target: `master` branch
+3. Title: `v1.2.0 - iRacing Flag Lighting`
+4. Upload both installers from `Installers/` folder
 
 ## ?? Coming Soon
 - Philips Hue plugin

@@ -419,3 +419,49 @@ All core lighting features are implemented and tested. Next thread can focus on:
 - ? No known bugs
 
 ---
+
+## ?? Release Process
+
+### Building Installers
+
+**Location**: `Installers/` folder (created by build script)
+
+**Files Created**:
+1. `SimControlCentre-Setup-Standalone-v1.2.0.exe` (~70MB)
+   - Includes .NET 8 Runtime
+   - Built with `installer-standalone.iss`
+   - For all users
+
+2. `SimControlCentre-Setup-v1.2.0.exe` (~3MB)
+   - Requires .NET 8 already installed
+   - Built with `installer.iss`
+   - For power users
+
+**Build Command**:
+```powershell
+# Close app first!
+.\build-release.ps1
+```
+
+### Creating GitHub Release
+
+**Important**: Git tag is `v1.2.0`, NOT the filename!
+
+**Steps**:
+1. Tag: `v1.2.0`
+2. Target: `master` branch
+3. Title: `v1.2.0 - iRacing Flag Lighting`
+4. Description: Copy from `GITHUB_RELEASE_v1.2.0.md`
+5. Upload both installers from `Installers/` folder
+
+**Previous Release Format**:
+- v1.1.2: https://github.com/dcunliffe1980/SimControlCentre/releases/tag/v1.1.2
+- Follow same structure
+
+### Documentation Created
+
+- `docs/BUILD_INSTRUCTIONS.md` - Complete build and release guide
+- `RELEASE_NOTES_v1.2.0.md` - Comprehensive release notes
+- `GITHUB_RELEASE_v1.2.0.md` - GitHub release template
+
+---

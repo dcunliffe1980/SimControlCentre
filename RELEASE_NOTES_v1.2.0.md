@@ -185,9 +185,15 @@ None! All features tested and working on both GoXLR Mini and Full-size.
 
 ## ?? Downloads
 
-- **SimControlCentre v1.2.0** - [Download Latest Release](https://github.com/dcunliffe1980/SimControlCentre/releases/tag/v1.2.0)
-- **Full Installer** - Includes .NET 8 Runtime
-- **Portable** - Requires .NET 8 Runtime installed separately
+- **SimControlCentre-Setup-Standalone-v1.2.0.exe** (~70MB)
+  - Includes .NET 8 Runtime
+  - Recommended for most users
+  - No prerequisites required
+
+- **SimControlCentre-Setup-v1.2.0.exe** (~3MB)
+  - Requires .NET 8 Runtime already installed
+  - Smaller download for power users
+  - [Get .NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)
 
 ---
 
