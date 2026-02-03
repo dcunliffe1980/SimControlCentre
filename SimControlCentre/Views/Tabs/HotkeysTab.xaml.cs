@@ -34,7 +34,11 @@ namespace SimControlCentre.Views.Tabs
             
             CheckPluginAvailability();
             PopulateHotkeyEditor();
+            
+            // Load available profiles
+            _ = LoadAvailableProfilesAsync();
         }
+
 
         public void CheckPluginAvailability()
         {
@@ -130,6 +134,7 @@ namespace SimControlCentre.Views.Tabs
             channelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             channelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             channelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            channelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // Remove button column
             
             // Channel label
             var label = new TextBlock
@@ -141,6 +146,7 @@ namespace SimControlCentre.Views.Tabs
             };
             Grid.SetColumn(label, 0);
             channelGrid.Children.Add(label);
+
             
             // Volume Up
             var upLabel = new TextBlock
@@ -233,8 +239,23 @@ namespace SimControlCentre.Views.Tabs
             Grid.SetColumn(downClearButton, 8);
             channelGrid.Children.Add(downClearButton);
             
+            // Remove channel button
+            var removeButton = new Button
+            {
+                Content = "? Remove",
+                Padding = new Thickness(8, 5, 8, 5),
+                Margin = new Thickness(10, 0, 0, 0),
+                Tag = channel,
+                ToolTip = $"Remove {channel} channel",
+                Background = System.Windows.Media.Brushes.LightCoral
+            };
+            removeButton.Click += RemoveChannel_Click;
+            Grid.SetColumn(removeButton, 9);
+            channelGrid.Children.Add(removeButton);
+            
             VolumeHotkeysPanel.Children.Add(channelGrid);
         }
+
 
         private void CreateProfileHotkeyRow(string profile, string hotkey, string button)
         {
@@ -243,6 +264,8 @@ namespace SimControlCentre.Views.Tabs
             profileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
             profileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             profileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            profileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // Remove button column
+
             
             // Profile label
             var label = new TextBlock
@@ -292,8 +315,23 @@ namespace SimControlCentre.Views.Tabs
             Grid.SetColumn(clearButton, 3);
             profileGrid.Children.Add(clearButton);
             
+            // Remove profile button
+            var removeButton = new Button
+            {
+                Content = "? Remove",
+                Padding = new Thickness(8, 5, 8, 5),
+                Margin = new Thickness(5, 0, 0, 0),
+                Tag = profile,
+                ToolTip = $"Remove {profile} profile",
+                Background = System.Windows.Media.Brushes.LightCoral
+            };
+            removeButton.Click += RemoveProfile_Click;
+            Grid.SetColumn(removeButton, 4);
+            profileGrid.Children.Add(removeButton);
+            
             ProfileHotkeysPanel.Children.Add(profileGrid);
         }
+
 
         private string GetCombinedHotkeyDisplay(string? keyboard, string? button)
         {
@@ -700,5 +738,179 @@ namespace SimControlCentre.Views.Tabs
 
             return null;
         }
+
+        // ==================== Channel and Profile Management ====================
+
+        private async void AddChannel_Click(object sender, RoutedEventArgs e)
+        {
+            var selectedItem = ChannelComboBox.SelectedItem as ComboBoxItem;
+            if (selectedItem == null)
+            {
+                MessageBox.Show("Please select a channel to add.", "No Selection", 
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            string channelName = selectedItem.Tag?.ToString() ?? "";
+            
+            // Check if already enabled
+            if (_settings.EnabledChannels.Contains(channelName))
+            {
+                MessageBox.Show($"Channel '{channelName}' is already added.", "Already Added", 
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Add to enabled channels
+            _settings.EnabledChannels.Add(channelName);
+
+            // Initialize hotkey settings if not exists
+            if (!_settings.VolumeHotkeys.ContainsKey(channelName))
+            {
+                _settings.VolumeHotkeys[channelName] = new ChannelHotkeys();
+            }
+
+            // Save and refresh
+            _configService.Save(_settings);
+            Logger.Info("Device Control Tab", $"Added channel: {channelName}");
+            
+            PopulateHotkeyEditor();
+        }
+
+        private async void AddProfile_Click(object sender, RoutedEventArgs e)
+        {
+            var selectedProfile = ProfileComboBox.SelectedItem as string;
+            if (string.IsNullOrEmpty(selectedProfile))
+            {
+                MessageBox.Show("Please select a profile to add.", "No Selection", 
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Check if already exists
+            if (_settings.ProfileButtons.ContainsKey(selectedProfile))
+            {
+                MessageBox.Show($"Profile '{selectedProfile}' is already added.", "Already Added", 
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Add profile with empty hotkey
+            _settings.ProfileButtons[selectedProfile] = "";
+
+            // Save and refresh
+            _configService.Save(_settings);
+            Logger.Info("Device Control Tab", $"Added profile: {selectedProfile}");
+            
+            PopulateHotkeyEditor();
+        }
+
+        private async void RefreshProfiles_Click(object sender, RoutedEventArgs e)
+        {
+            await LoadAvailableProfilesAsync();
+        }
+
+        private async System.Threading.Tasks.Task LoadAvailableProfilesAsync()
+        {
+            ProfileComboBox.Items.Clear();
+            
+            try
+            {
+                // Get the GoXLR device control plugin
+                var deviceControlService = App.GetDeviceControlService();
+                var goxlrPlugin = deviceControlService?.Plugins
+                    .FirstOrDefault(p => p.PluginId == "goxlr-control");
+                
+                if (goxlrPlugin != null)
+                {
+                    // Use reflection to call GetAvailableProfilesAsync
+                    var method = goxlrPlugin.GetType().GetMethod("GetAvailableProfilesAsync");
+                    if (method != null)
+                    {
+                        var task = method.Invoke(goxlrPlugin, null) as System.Threading.Tasks.Task<List<string>>;
+                        if (task != null)
+                        {
+                            var profiles = await task;
+                            foreach (var profile in profiles.OrderBy(p => p))
+                            {
+                                ProfileComboBox.Items.Add(profile);
+                            }
+                            
+                            if (ProfileComboBox.Items.Count > 0)
+                            {
+                                ProfileComboBox.SelectedIndex = 0;
+                            }
+                            
+                            Logger.Info("Device Control Tab", $"Loaded {profiles.Count} profiles");
+                        }
+                    }
+                }
+                
+                if (ProfileComboBox.Items.Count == 0)
+                {
+                    ProfileComboBox.Items.Add("(No profiles found)");
+                    ProfileComboBox.SelectedIndex = 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Device Control Tab", $"Failed to load profiles: {ex.Message}", ex);
+                ProfileComboBox.Items.Add("(Error loading profiles)");
+                ProfileComboBox.SelectedIndex = 0;
+            }
+        }
+
+        private void RemoveChannel_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            var channelName = button?.Tag?.ToString();
+            
+            if (string.IsNullOrEmpty(channelName))
+                return;
+
+            var result = MessageBox.Show(
+                $"Remove channel '{channelName}' and its hotkeys?",
+                "Confirm Remove",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                _settings.EnabledChannels.Remove(channelName);
+                _settings.VolumeHotkeys.Remove(channelName);
+                
+                _configService.Save(_settings);
+                Logger.Info("Device Control Tab", $"Removed channel: {channelName}");
+                
+                PopulateHotkeyEditor();
+            }
+        }
+
+        private void RemoveProfile_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            var profileName = button?.Tag?.ToString();
+            
+            if (string.IsNullOrEmpty(profileName))
+                return;
+
+            var result = MessageBox.Show(
+                $"Remove profile '{profileName}' hotkey?",
+                "Confirm Remove",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                _settings.ProfileButtons.Remove(profileName);
+                
+                _configService.Save(_settings);
+                Logger.Info("Device Control Tab", $"Removed profile: {profileName}");
+                
+                PopulateHotkeyEditor();
+            }
+        }
     }
 }
+
+

@@ -54,10 +54,27 @@ namespace SimControlCentre.Plugins.GoXLR.Services
             _context?.LogInfo("GoXLR Device Control Plugin", "Shutdown");
         }
 
+        /// <summary>
+        /// Get available GoXLR profiles
+        /// </summary>
+        public async Task<List<string>> GetAvailableProfilesAsync()
+        {
+            try
+            {
+                return await _goXLRService.GetProfilesAsync();
+            }
+            catch (Exception ex)
+            {
+                _context?.LogError("GoXLR Device Control Plugin", $"Failed to get profiles: {ex.Message}", ex);
+                return new List<string>();
+            }
+        }
+
         public object? GetConfigurationControl()
         {
             // TODO: Return WPF UserControl for hotkey configuration
             return null;
+
         }
 
         public void ApplyConfiguration(Dictionary<string, object> config)
