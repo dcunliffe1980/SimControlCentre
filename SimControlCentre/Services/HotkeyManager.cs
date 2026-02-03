@@ -4,18 +4,18 @@ using System.Windows;
 namespace SimControlCentre.Services;
 
 /// <summary>
-/// Manages hotkey registration and maps them to GoXLR actions
+/// Manages hotkey registration and maps them to device control plugin actions
 /// </summary>
 public class HotkeyManager : IDisposable
 {
     private readonly HotkeyService _hotkeyService;
-    private readonly GoXLRService _goXLRService;
+    private readonly DeviceControlService _deviceControlService;
     private readonly AppSettings _settings;
 
-    public HotkeyManager(HotkeyService hotkeyService, GoXLRService goXLRService, AppSettings settings)
+    public HotkeyManager(HotkeyService hotkeyService, DeviceControlService deviceControlService, AppSettings settings)
     {
         _hotkeyService = hotkeyService;
-        _goXLRService = goXLRService;
+        _deviceControlService = deviceControlService;
         _settings = settings;
     }
 
@@ -104,13 +104,20 @@ public class HotkeyManager : IDisposable
     }
 
     /// <summary>
-    /// Adjusts volume for a channel
+    /// Adjusts volume for a channel using device control plugin
     /// </summary>
     private async void AdjustVolume(string channel, bool increase)
     {
         try
         {
-            var result = await _goXLRService.AdjustVolumeAsync(channel, increase);
+            var parameters = new Dictionary<string, object>
+            {
+                { "channel", channel },
+                { "increase", increase }
+            };
+
+            var result = await _deviceControlService.ExecuteActionAsync("goxlr-control", "adjust_volume", parameters);
+            
             if (result.Success)
             {
                 Console.WriteLine($"[HotkeyManager] {result.Message}");
@@ -134,16 +141,22 @@ public class HotkeyManager : IDisposable
     }
 
     /// <summary>
-    /// Loads a profile
+    /// Loads a profile using device control plugin
     /// </summary>
     private async void LoadProfile(string profileName)
     {
         try
         {
-            var success = await _goXLRService.LoadProfileAsync(profileName);
-            if (success)
+            var parameters = new Dictionary<string, object>
             {
-                Console.WriteLine($"[HotkeyManager] Loaded profile: {profileName}");
+                { "profile_name", profileName }
+            };
+
+            var result = await _deviceControlService.ExecuteActionAsync("goxlr-control", "switch_profile", parameters);
+            
+            if (result.Success)
+            {
+                Console.WriteLine($"[HotkeyManager] {result.Message}");
                 
                 // Show notification
                 Application.Current.Dispatcher.Invoke(() =>
@@ -154,7 +167,7 @@ public class HotkeyManager : IDisposable
             }
             else
             {
-                Console.WriteLine($"[HotkeyManager] Failed to load profile: {profileName}");
+                Console.WriteLine($"[HotkeyManager] Failed to load profile: {result.Message}");
             }
         }
         catch (Exception ex)

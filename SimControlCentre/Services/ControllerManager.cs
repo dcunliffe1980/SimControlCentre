@@ -3,20 +3,20 @@ using SimControlCentre.Models;
 namespace SimControlCentre.Services;
 
 /// <summary>
-/// Manages controller input and maps buttons to GoXLR actions
+/// Manages controller input and maps buttons to device control plugin actions
 /// </summary>
 public class ControllerManager : IDisposable
 {
     private readonly DirectInputService _directInputService;
-    private readonly GoXLRService _goXLRService;
+    private readonly DeviceControlService _deviceControlService;
     private readonly AppSettings _settings;
     private readonly Dictionary<string, DateTime> _lastButtonPress = new();
     private const int DEBOUNCE_MS = 200; // Prevent double-triggers
 
-    public ControllerManager(DirectInputService directInputService, GoXLRService goXLRService, AppSettings settings)
+    public ControllerManager(DirectInputService directInputService, DeviceControlService deviceControlService, AppSettings settings)
     {
         _directInputService = directInputService;
-        _goXLRService = goXLRService;
+        _deviceControlService = deviceControlService;
         _settings = settings;
 
         // Subscribe to button events
@@ -74,14 +74,14 @@ public class ControllerManager : IDisposable
             if (!string.IsNullOrWhiteSpace(hotkeys.VolumeUpButton) && MatchesButton(hotkeys.VolumeUpButton, e.ProductGuid, e.ButtonNumber))
             {
                 Console.WriteLine($"[ControllerManager] Executing Volume Up for {channel}");
-                _ = _goXLRService.AdjustVolumeAsync(channel, true);
+                _ = ExecuteVolumeAction(channel, true);
                 return;
             }
 
             if (!string.IsNullOrWhiteSpace(hotkeys.VolumeDownButton) && MatchesButton(hotkeys.VolumeDownButton, e.ProductGuid, e.ButtonNumber))
             {
                 Console.WriteLine($"[ControllerManager] Executing Volume Down for {channel}");
-                _ = _goXLRService.AdjustVolumeAsync(channel, false);
+                _ = ExecuteVolumeAction(channel, false);
                 return;
             }
         }
@@ -92,7 +92,7 @@ public class ControllerManager : IDisposable
             if (!string.IsNullOrWhiteSpace(profileKvp.Value) && MatchesButton(profileKvp.Value, e.ProductGuid, e.ButtonNumber))
             {
                 Console.WriteLine($"[ControllerManager] Loading profile: {profileKvp.Key}");
-                _ = _goXLRService.LoadProfileAsync(profileKvp.Key);
+                _ = ExecuteProfileAction(profileKvp.Key);
                 return;
             }
         }
@@ -105,6 +105,33 @@ public class ControllerManager : IDisposable
         {
             ExecuteAction(mapping);
         }
+    }
+    
+    /// <summary>
+    /// Executes volume adjustment via device control plugin
+    /// </summary>
+    private async Task ExecuteVolumeAction(string channel, bool increase)
+    {
+        var parameters = new Dictionary<string, object>
+        {
+            { "channel", channel },
+            { "increase", increase }
+        };
+
+        await _deviceControlService.ExecuteActionAsync("goxlr-control", "adjust_volume", parameters);
+    }
+    
+    /// <summary>
+    /// Executes profile switch via device control plugin
+    /// </summary>
+    private async Task ExecuteProfileAction(string profileName)
+    {
+        var parameters = new Dictionary<string, object>
+        {
+            { "profile_name", profileName }
+        };
+
+        await _deviceControlService.ExecuteActionAsync("goxlr-control", "switch_profile", parameters);
     }
 
     private void OnButtonReleased(object? sender, ButtonReleasedEventArgs e)
@@ -137,7 +164,7 @@ public class ControllerManager : IDisposable
     }
 
     /// <summary>
-    /// Executes the GoXLR action for a controller mapping
+    /// Executes the device control action for a controller mapping (legacy format)
     /// </summary>
     private async void ExecuteAction(ControllerMapping mapping)
     {
@@ -166,21 +193,14 @@ public class ControllerManager : IDisposable
                         var direction = parts[2].ToLower();
                         var increase = direction == "up";
                         
-                        var result = await _goXLRService.AdjustVolumeAsync(channel, increase);
-                        if (result.Success)
-                        {
-                            Console.WriteLine($"[ControllerManager] {result.Message}");
-                        }
+                        
+                        await ExecuteVolumeAction(channel, increase);
                     }
                     break;
 
                 case "profile":
                     var profileName = parts[1];
-                    var success = await _goXLRService.LoadProfileAsync(profileName);
-                    if (success)
-                    {
-                        Console.WriteLine($"[ControllerManager] Loaded profile: {profileName}");
-                    }
+                    await ExecuteProfileAction(profileName);
                     break;
 
                 case "hotkey":

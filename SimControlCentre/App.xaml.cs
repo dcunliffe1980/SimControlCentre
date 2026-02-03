@@ -320,13 +320,13 @@ public partial class App : Application
             _hotkeyService = new HotkeyService();
             _hotkeyService.Initialize(windowInterop.Handle);
             
-            // Initialize hotkey manager
-            _hotkeyManager = new HotkeyManager(_hotkeyService, _goXLRService, Settings);
+            // Initialize hotkey manager with device control service
+            _hotkeyManager = new HotkeyManager(_hotkeyService, _deviceControlService!, Settings);
             var registeredCount = _hotkeyManager.RegisterAllHotkeys();
             
-            // Initialize controller input
+            // Initialize controller input with device control service
             _directInputService = new DirectInputService();
-            _controllerManager = new ControllerManager(_directInputService, _goXLRService, Settings);
+            _controllerManager = new ControllerManager(_directInputService, _deviceControlService!, Settings);
             _controllerManager.InitializeControllers(windowInterop.Handle);
             
             // Initialize Controllers Tab now that DirectInputService exists
