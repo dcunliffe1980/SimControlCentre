@@ -544,6 +544,38 @@ public class GoXLRApiClient : IDisposable
     }
 
     /// <summary>
+    /// Sets the mute state for a fader/channel
+    /// MuteState can be: "Unmuted", "MutedToX", "MutedToAll"
+    /// </summary>
+    public async Task<bool> SetFaderMuteStateAsync(string serialNumber, string faderName, string muteState)
+    {
+        try
+        {
+            Logger.Info("GoXLR API", $"SetFaderMuteState - Fader: {faderName}, State: {muteState}");
+            
+            var command = GoXLRCommandRequest.SetFaderMuteState(serialNumber, faderName, muteState);
+            var response = await _httpClient.PostAsJsonAsync("/api/command", command);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Logger.Info("GoXLR API", $"Fader mute state set successfully");
+                return true;
+            }
+            else
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                Logger.Error("GoXLR API", $"Error response: {errorBody}");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("GoXLR API", $"Error setting fader mute state: {ex.Message}", ex);
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Updates volume cache from device status
     /// </summary>
     private void UpdateVolumeCacheFromDevice(GoXLRDevice device)

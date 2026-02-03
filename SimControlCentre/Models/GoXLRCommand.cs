@@ -114,7 +114,23 @@ public class GoXLRCommandRequest
             }
         };
     }
+
+    public static GoXLRCommandRequest SetFaderMuteState(string serialNumber, string faderName, string muteState)
+    {
+        return new GoXLRCommandRequest
+        {
+            Command = new object[]
+            {
+                serialNumber,
+                new Dictionary<string, object[]>
+                {
+                    { "SetFaderMuteState", new object[] { faderName, muteState } }
+                }
+            }
+        };
+    }
 }
+
 
 
 

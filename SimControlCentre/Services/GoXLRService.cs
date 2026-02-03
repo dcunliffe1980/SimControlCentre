@@ -333,6 +333,31 @@ public class GoXLRService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Sets the mute state for a channel/fader
+    /// </summary>
+    /// <param name="channelName">Channel name (A, B, C, or D for faders)</param>
+    /// <param name="muteState">"Unmuted", "MutedToX", or "MutedToAll"</param>
+    public async Task<bool> SetChannelMuteStateAsync(string channelName, string muteState)
+    {
+        if (!IsConfigured || _apiClient == null)
+        {
+            Logger.Warning("GoXLR Service", "Cannot set mute state - not configured");
+            return false;
+        }
+
+        try
+        {
+            Logger.Info("GoXLR Service", $"Setting mute state for {channelName} to {muteState}");
+            return await _apiClient.SetFaderMuteStateAsync(SerialNumber, channelName, muteState);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("GoXLR Service", $"Error setting mute state", ex);
+            return false;
+        }
+    }
+
     public void Dispose()
     {
         Console.WriteLine("[GoXLRService] Disposing service");
