@@ -2,7 +2,7 @@
 
 **Date**: February 2026  
 **Current Version**: v1.2.0 (Released)  
-**Development Phase**: Phase 1.2 (Plugin Settings Architecture)  
+**Development Phase**: Phase 1 Complete! Ready for Phase 2  
 **Status**: Ready to continue
 
 ---
@@ -27,7 +27,7 @@
 
 ---
 
-## ?? Recent Work (Post v1.2.0)
+## ?? Recent Work
 
 ### Phase 1.1: Lighting Tab Cleanup ? COMPLETE
 
@@ -49,51 +49,65 @@
 - `b8829d4` - Phase 1.1: Lighting Tab Cleanup - Complete
 - `eaf52dc` - Phase 1.1: Lighting Tab Cleanup - Part 1
 
----
+### Phase 1.2: Plugin Settings Architecture ? COMPLETE
 
-## ?? Next Steps - Phase 1.2
+**Completed**:
+1. ? Created centralized "Plugins" tab
+2. ? Moved plugin enable/disable from Lighting tab
+3. ? Clean, professional UI with expandable sections
+4. ? Shows plugin components (Lighting + Device Control future)
+5. ? Info panel explaining plugins
+6. ? Future plugins preview section
 
-### Create Centralized Plugins Tab
-
-**Goal**: Establish consistent plugin management
-
-**What to Build**:
-
-1. **New Tab**: "Plugins"
-   - Add to MainWindow.xaml TabControl
-   - Create `SimControlCentre\Views\Tabs\PluginsTab.xaml`
-   - Create `SimControlCentre\Views\Tabs\PluginsTab.xaml.cs`
-
-2. **Plugin Structure**:
-   ```
-   Plugins Tab
-   ??? GoXLR Plugin
-       ??? Enable/Disable main plugin
-       ??? Device Control (channels/profiles) - Future
-       ?   ??? Settings: Serial number, API endpoint
-       ??? Lighting (flag-based lighting)
-           ??? Settings: Button selection
-   ```
-
-3. **Move from Lighting Tab**:
-   - Plugin enable/disable checkbox
-   - Eventually button selection (but maybe keep for now)
-
-4. **UI Design**:
-   - Clean, grouped by plugin
-   - Expandable sections for each plugin
-   - Clear enable/disable toggles
-   - "Restart Required" message when needed
-
-**Files to Create**:
+**Files Created**:
 - `SimControlCentre\Views\Tabs\PluginsTab.xaml`
 - `SimControlCentre\Views\Tabs\PluginsTab.xaml.cs`
 
-**Files to Modify**:
-- `SimControlCentre\MainWindow.xaml` - Add Plugins tab
-- `SimControlCentre\MainWindow.xaml.cs` - Initialize tab
-- `SimControlCentre\Views\Tabs\LightingTab.xaml` - Remove plugin checkbox
-- `SimControlCentre\Views\Tabs\LightingTab.xaml.cs` - Remove plugin logic
+**Files Modified**:
+- `SimControlCentre\MainWindow.xaml` - Added Plugins tab
+- `SimControlCentre\MainWindow.xaml.cs` - Initialize Plugins tab
+- `SimControlCentre\Views\Tabs\LightingTab.xaml` - Removed plugin checkbox
+- `SimControlCentre\Views\Tabs\LightingTab.xaml.cs` - Removed plugin logic
+
+**UI Features**:
+- GoXLR Plugin section with enable/disable
+- Expandable components panel (shown when enabled)
+- Lighting component indicator (active)
+- Device Control component indicator (coming soon)
+- Future plugins preview (Hue, Nanoleaf, Stream Deck, LIFX)
+- Professional info panel
+
+---
+
+## ?? Next Steps - Phase 2
+
+### Phase 2.1: GoXLR Control ? Device Control Plugin
+
+**Goal**: Convert existing GoXLR control to plugin architecture
+
+**What to Build**:
+
+1. **Create Plugin Interface**: `IDeviceControlPlugin`
+   - Actions the plugin can perform
+   - Execute action with parameters
+   - Available actions list
+
+2. **Implement GoXLR Device Control Plugin**:
+   - Profile switching action
+   - Volume control action
+   - **NEW**: Channel mute functionality
+
+3. **Refactor Existing Code**:
+   - Move from `GoXLRService` direct calls to plugin actions
+   - Hotkeys execute plugin actions
+   - Controller buttons execute plugin actions
+
+4. **Update Settings UI**:
+   - Add Device Control section to GoXLR plugin in Plugins tab
+   - Settings: Serial number, API endpoint
+   - Enable/disable independently from Lighting
+
+**Expected Duration**: 2-3 sessions
 
 ---
 
@@ -101,18 +115,16 @@
 
 **Full Plan**: See `docs/DEVELOPMENT_ROADMAP.md`
 
-### Phase 1: Quick Wins & Foundation (Current)
+### Phase 1: Quick Wins & Foundation ? COMPLETE
 - ? Phase 1.1: Lighting Tab Cleanup (DONE)
-- ?? Phase 1.2: Plugin Settings Architecture (NEXT)
+- ? Phase 1.2: Plugin Settings Architecture (DONE)
 
-### Phase 2: Refactor Existing (Future)
-- GoXLR Control ? Device Control Plugin
-- Channel mute functionality
-- Telemetry optimization
+### Phase 2: Refactor Existing (Next)
+- ?? Phase 2.1: GoXLR Control ? Device Control Plugin (NEXT)
+- ? Phase 2.2: Telemetry Optimization
 
 ### Phase 3: New Features (Future)
-- Controller overhaul
-- Button type support (Momentary, Toggle, RotaryEncoder, etc.)
+- Controller overhaul with button type support
 - Toggle mode feature
 - TTS for VR
 

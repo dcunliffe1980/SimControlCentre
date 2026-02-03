@@ -107,9 +107,6 @@ namespace SimControlCentre.Views.Tabs
             
             // Load enable/disable state
             EnableLightingCheckBox.IsChecked = app.Settings.Lighting.EnableFlagLighting;
-            
-            // Load GoXLR plugin state
-            EnableGoXlrPluginCheckBox.IsChecked = app.Settings.Lighting.EnabledPlugins.GetValueOrDefault("goxlr", true);
         }
 
         private void EnableLighting_Changed(object sender, RoutedEventArgs e)
@@ -119,27 +116,6 @@ namespace SimControlCentre.Views.Tabs
             app.SaveSettings();
             
             Logger.Info("Lighting Tab", $"Flag lighting {(app.Settings.Lighting.EnableFlagLighting ? "enabled" : "disabled")}");
-        }
-
-        private void PluginEnabled_Changed(object sender, RoutedEventArgs e)
-        {
-            if (sender is not CheckBox checkbox || checkbox.Tag is not string pluginId)
-                return;
-
-            var app = (App)Application.Current;
-            bool isEnabled = checkbox.IsChecked == true;
-            
-            app.Settings.Lighting.EnabledPlugins[pluginId] = isEnabled;
-            app.SaveSettings();
-            
-            Logger.Info("Lighting Tab", $"Plugin '{pluginId}' {(isEnabled ? "enabled" : "disabled")}");
-            
-            // Show restart message
-            MessageBox.Show(
-                $"Plugin changes will take effect after restarting the application.",
-                "Restart Required",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
         }
 
 

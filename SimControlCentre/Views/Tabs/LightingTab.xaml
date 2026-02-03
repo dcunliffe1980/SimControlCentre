@@ -21,21 +21,7 @@
                     <TextBlock Text="When enabled, connected lighting devices will display racing flag colors."
                                TextWrapping="Wrap"
                                Foreground="Gray"
-                               FontSize="11"
-                               Margin="0,0,0,15"/>
-                    
-                    <TextBlock Text="Enabled Plugins:"
-                               FontWeight="SemiBold"
-                               Margin="0,0,0,5"/>
-                    
-                    <!-- Plugin Enable/Disable -->
-                    <CheckBox x:Name="EnableGoXlrPluginCheckBox"
-                              Content="GoXLR Lighting"
-                              IsChecked="True"
-                              Checked="PluginEnabled_Changed"
-                              Unchecked="PluginEnabled_Changed"
-                              Tag="goxlr"
-                              Margin="0,0,0,5"/>
+                               FontSize="11"/>
                 </StackPanel>
             </GroupBox>
 
