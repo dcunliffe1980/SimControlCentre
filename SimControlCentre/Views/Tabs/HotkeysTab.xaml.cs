@@ -14,6 +14,9 @@ namespace SimControlCentre.Views.Tabs
         private readonly ConfigurationService _configService;
         private readonly AppSettings _settings;
         
+        // Store all available profiles loaded from device
+        private List<string> _allAvailableProfiles = new List<string>();
+        
         // Hotkey capture state
         private bool _isCapturingHotkey = false;
         private bool _isCapturingButton = false;
@@ -28,6 +31,7 @@ namespace SimControlCentre.Views.Tabs
             
             _configService = configService;
             _settings = settings;
+
             
             // Add key event handler for hotkey capture
             PreviewKeyDown += HotkeysTab_PreviewKeyDown;
@@ -86,6 +90,12 @@ namespace SimControlCentre.Views.Tabs
             VolumeHotkeysPanel.Children.Clear();
             ProfileHotkeysPanel.Children.Clear();
 
+            // Update channel dropdown - filter out already-enabled channels
+            UpdateChannelDropdown();
+            
+            // Update profile dropdown - filter out already-added profiles
+            UpdateProfileDropdown();
+
             // Populate Volume Hotkeys - ONLY for enabled channels
             var enabledChannels = _settings.EnabledChannels
                 .Where(c => _settings.VolumeHotkeys.ContainsKey(c))
@@ -96,7 +106,7 @@ namespace SimControlCentre.Views.Tabs
             {
                 var emptyText = new TextBlock
                 {
-                    Text = "No channels enabled. Go to 'Channels & Profiles' tab to enable channels.",
+                    Text = "No channels enabled. Use the dropdown above to add channels.",
                     FontStyle = FontStyles.Italic,
                     Foreground = System.Windows.Media.Brushes.Gray,
                     Margin = new Thickness(0, 10, 0, 10)
@@ -113,13 +123,97 @@ namespace SimControlCentre.Views.Tabs
             }
 
             // Populate Profile Hotkeys
-            foreach (var profile in _settings.ProfileHotkeys.Keys.OrderBy(k => k))
+            if (_settings.ProfileHotkeys.Count == 0)
             {
-                var hotkey = _settings.ProfileHotkeys[profile];
-                var button = _settings.ProfileButtons.ContainsKey(profile) ? _settings.ProfileButtons[profile] : "";
-                CreateProfileHotkeyRow(profile, hotkey, button);
+                var emptyText = new TextBlock
+                {
+                    Text = "No profiles added. Use the dropdown above to add profiles.",
+                    FontStyle = FontStyles.Italic,
+                    Foreground = System.Windows.Media.Brushes.Gray,
+                    Margin = new Thickness(0, 10, 0, 10)
+                };
+                ProfileHotkeysPanel.Children.Add(emptyText);
+            }
+            else
+            {
+                foreach (var profile in _settings.ProfileHotkeys.Keys.OrderBy(k => k))
+                {
+                    var hotkey = _settings.ProfileHotkeys[profile];
+                    var button = _settings.ProfileButtons.ContainsKey(profile) ? _settings.ProfileButtons[profile] : "";
+                    CreateProfileHotkeyRow(profile, hotkey, button);
+                }
             }
         }
+
+        private void UpdateChannelDropdown()
+        {
+            var currentSelection = ChannelComboBox.SelectedItem;
+            ChannelComboBox.Items.Clear();
+            
+            // All available channels
+            var allChannels = new[] { "Game", "Music", "Chat", "System" };
+            
+            // Filter out already-enabled channels
+            var availableChannels = allChannels.Where(c => !_settings.EnabledChannels.Contains(c));
+            
+            foreach (var channel in availableChannels)
+            {
+                var item = new ComboBoxItem
+                {
+                    Content = channel,
+                    Tag = channel
+                };
+                ChannelComboBox.Items.Add(item);
+            }
+            
+            if (ChannelComboBox.Items.Count > 0)
+            {
+                ChannelComboBox.SelectedIndex = 0;
+            }
+        }
+
+        private void UpdateProfileDropdown()
+        {
+            var currentSelection = ProfileComboBox.SelectedItem as string;
+            ProfileComboBox.Items.Clear();
+            
+            // Filter out already-added profiles from all available profiles
+            var availableProfiles = _allAvailableProfiles
+                .Where(p => !_settings.ProfileHotkeys.ContainsKey(p))
+                .ToList();
+            
+            foreach (var profile in availableProfiles)
+            {
+                ProfileComboBox.Items.Add(profile);
+            }
+            
+            if (ProfileComboBox.Items.Count > 0)
+            {
+                // Try to restore previous selection if still available
+                if (availableProfiles.Contains(currentSelection))
+                {
+                    ProfileComboBox.SelectedItem = currentSelection;
+                }
+                else
+                {
+                    ProfileComboBox.SelectedIndex = 0;
+                }
+            }
+            else
+            {
+                if (_allAvailableProfiles.Count == 0)
+                {
+                    ProfileComboBox.Items.Add("(No profiles found - click Refresh)");
+                }
+                else
+                {
+                    ProfileComboBox.Items.Add("(All profiles added)");
+                }
+                ProfileComboBox.SelectedIndex = 0;
+            }
+        }
+
+
 
         private void CreateVolumeHotkeyRow(string channel, ChannelHotkeys hotkeys)
         {
@@ -787,15 +881,16 @@ namespace SimControlCentre.Views.Tabs
                 return;
             }
 
-            // Check if already exists
-            if (_settings.ProfileButtons.ContainsKey(selectedProfile))
+            // Check if already exists in ProfileHotkeys (main dict)
+            if (_settings.ProfileHotkeys.ContainsKey(selectedProfile))
             {
                 MessageBox.Show($"Profile '{selectedProfile}' is already added.", "Already Added", 
                     MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            // Add profile with empty hotkey
+            // Add profile to BOTH dictionaries with empty hotkey/button
+            _settings.ProfileHotkeys[selectedProfile] = "";
             _settings.ProfileButtons[selectedProfile] = "";
 
             // Save and refresh
@@ -805,6 +900,7 @@ namespace SimControlCentre.Views.Tabs
             PopulateHotkeyEditor();
         }
 
+
         private async void RefreshProfiles_Click(object sender, RoutedEventArgs e)
         {
             await LoadAvailableProfilesAsync();
@@ -813,6 +909,7 @@ namespace SimControlCentre.Views.Tabs
         private async System.Threading.Tasks.Task LoadAvailableProfilesAsync()
         {
             ProfileComboBox.Items.Clear();
+            _allAvailableProfiles.Clear();
             
             try
             {
@@ -831,26 +928,15 @@ namespace SimControlCentre.Views.Tabs
                         if (task != null)
                         {
                             var profiles = await task;
-                            foreach (var profile in profiles.OrderBy(p => p))
-                            {
-                                ProfileComboBox.Items.Add(profile);
-                            }
+                            _allAvailableProfiles = profiles.OrderBy(p => p).ToList();
                             
-                            if (ProfileComboBox.Items.Count > 0)
-                            {
-                                ProfileComboBox.SelectedIndex = 0;
-                            }
-                            
-                            Logger.Info("Device Control Tab", $"Loaded {profiles.Count} profiles");
+                            Logger.Info("Device Control Tab", $"Loaded {profiles.Count} profiles from device");
                         }
                     }
                 }
                 
-                if (ProfileComboBox.Items.Count == 0)
-                {
-                    ProfileComboBox.Items.Add("(No profiles found)");
-                    ProfileComboBox.SelectedIndex = 0;
-                }
+                // Update dropdown with filtering
+                UpdateProfileDropdown();
             }
             catch (Exception ex)
             {
@@ -859,6 +945,7 @@ namespace SimControlCentre.Views.Tabs
                 ProfileComboBox.SelectedIndex = 0;
             }
         }
+
 
         private void RemoveChannel_Click(object sender, RoutedEventArgs e)
         {
@@ -902,6 +989,8 @@ namespace SimControlCentre.Views.Tabs
 
             if (result == MessageBoxResult.Yes)
             {
+                // Remove from BOTH dictionaries
+                _settings.ProfileHotkeys.Remove(profileName);
                 _settings.ProfileButtons.Remove(profileName);
                 
                 _configService.Save(_settings);
@@ -910,6 +999,7 @@ namespace SimControlCentre.Views.Tabs
                 PopulateHotkeyEditor();
             }
         }
+
     }
 }
 
