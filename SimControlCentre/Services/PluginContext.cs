@@ -77,15 +77,30 @@ namespace SimControlCentre.Services
 
         public T? GetValue<T>(string key)
         {
-            // Parse key like "GoXLR.ApiEndpoint" or "GoXLR.SerialNumber"
+            // Support both dotted notation (Section.Property) and direct property access
             var parts = key.Split('.');
-            if (parts.Length != 2) return default;
-
-            var section = parts[0];
-            var propertyName = parts[1];
-
+            
             try
             {
+                // Direct AppSettings property (no dot)
+                if (parts.Length == 1)
+                {
+                    var property = typeof(AppSettings).GetProperty(key);
+                    if (property != null && property.CanRead)
+                    {
+                        var value = property.GetValue(_settings);
+                        if (value is T typedValue)
+                            return typedValue;
+                    }
+                    return default;
+                }
+                
+                // Dotted notation: Section.Property
+                if (parts.Length != 2) return default;
+
+                var section = parts[0];
+                var propertyName = parts[1];
+
                 switch (section.ToLower())
                 {
                     case "goxlr":
@@ -117,16 +132,30 @@ namespace SimControlCentre.Services
             return default;
         }
 
+
         public void SetValue<T>(string key, T value)
         {
             var parts = key.Split('.');
-            if (parts.Length != 2) return;
-
-            var section = parts[0];
-            var propertyName = parts[1];
-
+            
             try
             {
+                // Direct AppSettings property (no dot)
+                if (parts.Length == 1)
+                {
+                    var property = typeof(AppSettings).GetProperty(key);
+                    if (property != null && property.CanWrite)
+                    {
+                        property.SetValue(_settings, value);
+                    }
+                    return;
+                }
+                
+                // Dotted notation: Section.Property
+                if (parts.Length != 2) return;
+
+                var section = parts[0];
+                var propertyName = parts[1];
+
                 switch (section.ToLower())
                 {
                     case "goxlr":
@@ -159,3 +188,4 @@ namespace SimControlCentre.Services
         }
     }
 }
+

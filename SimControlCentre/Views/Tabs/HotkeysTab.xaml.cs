@@ -18,15 +18,14 @@ namespace SimControlCentre.Views.Tabs
         private readonly ConfigurationService _configService;
         private readonly AppSettings _settings;
         
-        // Hotkey capture state for generic hotkeys
+        // Hotkey capture state for generic hotkeys (if needed in future)
         private bool _isCapturingHotkey = false;
-        private bool _isCapturingButton = false;
         private string? _captureType;
         private string? _captureAction;
         private TextBox? _captureTextBox;
-        private TextBox? _captureButtonTextBox;
 
         public HotkeysTab(ConfigurationService configService, AppSettings settings)
+
         {
             InitializeComponent();
             
@@ -212,11 +211,10 @@ namespace SimControlCentre.Views.Tabs
         private void StopCapture()
         {
             _isCapturingHotkey = false;
-            _isCapturingButton = false;
             _captureType = null;
             _captureAction = null;
             _captureTextBox = null;
-            _captureButtonTextBox = null;
         }
+
     }
 }

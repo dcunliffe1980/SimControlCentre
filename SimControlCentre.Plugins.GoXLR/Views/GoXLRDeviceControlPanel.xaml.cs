@@ -47,8 +47,9 @@ namespace SimControlCentre.Plugins.GoXLR.Views
             ChannelComboBox.Items.Clear();
             
             var allChannels = new[] { "Game", "Music", "Chat", "System" };
-            var settings = _context.Settings;
-            var enabledChannels = settings.GetValue<List<string>>("EnabledChannels") ?? new List<string>();
+            
+            // Access settings directly - EnabledChannels is a property on AppSettings
+            var enabledChannels = _context.Settings.GetValue<List<string>>("EnabledChannels") ?? new List<string>();
             
             var availableChannels = allChannels.Where(c => !enabledChannels.Contains(c));
             
@@ -67,6 +68,7 @@ namespace SimControlCentre.Plugins.GoXLR.Views
                 ChannelComboBox.SelectedIndex = 0;
             }
         }
+
 
         private void UpdateProfileDropdown()
         {
