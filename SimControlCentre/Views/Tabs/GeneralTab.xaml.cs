@@ -145,27 +145,10 @@ namespace SimControlCentre.Views.Tabs
                 return;
             }
             
-            var isConnected = await Task.FromResult<object?>(null) /* Plugin */;
-            
-            if (false /* isConnected - plugin */)
-            {
-                var profile = await Task.FromResult<object?>(null) /* Plugin */;
-                if (profile != null)
-                {
-                    ConnectionStatusText.Text = $"Connection Status: ? Connected (Profile: {profile})";
-                    ConnectionStatusText.Foreground = System.Windows.Media.Brushes.Green;
-                }
-                else
-                {
-                    ConnectionStatusText.Text = "Connection Status: ? Connected (Check serial number)";
-                    ConnectionStatusText.Foreground = System.Windows.Media.Brushes.Orange;
-                }
-            }
-            else
-            {
-                ConnectionStatusText.Text = "Connection Status: ? GoXLR Utility not running";
-                ConnectionStatusText.Foreground = System.Windows.Media.Brushes.Red;
-            }
+            // TODO: Connection check moved to plugin - need plugin API to expose connection status
+            ConnectionStatusText.Text = "Connection Status: GoXLR functionality moved to plugin";
+            ConnectionStatusText.Foreground = System.Windows.Media.Brushes.Gray;
+            await Task.CompletedTask;
         }
 
         private void SaveVolumeSettings_Click(object sender, RoutedEventArgs e)
