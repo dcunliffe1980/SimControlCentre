@@ -1,0 +1,58 @@
+<UserControl x:Class="SimControlCentre.Plugins.GoXLR.Views.GoXLRDeviceControlPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    <StackPanel>
+        <!-- Volume Hotkeys Section -->
+        <GroupBox Header="Volume Hotkeys" Padding="10" Margin="0,0,0,20">
+            <StackPanel>
+                <!-- Channel Management -->
+                <Border Background="#F5F5F5" Padding="8" Margin="0,0,0,10" CornerRadius="4">
+                    <StackPanel>
+                        <TextBlock Text="Manage Channels" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox x:Name="ChannelComboBox" Width="150" Margin="0,0,10,0">
+                                <ComboBoxItem Content="Game" Tag="Game"/>
+                                <ComboBoxItem Content="Music" Tag="Music"/>
+                                <ComboBoxItem Content="Chat" Tag="Chat"/>
+                                <ComboBoxItem Content="System" Tag="System"/>
+                            </ComboBox>
+                            <Button Content="Add Channel" Click="AddChannel_Click" Padding="8,4"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Volume Hotkeys List -->
+                <StackPanel x:Name="VolumeHotkeysPanel">
+                    <!-- Will be populated dynamically -->
+                </StackPanel>
+            </StackPanel>
+        </GroupBox>
+        
+        <!-- Profile Hotkeys Section -->
+        <GroupBox Header="Profile Hotkeys" Padding="10">
+            <StackPanel>
+                <!-- Profile Management -->
+                <Border Background="#F5F5F5" Padding="8" Margin="0,0,0,10" CornerRadius="4">
+                    <StackPanel>
+                        <TextBlock Text="Manage Profiles" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox x:Name="ProfileComboBox" Width="150" Margin="0,0,10,0"/>
+                            <Button Content="Add Profile" Click="AddProfile_Click" Padding="8,4" Margin="0,0,5,0"/>
+                            <Button Content="?? Refresh" Click="RefreshProfiles_Click" Padding="8,4" 
+                                    ToolTip="Reload profiles from device"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Profile Hotkeys List -->
+                <StackPanel x:Name="ProfileHotkeysPanel">
+                    <!-- Will be populated dynamically -->
+                </StackPanel>
+            </StackPanel>
+        </GroupBox>
+    </StackPanel>
+</UserControl>

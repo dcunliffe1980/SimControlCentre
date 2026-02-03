@@ -72,10 +72,10 @@ namespace SimControlCentre.Plugins.GoXLR.Services
 
         public object? GetConfigurationControl()
         {
-            // TODO: Return WPF UserControl for hotkey configuration
-            return null;
-
+            // Return GoXLR-specific configuration UI
+            return new SimControlCentre.Plugins.GoXLR.Views.GoXLRDeviceControlPanel(_context, this);
         }
+
 
         public void ApplyConfiguration(Dictionary<string, object> config)
         {
