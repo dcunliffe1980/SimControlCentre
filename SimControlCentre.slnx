@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="SimControlCentre.Contracts/SimControlCentre.Contracts.csproj" />
+  <Project Path="SimControlCentre.Plugins.GoXLR/SimControlCentre.Plugins.GoXLR.csproj" />
   <Project Path="SimControlCentre/SimControlCentre.csproj" />
 </Solution>
