@@ -108,8 +108,8 @@ namespace SimControlCentre.Views.Tabs
             // Load enable/disable state
             EnableLightingCheckBox.IsChecked = app.Settings.Lighting.EnableFlagLighting;
             
-            // TODO: Load plugin enabled states when checkboxes are added to XAML
-            // EnableGoXlrPluginCheckBox.IsChecked = app.Settings.Lighting.EnabledPlugins.GetValueOrDefault("goxlr", true);
+            // Load GoXLR plugin state
+            EnableGoXlrPluginCheckBox.IsChecked = app.Settings.Lighting.EnabledPlugins.GetValueOrDefault("goxlr", true);
         }
 
         private void EnableLighting_Changed(object sender, RoutedEventArgs e)

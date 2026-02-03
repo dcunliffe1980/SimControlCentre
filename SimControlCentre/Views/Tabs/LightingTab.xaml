@@ -85,22 +85,23 @@
             </GroupBox>
 
             <!-- Test Buttons -->
-            <GroupBox Header="Test Flag Lighting" Padding="10" Margin="0,0,0,15">
+            <GroupBox Header="Test Flag Lighting" Padding="15" Margin="0,0,0,15">
                 <StackPanel>
                     <TextBlock Text="Click buttons to test flag lighting (useful for testing without running the sim)"
                                TextWrapping="Wrap"
                                Foreground="Gray"
                                FontSize="11"
-                               Margin="0,0,0,10"/>
+                               Margin="0,0,0,15"/>
 
-                    <!-- Row 1: Primary Racing Flags -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                    <!-- Use UniformGrid for consistent button layout -->
+                    <UniformGrid Columns="4" HorizontalAlignment="Left">
+                        <!-- Row 1 -->
                         <Button Content="Green Flag" 
                                 Click="TestFlag_Click" 
                                 Tag="Green"
-                                Width="120" 
-                                Padding="10,5"
-                                Margin="0,0,10,0"
+                                MinWidth="130"
+                                Padding="12,8"
+                                Margin="0,0,8,8"
                                 Background="#FF4CAF50"
                                 Foreground="White"
                                 ToolTip="Race start / Track clear"/>
@@ -108,9 +109,9 @@
                         <Button Content="Yellow Flag" 
                                 Click="TestFlag_Click" 
                                 Tag="Yellow"
-                                Width="120" 
-                                Padding="10,5"
-                                Margin="0,0,10,0"
+                                MinWidth="130"
+                                Padding="12,8"
+                                Margin="0,0,8,8"
                                 Background="#FFFFC107"
                                 Foreground="Black"
                                 ToolTip="Caution / No passing"/>
@@ -118,53 +119,42 @@
                         <Button Content="Yellow Waving" 
                                 Click="TestFlag_Click" 
                                 Tag="YellowWaving"
-                                Width="120" 
-                                Padding="10,5"
+                                MinWidth="130"
+                                Padding="12,8"
+                                Margin="0,0,8,8"
                                 Background="#FFFFC107"
                                 Foreground="Black"
                                 ToolTip="Danger ahead / No passing"/>
-                    </StackPanel>
-
-                    <!-- Row 2: Informational Flags -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        
                         <Button Content="Blue Flag" 
                                 Click="TestFlag_Click" 
                                 Tag="Blue"
-                                Width="120" 
-                                Padding="10,5"
-                                Margin="0,0,10,0"
+                                MinWidth="130"
+                                Padding="12,8"
+                                Margin="0,0,8,8"
                                 Background="#FF2196F3"
                                 Foreground="White"
                                 ToolTip="Being lapped / Hold your line"/>
                         
+                        <!-- Row 2 -->
                         <Button Content="White Flag" 
                                 Click="TestFlag_Click" 
                                 Tag="White"
-                                Width="120" 
-                                Padding="10,5"
-                                Margin="0,0,10,0"
+                                MinWidth="130"
+                                Padding="12,8"
+                                Margin="0,0,8,8"
                                 Background="White"
                                 Foreground="Black"
+                                BorderBrush="Gray"
+                                BorderThickness="1"
                                 ToolTip="Final lap"/>
                         
-                        <Button Content="Debris Flag" 
-                                Click="TestFlag_Click" 
-                                Tag="Debris"
-                                Width="120" 
-                                Padding="10,5"
-                                Background="#FFFF9800"
-                                Foreground="Black"
-                                ToolTip="Surface / Debris on track"/>
-                    </StackPanel>
-
-                    <!-- Row 3: Session Control Flags -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <Button Content="Red Flag" 
                                 Click="TestFlag_Click" 
                                 Tag="Red"
-                                Width="120" 
-                                Padding="10,5"
-                                Margin="0,0,10,0"
+                                MinWidth="130"
+                                Padding="12,8"
+                                Margin="0,0,8,8"
                                 Background="#FFF44336"
                                 Foreground="White"
                                 ToolTip="Session stopped"/>
@@ -172,9 +162,9 @@
                         <Button Content="Black Flag" 
                                 Click="TestFlag_Click" 
                                 Tag="Black"
-                                Width="120" 
-                                Padding="10,5"
-                                Margin="0,0,10,0"
+                                MinWidth="130"
+                                Padding="12,8"
+                                Margin="0,0,8,8"
                                 Background="Black"
                                 Foreground="White"
                                 ToolTip="Disqualification / Penalty"/>
@@ -182,21 +172,32 @@
                         <Button Content="Checkered Flag" 
                                 Click="TestFlag_Click" 
                                 Tag="Checkered"
-                                Width="120" 
-                                Padding="10,5"
+                                MinWidth="130"
+                                Padding="12,8"
+                                Margin="0,0,8,8"
                                 Background="WhiteSmoke"
                                 Foreground="Black"
+                                BorderBrush="Gray"
+                                BorderThickness="1"
                                 ToolTip="Session end"/>
-                    </StackPanel>
-
-                    <!-- Row 4: Special Flags -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        
+                        <!-- Row 3 -->
+                        <Button Content="Debris Flag" 
+                                Click="TestFlag_Click" 
+                                Tag="Debris"
+                                MinWidth="130"
+                                Padding="12,8"
+                                Margin="0,0,8,8"
+                                Background="#FFFF9800"
+                                Foreground="Black"
+                                ToolTip="Surface / Debris on track"/>
+                        
                         <Button Content="One Lap to Green" 
                                 Click="TestFlag_Click" 
                                 Tag="OneLapToGreen"
-                                Width="140" 
-                                Padding="10,5"
-                                Margin="0,0,10,0"
+                                MinWidth="130"
+                                Padding="12,8"
+                                Margin="0,0,8,8"
                                 Background="#FF8BC34A"
                                 Foreground="White"
                                 ToolTip="One lap until race restart"/>
@@ -204,19 +205,20 @@
                         <Button Content="Clear Flag" 
                                 Click="TestFlag_Click" 
                                 Tag="None"
-                                Width="120" 
-                                Padding="10,5"
+                                MinWidth="130"
+                                Padding="12,8"
+                                Margin="0,0,8,8"
                                 Background="Gray"
                                 Foreground="White"
                                 ToolTip="Turn off all flag lights"/>
-                    </StackPanel>
+                    </UniformGrid>
 
                     <TextBlock Text="Note: Flashing flags will flash on your devices. Click 'Clear Flag' to stop."
                                TextWrapping="Wrap"
-                               Foreground="Orange"
+                               Foreground="Gray"
                                FontSize="11"
                                FontStyle="Italic"
-                               Margin="0,10,0,0"/>
+                               Margin="0,15,0,0"/>
                 </StackPanel>
             </GroupBox>
 
