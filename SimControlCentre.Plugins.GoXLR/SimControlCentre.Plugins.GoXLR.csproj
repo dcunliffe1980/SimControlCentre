@@ -2,7 +2,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SimControlCentre.Contracts\SimControlCentre.Contracts.csproj" />
-    <ProjectReference Include="..\SimControlCentre\SimControlCentre.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

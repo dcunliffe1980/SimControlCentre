@@ -35,8 +35,11 @@ namespace SimControlCentre.Contracts
         bool IsConnected { get; }
 
         Task<bool> InitializeAsync();
-        Task SetColorAsync(string color);
+        Task SetColorAsync(string hexColor);
+        Task SetColorAsync(LightingColor color);
         Task SetColorsAsync(Dictionary<string, string> buttonColors);
+        Task StartFlashingAsync(LightingColor color1, LightingColor color2, int intervalMs);
+        Task StopFlashingAsync();
         Task DisconnectAsync();
     }
 }
