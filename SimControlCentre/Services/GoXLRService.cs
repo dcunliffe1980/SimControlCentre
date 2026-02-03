@@ -261,11 +261,15 @@ public class GoXLRService : IDisposable
                 // Check if it's the global color
                 if (buttonId == "Global")
                 {
+                    Logger.Info("GoXLR Service", $"? GLOBAL COLOR DETECTED! Setting to {color}");
+                    Console.WriteLine($"[GoXLR Service] ??? GLOBAL DETECTED: {color} ???");
                     await _apiClient.SetGlobalColourAsync(SerialNumber, color);
+                    Logger.Info("GoXLR Service", "? Global color command sent");
                 }
                 // Check if it's accent (uses SetSimpleColour with Accent target)
                 else if (buttonId == "Accent")
                 {
+                    Logger.Info("GoXLR Service", $"Accent color detected, setting to {color}");
                     await _apiClient.SetSimpleColorAsync(SerialNumber, "Accent", color);
                 }
                 // Check if it's a fader color
