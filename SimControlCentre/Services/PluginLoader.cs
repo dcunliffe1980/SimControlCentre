@@ -18,11 +18,13 @@ namespace SimControlCentre.Services
         public PluginLoader(IPluginContext pluginContext)
         {
             _pluginContext = pluginContext;
-            _pluginsDirectory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "SimControlCentre",
-                "Plugins"
-            );
+            
+            // Plugins folder should be relative to the application installation directory
+            // This works for both:
+            // - Development: <repo>\SimControlCentre\bin\Debug\net8.0-windows\Plugins
+            // - Production: C:\Program Files\SimControlCentre\Plugins
+            var appDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            _pluginsDirectory = Path.Combine(appDirectory, "Plugins");
             
             // Ensure directory exists
             Directory.CreateDirectory(_pluginsDirectory);
