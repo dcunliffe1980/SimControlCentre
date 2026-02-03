@@ -82,10 +82,10 @@ public class ConfigurationService
             },
             EnabledChannels = new List<string>
             {
-                GoXLRChannel.Game.ToString(),
-                GoXLRChannel.Music.ToString(),
-                GoXLRChannel.Chat.ToString(),
-                GoXLRChannel.System.ToString()
+                "Game",
+                "Music",
+                "Chat",
+                "System"
             },
             ProfileHotkeys = new Dictionary<string, string>
             {
@@ -98,20 +98,20 @@ public class ConfigurationService
             VolumeHotkeys = new Dictionary<string, ChannelHotkeys>
             {
                 // Example hotkeys - user can customize these
-                { GoXLRChannel.Game.ToString(), new ChannelHotkeys 
+                { "Game", new ChannelHotkeys 
                     { 
                         VolumeUp = "Ctrl+Shift+Up", 
                         VolumeDown = "Ctrl+Shift+Down" 
                     } 
                 },
-                { GoXLRChannel.Music.ToString(), new ChannelHotkeys 
+                { "Music", new ChannelHotkeys 
                     { 
                         VolumeUp = "Ctrl+Shift+PageUp", 
                         VolumeDown = "Ctrl+Shift+PageDown" 
                     } 
                 },
-                { GoXLRChannel.Chat.ToString(), new ChannelHotkeys() },
-                { GoXLRChannel.System.ToString(), new ChannelHotkeys() }
+                { "Chat", new ChannelHotkeys() },
+                { "System", new ChannelHotkeys() }
             },
             ControllerMappings = new List<ControllerMapping>(),
             Window = new WindowSettings
@@ -135,3 +135,4 @@ public class ConfigurationService
     /// </summary>
     public bool ConfigExists() => File.Exists(ConfigFilePath);
 }
+

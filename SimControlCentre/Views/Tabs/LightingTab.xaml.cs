@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using SimControlCentre.Models;
 using SimControlCentre.Services;
+using SimControlCentre.Contracts;
 
 namespace SimControlCentre.Views.Tabs
 {
@@ -13,7 +14,8 @@ namespace SimControlCentre.Views.Tabs
     {
         private readonly LightingService _lightingService;
         private readonly TelemetryService _telemetryService;
-        private GoXLRLightingPlugin? _goxlrPlugin;
+        private ILightingPlugin? _goxlrPlugin;
+
 
         public LightingTab(LightingService lightingService, TelemetryService telemetryService)
         {
@@ -88,27 +90,28 @@ namespace SimControlCentre.Views.Tabs
         {
             ButtonSelectionPanel.Children.Clear();
 
-            // Find GoXLR plugin
-            _goxlrPlugin = _lightingService.Plugins.OfType<GoXLRLightingPlugin>().FirstOrDefault();
+            // Find GoXLR plugin by ID
+            _goxlrPlugin = _lightingService.Plugins.FirstOrDefault(p => p.PluginId == "goxlr");
             
             if (_goxlrPlugin != null)
-            {
-                var configOptions = _goxlrPlugin.GetConfigOptions();
-                var buttonOption = configOptions.FirstOrDefault(o => o.Key == "selected_buttons");
+            {               
+                // Load current selection from settings
+                var app = (App)Application.Current;
+                var currentSelection = app.Settings.Lighting?.GoXlrSelectedButtons ?? new List<string> { "Global" };
                 
-                if (buttonOption != null && buttonOption.AvailableOptions != null)
-                {
-                    var currentSelection = (List<string>?)buttonOption.DefaultValue ?? new List<string>();
+                // Simple button list - plugin handles validation
+                var availableButtons = new[] { "Global", "Accent", "FaderA", "FaderB", "FaderC", "FaderD",
+                                               "Fader1Mute", "Fader2Mute", "Fader3Mute", "Fader4Mute", "Bleep", "Cough" };
                     
-                foreach (var button in buttonOption.AvailableOptions)
+                foreach (var button in availableButtons)
                 {
                     var checkbox = new CheckBox
                     {
-                        Content = GoXLRLightingPlugin.GetDisplayName(button),
-                        Tag = button, // Store internal ID in Tag
+                        Content = button,
+                        Tag = button,
                         IsChecked = currentSelection.Contains(button),
                         Margin = new Thickness(0, 0, 15, 5),
-                        MinWidth = 120 // Consistent width for better layout
+                        MinWidth = 120
                     };
                     
                     checkbox.Checked += ButtonSelection_Changed;
@@ -116,9 +119,9 @@ namespace SimControlCentre.Views.Tabs
                     
                     ButtonSelectionPanel.Children.Add(checkbox);
                 }
-                }
             }
         }
+
 
         private void ButtonSelection_Changed(object sender, RoutedEventArgs e)
         {

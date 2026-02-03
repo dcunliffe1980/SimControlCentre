@@ -10,7 +10,7 @@ namespace SimControlCentre
     {
         private readonly ConfigurationService _configService;
         private readonly AppSettings _settings;
-        private readonly GoXLRService _goXLRService;
+        
         private readonly iRacingMonitorService? _iRacingMonitor;
         
         // Tab controls
@@ -19,11 +19,10 @@ namespace SimControlCentre
         private ExternalAppsTab? _externalAppsTab;
         private LightingTab? _lightingTab;
 
-        public MainWindow(AppSettings settings, ConfigurationService configService, GoXLRService goXLRService, iRacingMonitorService? iRacingMonitor = null)
+        public MainWindow(AppSettings settings, ConfigurationService configService, iRacingMonitorService? iRacingMonitor = null)
         {
             _settings = settings;
             _configService = configService;
-            _goXLRService = goXLRService;
             _iRacingMonitor = iRacingMonitor;
 
             InitializeComponent();
@@ -42,7 +41,7 @@ namespace SimControlCentre
         private void InitializeTabs()
         {
             // Create Settings Tab
-            _settingsTab = new SettingsTab(_configService, _settings, _goXLRService, this);
+            _settingsTab = new SettingsTab(_configService, _settings, this);
             SettingsTabItem.Content = _settingsTab;
             
             // Create Device Control Tab (always visible like Lighting tab)
@@ -157,3 +156,4 @@ namespace SimControlCentre
         }
     }
 }
+

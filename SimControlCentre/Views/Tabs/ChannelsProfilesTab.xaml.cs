@@ -11,18 +11,16 @@ namespace SimControlCentre.Views.Tabs
 {
     public partial class ChannelsProfilesTab : UserControl
     {
-        private readonly GoXLRService _goXLRService;
+        // GoXLR now in plugins - channels/profiles managed there
         private readonly ConfigurationService _configService;
         private readonly AppSettings _settings;
         private List<string> _availableProfiles = new();
         
         public event EventHandler? HotkeysChanged;
 
-        public ChannelsProfilesTab(GoXLRService goXLRService, ConfigurationService configService, AppSettings settings)
+        public ChannelsProfilesTab( ConfigurationService configService, AppSettings settings)
         {
             InitializeComponent();
-            
-            _goXLRService = goXLRService;
             _configService = configService;
             _settings = settings;
             
@@ -31,14 +29,14 @@ namespace SimControlCentre.Views.Tabs
             // Load profiles after waiting for connection
             _ = Task.Run(async () =>
             {
-                GoXLRDiagnostics.Info("ChannelsProfilesTab", "Waiting for GoXLR connection...");
+                Logger.Info("ChannelsProfilesTab", "Waiting for GoXLR connection...");
                 
                 // Wait for GoXLR connection to be ready (up to 15 seconds)
                 var connected = await WaitForConnectionAsync();
                 
                 if (connected)
                 {
-                    GoXLRDiagnostics.Info("ChannelsProfilesTab", "Connection ready, loading profiles...");
+                    Logger.Info("ChannelsProfilesTab", "Connection ready, loading profiles...");
                     
                     // Load profiles on UI thread
                     await Dispatcher.InvokeAsync(async () =>
@@ -48,7 +46,7 @@ namespace SimControlCentre.Views.Tabs
                 }
                 else
                 {
-                    GoXLRDiagnostics.Warning("ChannelsProfilesTab", "Timeout waiting for connection");
+                    Logger.Warning("ChannelsProfilesTab", "Timeout waiting for connection");
                     
                     await Dispatcher.InvokeAsync(() =>
                     {
@@ -66,9 +64,9 @@ namespace SimControlCentre.Views.Tabs
             {
                 try
                 {
-                    if (await _goXLRService.IsConnectedAsync())
+                    if (await Task.FromResult(false) /* TODO: Get from plugin */)
                     {
-                        GoXLRDiagnostics.Info("ChannelsProfilesTab", $"GoXLR connected after {i * 500}ms");
+                        Logger.Info("ChannelsProfilesTab", $"GoXLR connected after {i * 500}ms");
                         // Give it a bit more time to fully settle
                         await Task.Delay(500);
                         return true;
@@ -76,7 +74,7 @@ namespace SimControlCentre.Views.Tabs
                 }
                 catch (Exception ex)
                 {
-                    GoXLRDiagnostics.Error("ChannelsProfilesTab", $"Connection check failed: {ex.Message}");
+                    Logger.Error("ChannelsProfilesTab", $"Connection check failed: {ex.Message}");
                 }
                 
                 await Task.Delay(500);
@@ -144,7 +142,7 @@ namespace SimControlCentre.Views.Tabs
             
             try
             {
-                var profiles = await _goXLRService.GetProfilesAsync();
+                var profiles = await Task.FromResult(new List<string>()) /* TODO: Get from plugin */;
                 
                 if (profiles.Count == 0)
                 {
@@ -289,3 +287,5 @@ namespace SimControlCentre.Views.Tabs
         }
     }
 }
+
+

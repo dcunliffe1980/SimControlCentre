@@ -12,7 +12,7 @@ namespace SimControlCentre.Views.Tabs
     {
         private readonly ConfigurationService _configService;
         private readonly AppSettings _settings;
-        private readonly GoXLRService _goXLRService;
+        // GoXLR functionality now in plugins
         private readonly MainWindow _mainWindow;
         private ChannelsProfilesTab? _channelsProfilesTab;
         private ControllersTab? _controllersTab;
@@ -21,13 +21,12 @@ namespace SimControlCentre.Views.Tabs
         private TextBlock? _updateStatusText;
         private Button? _downloadButton;
 
-        public SettingsTab(ConfigurationService configService, AppSettings settings, GoXLRService goXLRService, MainWindow mainWindow)
+        public SettingsTab(ConfigurationService configService, AppSettings settings, MainWindow mainWindow)
         {
             InitializeComponent();
             
             _configService = configService;
             _settings = settings;
-            _goXLRService = goXLRService;
             _mainWindow = mainWindow;
             _updateCheckService = App.GetUpdateCheckService();
 
@@ -62,7 +61,7 @@ namespace SimControlCentre.Views.Tabs
 
         public void InitializeChannelsProfilesTab()
         {
-            _channelsProfilesTab = new ChannelsProfilesTab(_goXLRService, _configService, _settings);
+            _channelsProfilesTab = new ChannelsProfilesTab( _configService, _settings);
             
             // Subscribe to hotkeys changed event to notify the HotkeysTab
             _channelsProfilesTab.HotkeysChanged += (s, e) =>
@@ -264,7 +263,7 @@ namespace SimControlCentre.Views.Tabs
             // Check connection status
             _ = Task.Run(async () =>
             {
-                bool isConnected = await _goXLRService.IsConnectedAsync();
+                bool isConnected = await Task.FromResult(false) /* Plugin handles connection */;
                 Dispatcher.Invoke(() =>
                 {
                     if (isConnected)
@@ -339,7 +338,7 @@ namespace SimControlCentre.Views.Tabs
                 statusLabel.Text = "Connection Status: Testing...";
                 statusLabel.Foreground = System.Windows.Media.Brushes.Orange;
 
-                bool isConnected = await _goXLRService.IsConnectedAsync();
+                bool isConnected = await Task.FromResult(false) /* Plugin handles connection */;
 
                 if (isConnected)
                 {
@@ -506,13 +505,13 @@ namespace SimControlCentre.Views.Tabs
             {
                 _settings.General.EnableGoXLRDiagnostics = true;
                 _configService.Save(_settings);
-                GoXLRDiagnostics.SetEnabled(true);
+                // Logger.SetEnabled(true);
             };
             goxlrDiagCheck.Unchecked += (s, e) =>
             {
                 _settings.General.EnableGoXLRDiagnostics = false;
                 _configService.Save(_settings);
-                GoXLRDiagnostics.SetEnabled(false);
+                // Logger.SetEnabled(false);
             };
             SettingsContent.Children.Add(goxlrDiagCheck);
 
@@ -1076,3 +1075,6 @@ namespace SimControlCentre.Views.Tabs
         }
     }
 }
+
+
+

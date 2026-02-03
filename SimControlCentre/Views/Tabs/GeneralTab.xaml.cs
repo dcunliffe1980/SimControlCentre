@@ -11,18 +11,16 @@ namespace SimControlCentre.Views.Tabs
 {
     public partial class GeneralTab : UserControl
     {
-        private readonly GoXLRService _goXLRService;
+        // GoXLR now in plugins
         private readonly ConfigurationService _configService;
         private readonly AppSettings _settings;
         
         private const string StartupRegistryKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
         private const string AppName = "SimControlCentre";
 
-        public GeneralTab(GoXLRService goXLRService, ConfigurationService configService, AppSettings settings)
+        public GeneralTab( ConfigurationService configService, AppSettings settings)
         {
             InitializeComponent();
-            
-            _goXLRService = goXLRService;
             _configService = configService;
             _settings = settings;
             
@@ -50,73 +48,28 @@ namespace SimControlCentre.Views.Tabs
             
             try
             {
-                using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-                var response = await httpClient.GetAsync("http://localhost:14564/api/get-devices");
-                
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var fullResponse = System.Text.Json.JsonSerializer.Deserialize<GoXLRFullResponse>(json);
-                    
-                    if (fullResponse?.Mixers != null && fullResponse.Mixers.Count > 0)
-                    {
-                        var serialNumbers = fullResponse.Mixers.Keys.ToList();
-                        
-                        if (serialNumbers.Count == 1)
-                        {
-                            // Auto-populate single device
-                            SerialNumberBox.Text = serialNumbers[0];
-                            
-                            // Automatically save and test
-                            await SaveAndTestSerial(serialNumbers[0]);
-                        }
-                        else
-                        {
-                            // Multiple devices - let user choose
-                            var deviceList = string.Join("\n", serialNumbers);
-                            var result = MessageBox.Show(
-                                $"Found {serialNumbers.Count} GoXLR devices:\n\n{deviceList}\n\nUsing first device. Click OK to accept or Cancel to enter manually.",
-                                "Multiple Devices Found",
-                                MessageBoxButton.OKCancel,
-                                MessageBoxImage.Question);
-                            
-                            if (result == MessageBoxResult.OK)
-                            {
-                                SerialNumberBox.Text = serialNumbers[0];
-                                
-                                // Automatically save and test
-                                await SaveAndTestSerial(serialNumbers[0]);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        MessageBox.Show("No GoXLR devices found. Make sure your GoXLR is connected and GoXLR Utility is running.",
-                            "No Devices Found", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    }
-                }
-                else
-                {
-                    MessageBox.Show("Unable to connect to GoXLR Utility.\n\nMake sure GoXLR Utility is running on http://localhost:14564",
-                        "Connection Failed", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                // TODO: GoXLR detection moved to plugin
+                MessageBox.Show("GoXLR auto-detection has been moved to the plugin system.\n\nPlease enter your serial number manually.", 
+                    "Feature Moved", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error detecting serial number:\n\n{ex.Message}\n\nMake sure GoXLR Utility is running.",
-                    "Detection Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
                 DetectSerialBtn.IsEnabled = true;
-                DetectSerialBtn.Content = "Detect";
+                DetectSerialBtn.Content = "Auto-Detect";
             }
+            await Task.CompletedTask;
         }
 
         private async Task SaveAndTestSerial(string serialNumber)
         {
             // Reload current settings from disk
             var currentSettings = _configService.Load();
+            
+
             
             // Update serial number
             currentSettings.General.SerialNumber = serialNumber;
@@ -192,11 +145,11 @@ namespace SimControlCentre.Views.Tabs
                 return;
             }
             
-            var isConnected = await _goXLRService.IsConnectedAsync();
+            var isConnected = await Task.FromResult<object?>(null) /* Plugin */;
             
-            if (isConnected)
+            if (false /* isConnected - plugin */)
             {
-                var profile = await _goXLRService.GetCurrentProfileAsync();
+                var profile = await Task.FromResult<object?>(null) /* Plugin */;
                 if (profile != null)
                 {
                     ConnectionStatusText.Text = $"Connection Status: ? Connected (Profile: {profile})";
@@ -313,3 +266,8 @@ namespace SimControlCentre.Views.Tabs
         }
     }
 }
+
+
+
+
+
