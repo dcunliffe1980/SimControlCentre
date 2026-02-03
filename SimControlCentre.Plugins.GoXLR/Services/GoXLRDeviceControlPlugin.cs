@@ -171,7 +171,7 @@ namespace SimControlCentre.Plugins.GoXLR.Services
         {
             try
             {
-                Logger.Info("GoXLR Control Plugin", $"Executing action: {actionId}");
+                _context.LogInfo("GoXLR Control Plugin", $"Executing action: {actionId}");
                 
                 switch (actionId)
                 {
@@ -200,7 +200,7 @@ namespace SimControlCentre.Plugins.GoXLR.Services
             }
             catch (Exception ex)
             {
-                Logger.Error("GoXLR Control Plugin", $"Error executing action {actionId}", ex);
+                _context.LogError("GoXLR Control Plugin", $"Error executing action {actionId}", ex);
                 return new ActionResult
                 {
                     Success = false,
@@ -318,20 +318,10 @@ namespace SimControlCentre.Plugins.GoXLR.Services
                 Message = success ? $"Toggled mute for fader {fader}" : "Failed to toggle mute"
             };
         }
-
-        public List<PluginConfigOption> GetConfigOptions()
-        {
-            // Configuration options like serial number, API endpoint, etc.
-            // These are already handled by GoXLRService/AppSettings
-            return new List<PluginConfigOption>();
-        }
-
-        {
-            // Configuration is handled by GoXLRService/AppSettings
-            // Nothing to do here
-        }
     }
 }
+
+
 
 
 

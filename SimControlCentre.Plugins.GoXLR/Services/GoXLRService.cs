@@ -106,14 +106,18 @@ public class GoXLRService : IDisposable
                 return new VolumeChangeResult { Success = false, Message = "Serial number not configured. Click 'Detect' to auto-detect." };
             
             // Temporarily use auto-detected serial
-            _settings.General.SerialNumber = autoSerial;
+            _serialNumber = autoSerial;
+            _context.Settings.SetValue("GoXLR.SerialNumber", autoSerial);
+            _context.SaveSettings();
             Reinitialize();
         }
 
         if (_apiClient == null)
             return new VolumeChangeResult { Success = false, Message = "API client not initialized" };
 
-        var delta = increase ? _settings.General.VolumeStep : -_settings.General.VolumeStep;
+        var volumeStep = _context.Settings.GetValue<int>("GoXLR.VolumeStep");
+        if (volumeStep == 0) volumeStep = 5; // Default
+        var delta = increase ? volumeStep : -volumeStep;
         var newVolume = await _apiClient.AdjustVolumeAsync(SerialNumber, channel, delta);
 
         if (newVolume.HasValue)
@@ -192,7 +196,7 @@ public class GoXLRService : IDisposable
         try
         {
             using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            var response = await httpClient.GetFromJsonAsync<GoXLRFullResponse>(_settings.General.ApiEndpoint + "/api/get-devices");
+            var response = await httpClient.GetFromJsonAsync<GoXLRFullResponse>(_apiEndpoint + "/api/get-devices");
             
             if (response?.Mixers != null && response.Mixers.Count == 1)
             {

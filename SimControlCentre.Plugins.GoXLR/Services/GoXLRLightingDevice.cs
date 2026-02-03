@@ -157,7 +157,7 @@ namespace SimControlCentre.Plugins.GoXLR.Services
                 _context.LogDebug("GoXLR Lighting", "Saving current button states");
                 
                 // TODO: Query actual button states from GoXLR API if possible
-                _savedState = "saved"; // Placeholder
+                _savedButtonStates = new Dictionary<string, string>(); // TODO: Save actual state
                 
                 await Task.CompletedTask;
             }
@@ -171,14 +171,14 @@ namespace SimControlCentre.Plugins.GoXLR.Services
         {
             try
             {
-                if (_savedState != null)
+                if (_savedButtonStates != null)
                 {
                     _context.LogDebug("GoXLR Lighting", "Restoring previous button states");
                     
                     // For now, turn off all buttons (return to default)
                     await SetColorAsync(LightingColor.Off);
                     
-                    _savedState = null;
+                    _savedButtonStates = null;
                 }
             }
             catch (Exception ex)
@@ -244,5 +244,7 @@ namespace SimControlCentre.Plugins.GoXLR.Services
         }
     }
 }
+
+
 
 

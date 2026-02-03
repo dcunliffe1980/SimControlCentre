@@ -144,8 +144,8 @@ namespace SimControlCentre.Plugins.GoXLR.Services
                 ? new List<string> { "Fader1Mute", "Fader2Mute", "Fader3Mute" }
                 : new List<string> { "Fader1Mute", "Fader2Mute", "Fader3Mute", "Fader4Mute" };
             
-            Logger.Info("GoXLR Plugin", $"Detected device type: {_deviceType}");
-            Logger.Info("GoXLR Plugin", $"Available buttons: {string.Join(", ", AvailableButtons)}");
+            _context.LogInfo("GoXLR Plugin", $"Detected device type: {_deviceType}");
+            _context.LogInfo("GoXLR Plugin", $"Available buttons: {string.Join(", ", AvailableButtons)}");
         }
 
         public async Task<bool> IsHardwareAvailableAsync()
@@ -160,32 +160,18 @@ namespace SimControlCentre.Plugins.GoXLR.Services
             return new GoXLRLightingDevice(_goXLRService, _context, _selectedButtons);
         }
 
-        public IEnumerable<DeviceConfigOption> GetConfigOptions()
-        {
-            return new List<DeviceConfigOption>
-            {
-                new DeviceConfigOption
-                {
-                    Key = "selected_buttons",
-                    DisplayName = "Active Buttons",
-                    Description = "Select which GoXLR buttons to use for flag lighting",
-                    Type = DeviceConfigType.MultiSelect,
-                    DefaultValue = _selectedButtons,
-                    AvailableOptions = AvailableButtons
-                }
-            };
-        }
-
         public void ApplyConfiguration(Dictionary<string, object> config)
         {
-            if (config.TryGetValue("selected_buttons", out var buttonsObj) && buttonsObj is List<string> buttons)
+            if (config.ContainsKey("selected_buttons"))
             {
-                _selectedButtons = buttons;
-                Logger.Info("GoXLR Plugin", $"Updated button selection: {string.Join(", ", buttons)}");
+                var buttons = config["selected_buttons"] as List<string>;
+                if (buttons != null && buttons.Any())
+                {
+                    _selectedButtons = buttons;
+                    _context?.LogInfo("GoXLR Plugin", $"Updated button selection: {string.Join(", ", buttons)}");
+                }
             }
         }
     }
 }
-
-
 

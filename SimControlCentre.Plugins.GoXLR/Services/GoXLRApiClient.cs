@@ -119,8 +119,6 @@ public class GoXLRApiClient : IDisposable
         return false;
     }
 
-    public bool IsConnectionWarmed => _isConnectionWarmed;
-
     /// <summary>
     /// Gets the current device status including volumes and profiles
     /// </summary>
