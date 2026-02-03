@@ -995,24 +995,10 @@ namespace SimControlCentre.Views.Tabs
         {
             try
             {
-                // Check if we're running from a single-file publish
-                // In standalone, the main exe contains everything
-                var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                // NEW APPROACH: Check if .NET runtime DLLs are present
+                // Standalone version includes .NET runtime DLLs (like System.Private.CoreLib.dll, clr*.dll)
+                // Framework-dependent version does NOT include these
                 
-#pragma warning disable IL3000 // Assembly.Location is intentionally used to detect single-file bundle
-                var location = assembly.Location;
-#pragma warning restore IL3000
-                
-                UpdateDiagnostics.Log($"[IsStandalone] Assembly location: {location}");
-                
-                // If location is empty, we're likely in a single-file bundle
-                if (string.IsNullOrEmpty(location))
-                {
-                    UpdateDiagnostics.Log("[IsStandalone] Empty location - single file bundle detected");
-                    return true;
-                }
-                
-                // Check if SimControlCentre.dll exists alongside the exe
                 var exePath = Process.GetCurrentProcess().MainModule?.FileName;
                 if (string.IsNullOrEmpty(exePath))
                 {
@@ -1027,23 +1013,42 @@ namespace SimControlCentre.Views.Tabs
                     return false;
                 }
                 
-                var dllPath = Path.Combine(exeDir, "SimControlCentre.dll");
-                bool dllExists = File.Exists(dllPath);
+                UpdateDiagnostics.Log($"[IsStandalone] Checking directory: {exeDir}");
                 
-                UpdateDiagnostics.Log($"[IsStandalone] DLL path: {dllPath}");
-                UpdateDiagnostics.Log($"[IsStandalone] DLL exists: {dllExists}");
+                // Check for .NET Runtime DLLs that only exist in standalone builds
+                var runtimeDlls = new[]
+                {
+                    "System.Private.CoreLib.dll",  // Core runtime DLL
+                    "clrjit.dll",                  // JIT compiler
+                    "coreclr.dll",                 // CoreCLR runtime
+                    "System.Runtime.dll"           // Runtime library
+                };
                 
-                // If .dll exists separately, it's NOT standalone
-                // If .dll doesn't exist, it's bundled in the exe (standalone)
-                return !dllExists;
+                int foundCount = 0;
+                foreach (var dll in runtimeDlls)
+                {
+                    var dllPath = Path.Combine(exeDir, dll);
+                    bool exists = File.Exists(dllPath);
+                    UpdateDiagnostics.Log($"[IsStandalone] Checking {dll}: {exists}");
+                    if (exists) foundCount++;
+                }
+                
+                // If we find at least 2 runtime DLLs, it's standalone
+                bool isStandalone = foundCount >= 2;
+                
+                UpdateDiagnostics.Log($"[IsStandalone] Found {foundCount} runtime DLLs");
+                UpdateDiagnostics.Log($"[IsStandalone] Result: {(isStandalone ? "STANDALONE" : "FRAMEWORK-DEPENDENT")}");
+                
+                return isStandalone;
             }
             catch (Exception ex)
             {
                 UpdateDiagnostics.Log($"[IsStandalone] Error: {ex.Message}");
-                // Default to non-standalone on error
+                // Default to non-standalone on error (safer to download smaller file)
                 return false;
             }
         }
+
 
         private void SetStartupRegistry(bool enable)
         {
