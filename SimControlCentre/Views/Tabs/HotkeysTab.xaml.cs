@@ -45,7 +45,19 @@ namespace SimControlCentre.Views.Tabs
             var deviceControlService = App.GetDeviceControlService();
             bool hasEnabledPlugins = deviceControlService?.Plugins.Any(p => p.IsEnabled) ?? false;
             
+            // Log for debugging
+            Logger.Info("Device Control Tab", $"Component enabled in settings: {deviceControlComponentEnabled}");
+            Logger.Info("Device Control Tab", $"Plugin count: {deviceControlService?.Plugins.Count ?? 0}");
+            if (deviceControlService?.Plugins != null)
+            {
+                foreach (var plugin in deviceControlService.Plugins)
+                {
+                    Logger.Info("Device Control Tab", $"Plugin '{plugin.PluginId}': IsEnabled={plugin.IsEnabled}");
+                }
+            }
+            
             bool pluginsAvailable = hasEnabledPlugins && deviceControlComponentEnabled;
+            Logger.Info("Device Control Tab", $"Plugins available: {pluginsAvailable}");
             
             if (!pluginsAvailable)
             {
