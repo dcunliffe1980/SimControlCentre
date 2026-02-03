@@ -164,7 +164,7 @@ public partial class App : Application
                 }
             }
             
-            // Register device control plugins  
+            // Register device control plugins (always register, just set IsEnabled)
             var deviceControlPlugins = PluginLoader.GetDeviceControlPlugins(loadedPlugins);
             foreach (var plugin in deviceControlPlugins)
             {
@@ -172,16 +172,13 @@ public partial class App : Application
                 bool isEnabled = Settings.Lighting?.EnabledPlugins?.GetValueOrDefault("goxlr-device-control", true) ?? true;
                 plugin.IsEnabled = isEnabled;
                 
-                if (isEnabled)
-                {
-                    Logger.Info("App", $"Registering device control plugin: {plugin.DisplayName}");
-                    _deviceControlService.RegisterPlugin(plugin);
-                }
-                else
-                {
-                    Logger.Info("App", $"Device control plugin {plugin.DisplayName} is disabled in settings");
-                }
+                // Always register the plugin, even if disabled
+                // The service will respect the IsEnabled property
+                Logger.Info("App", $"Registering device control plugin: {plugin.DisplayName} (Enabled: {isEnabled})");
+                _deviceControlService.RegisterPlugin(plugin);
             }
+            
+
             
             // Initialize all lighting plugins and wait for completion
             Logger.Info("App", "Initializing lighting devices...");
