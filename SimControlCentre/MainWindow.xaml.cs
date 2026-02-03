@@ -17,7 +17,6 @@ namespace SimControlCentre
         private SettingsTab? _settingsTab;
         private HotkeysTab? _hotkeysTab;
         private ExternalAppsTab? _externalAppsTab;
-        private PluginsTab? _pluginsTab;
         private LightingTab? _lightingTab;
 
         public MainWindow(AppSettings settings, ConfigurationService configService, GoXLRService goXLRService, iRacingMonitorService? iRacingMonitor = null)
@@ -62,15 +61,8 @@ namespace SimControlCentre
                 iRacingTabItem.Content = _externalAppsTab;
             }
             
-            // Create Plugins Tab
-            var lightingService = App.GetLightingService();
-            if (lightingService != null)
-            {
-                _pluginsTab = new PluginsTab(_configService, _settings, lightingService);
-                PluginsTabItem.Content = _pluginsTab;
-            }
-            
             // Create Lighting Tab
+            var lightingService = App.GetLightingService();
             var telemetryService = App.GetTelemetryService();
             if (lightingService != null && telemetryService != null)
             {

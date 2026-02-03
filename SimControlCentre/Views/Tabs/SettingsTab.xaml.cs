@@ -16,6 +16,7 @@ namespace SimControlCentre.Views.Tabs
         private readonly MainWindow _mainWindow;
         private ChannelsProfilesTab? _channelsProfilesTab;
         private ControllersTab? _controllersTab;
+        private PluginsTab? _pluginsTab;
         private readonly UpdateCheckService? _updateCheckService;
         private TextBlock? _updateStatusText;
         private Button? _downloadButton;
@@ -101,6 +102,9 @@ namespace SimControlCentre.Views.Tabs
                     break;
                 case "GoXLR":
                     LoadGoXLRSettings();
+                    break;
+                case "Plugins":
+                    LoadPluginsSettings();
                     break;
                 case "Controllers":
                     LoadControllersSettings();
@@ -408,6 +412,42 @@ namespace SimControlCentre.Views.Tabs
                 var notInitializedMessage = new TextBlock
                 {
                     Text = "Controllers not yet initialized. Please wait...",
+                    Foreground = System.Windows.Media.Brushes.Gray,
+                    FontStyle = FontStyles.Italic,
+                    Margin = new Thickness(0, 10, 0, 0),
+                    TextWrapping = TextWrapping.Wrap
+                };
+                SettingsContent.Children.Add(notInitializedMessage);
+            }
+        }
+
+        private void LoadPluginsSettings()
+        {
+            // Initialize plugins tab if not already done
+            if (_pluginsTab == null)
+            {
+                var lightingService = App.GetLightingService();
+                if (lightingService != null)
+                {
+                    _pluginsTab = new PluginsTab(_configService, _settings, lightingService, _mainWindow);
+                }
+            }
+
+            // Embed the PluginsTab content if available
+            if (_pluginsTab != null)
+            {
+                var pluginsContent = _pluginsTab.Content as UIElement;
+                if (pluginsContent != null)
+                {
+                    _pluginsTab.Content = null; // Detach from original parent
+                    SettingsContent.Children.Add(pluginsContent);
+                }
+            }
+            else
+            {
+                var notInitializedMessage = new TextBlock
+                {
+                    Text = "Plugins not yet initialized. Please wait...",
                     Foreground = System.Windows.Media.Brushes.Gray,
                     FontStyle = FontStyles.Italic,
                     Margin = new Thickness(0, 10, 0, 0),

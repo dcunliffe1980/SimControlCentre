@@ -54,6 +54,7 @@
                     </ListBox.ItemContainerStyle>
                     <ListBoxItem Content="General" Tag="General"/>
                     <ListBoxItem Content="GoXLR" Tag="GoXLR"/>
+                    <ListBoxItem Content="Plugins" Tag="Plugins"/>
                     <ListBoxItem Content="Controllers" Tag="Controllers"/>
                     <ListBoxItem Content="Telemetry" Tag="Telemetry"/>
                     <ListBoxItem Content="Logs" Tag="Logs"/>

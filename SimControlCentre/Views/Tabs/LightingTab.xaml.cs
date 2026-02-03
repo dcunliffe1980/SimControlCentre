@@ -26,6 +26,7 @@ namespace SimControlCentre.Views.Tabs
             _telemetryService.FlagChanged += OnFlagChanged;
             
             LoadSettings();
+            CheckPluginAvailability();
             
             // Load button selection after a short delay to allow device detection
             _ = Task.Run(async () =>
@@ -33,6 +34,26 @@ namespace SimControlCentre.Views.Tabs
                 await Task.Delay(1000); // Wait for device type detection
                 Dispatcher.Invoke(() => LoadButtonSelection());
             });
+        }
+
+        private void CheckPluginAvailability()
+        {
+            // Check if any lighting plugins are enabled
+            bool hasEnabledPlugins = _lightingService.Plugins.Any(p => p.IsEnabled);
+            
+            if (!hasEnabledPlugins)
+            {
+                // Disable the lighting checkbox and show warning
+                EnableLightingCheckBox.IsEnabled = false;
+                EnableLightingCheckBox.IsChecked = false;
+                NoPluginsWarning.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                // Enable the checkbox
+                EnableLightingCheckBox.IsEnabled = true;
+                NoPluginsWarning.Visibility = Visibility.Collapsed;
+            }
         }
 
         private void LoadButtonSelection()

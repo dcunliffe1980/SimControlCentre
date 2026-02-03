@@ -21,7 +21,17 @@
                     <TextBlock Text="When enabled, connected lighting devices will display racing flag colors."
                                TextWrapping="Wrap"
                                Foreground="Gray"
-                               FontSize="11"/>
+                               FontSize="11"
+                               Margin="0,0,0,10"/>
+                    
+                    <!-- No plugins available warning -->
+                    <TextBlock x:Name="NoPluginsWarning"
+                               TextWrapping="Wrap"
+                               Foreground="#D32F2F"
+                               FontSize="11"
+                               Visibility="Collapsed">
+                        <Run Text="No lighting plugins are currently enabled. Enable a plugin in Settings > Plugins to use flag lighting."/>
+                    </TextBlock>
                 </StackPanel>
             </GroupBox>
 

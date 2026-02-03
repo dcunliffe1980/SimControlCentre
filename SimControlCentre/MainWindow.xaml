@@ -19,9 +19,6 @@
             <!-- Application Manager Tab -->
             <TabItem Header="Application Manager" x:Name="iRacingTabItem"/>
             
-            <!-- Plugins Tab -->
-            <TabItem Header="Plugins" x:Name="PluginsTabItem"/>
-            
             <!-- Lighting Tab -->
             <TabItem Header="Lighting" x:Name="LightingTabItem"/>
         </TabControl>

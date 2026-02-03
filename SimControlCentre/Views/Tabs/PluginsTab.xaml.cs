@@ -12,14 +12,16 @@ namespace SimControlCentre.Views.Tabs
         private readonly ConfigurationService _configService;
         private readonly AppSettings _settings;
         private readonly LightingService _lightingService;
+        private readonly MainWindow? _mainWindow;
 
-        public PluginsTab(ConfigurationService configService, AppSettings settings, LightingService lightingService)
+        public PluginsTab(ConfigurationService configService, AppSettings settings, LightingService lightingService, MainWindow? mainWindow = null)
         {
             InitializeComponent();
             
             _configService = configService;
             _settings = settings;
             _lightingService = lightingService;
+            _mainWindow = mainWindow;
             
             LoadSettings();
         }
@@ -70,6 +72,13 @@ namespace SimControlCentre.Views.Tabs
                     
                     // Reinitialize devices to apply changes
                     _ = _lightingService.InitializeAsync();
+                    
+                    // If plugin is disabled, also disable flag lighting
+                    if (!isEnabled)
+                    {
+                        _settings.Lighting.EnableFlagLighting = false;
+                        _configService.Save(_settings);
+                    }
                 }
                 
                 // Update UI visibility
@@ -77,6 +86,13 @@ namespace SimControlCentre.Views.Tabs
                 {
                     UpdateGoXlrComponentsVisibility();
                 }
+                
+                // Show message about effect
+                string message = isEnabled 
+                    ? $"Plugin '{pluginId}' has been enabled. Lighting features are now available."
+                    : $"Plugin '{pluginId}' has been disabled. All GoXLR functionality has been disabled.";
+                
+                MessageBox.Show(message, "Plugin Status Changed", MessageBoxButton.OK, MessageBoxImage.Information);
                 
                 Logger.Info("Plugins", $"Plugin '{pluginId}' {(isEnabled ? "enabled" : "disabled")}");
             }

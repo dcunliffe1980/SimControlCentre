@@ -52,30 +52,35 @@
 ### Phase 1.2: Plugin Settings Architecture ? COMPLETE
 
 **Completed**:
-1. ? Created centralized "Plugins" tab
+1. ? Created centralized Plugins section under Settings
 2. ? Moved plugin enable/disable from Lighting tab
 3. ? Clean, professional UI with expandable sections
 4. ? Shows plugin components (Lighting + Device Control future)
 5. ? Info panel explaining plugins
-6. ? Future plugins preview section
+6. ? Removed "coming soon" plugins section
+7. ? Lighting tab auto-disables when no plugins available
+8. ? Disabling plugin disables all functionality
 
 **Files Created**:
 - `SimControlCentre\Views\Tabs\PluginsTab.xaml`
 - `SimControlCentre\Views\Tabs\PluginsTab.xaml.cs`
 
 **Files Modified**:
-- `SimControlCentre\MainWindow.xaml` - Added Plugins tab
-- `SimControlCentre\MainWindow.xaml.cs` - Initialize Plugins tab
-- `SimControlCentre\Views\Tabs\LightingTab.xaml` - Removed plugin checkbox
-- `SimControlCentre\Views\Tabs\LightingTab.xaml.cs` - Removed plugin logic
+- `SimControlCentre\Views\Tabs\SettingsTab.xaml` - Added Plugins category
+- `SimControlCentre\Views\Tabs\SettingsTab.xaml.cs` - Load Plugins section
+- `SimControlCentre\MainWindow.xaml` - Removed Plugins tab
+- `SimControlCentre\MainWindow.xaml.cs` - Removed Plugins tab initialization
+- `SimControlCentre\Views\Tabs\LightingTab.xaml` - Added no plugins warning
+- `SimControlCentre\Views\Tabs\LightingTab.xaml.cs` - Check plugin availability
 
-**UI Features**:
+**Key Features**:
+- Plugins section accessible via Settings > Plugins
 - GoXLR Plugin section with enable/disable
 - Expandable components panel (shown when enabled)
 - Lighting component indicator (active)
 - Device Control component indicator (coming soon)
-- Future plugins preview (Hue, Nanoleaf, Stream Deck, LIFX)
-- Professional info panel
+- Auto-disables lighting when no plugins enabled
+- Warning message when no plugins available
 
 ---
 
