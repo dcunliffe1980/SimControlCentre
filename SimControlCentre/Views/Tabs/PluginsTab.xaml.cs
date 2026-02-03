@@ -166,7 +166,8 @@ namespace SimControlCentre.Views.Tabs
                         deviceControlPlugin.IsEnabled = isEnabled;
                     }
                     
-                    // Notify device control tab
+                    // Refresh device control tab to update plugin availability
+                    _mainWindow?.UpdateDeviceControlTabVisibility();
                     _mainWindow?.RefreshHotkeysTab();
                 }
                 
