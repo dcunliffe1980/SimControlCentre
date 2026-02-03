@@ -1,7 +1,7 @@
-# SimControlCentre v1.3.0 Release Build Script
+# SimControlCentre v1.3.1 Release Build Script
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "SimControlCentre v1.3.0 Release Build" -ForegroundColor Cyan
+Write-Host "SimControlCentre v1.3.1 Release Build" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
