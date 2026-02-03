@@ -61,8 +61,11 @@ namespace SimControlCentre.Views.Tabs
                 GoXlrSpecificPanel.Visibility = Visibility.Collapsed;
                 
                 // Also disable flag lighting in settings
-                app.Settings.Lighting.EnableFlagLighting = false;
-                app.SaveSettings();
+                if (app.Settings.Lighting != null)
+                {
+                    app.Settings.Lighting.EnableFlagLighting = false;
+                    app.SaveSettings();
+                }
                 
                 Logger.Info("Lighting Tab", "No enabled plugins - lighting disabled");
             }
