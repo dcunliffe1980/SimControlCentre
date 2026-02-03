@@ -37,7 +37,17 @@ namespace SimControlCentre.Services
             var goxlrColor = MapToGoXLRColor(color);
             
             Logger.Info("GoXLR Lighting", $"SetColorAsync: {color} (hex: {goxlrColor}) on {_activeButtons.Count} button(s)");
-            Logger.Info("GoXLR Lighting", $"Buttons: {string.Join(", ", _activeButtons)}");
+            Logger.Info("GoXLR Lighting", $"Active Buttons: {string.Join(", ", _activeButtons)}");
+            
+            // Check if Global is in the list
+            if (_activeButtons.Contains("Global"))
+            {
+                Logger.Info("GoXLR Lighting", "? Global IS in active buttons list");
+            }
+            else
+            {
+                Logger.Info("GoXLR Lighting", "? Global is NOT in active buttons list");
+            }
             
             // Send all commands at once (parallel) for instant update
             var sw = System.Diagnostics.Stopwatch.StartNew();

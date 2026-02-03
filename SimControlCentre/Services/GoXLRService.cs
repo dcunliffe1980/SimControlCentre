@@ -254,23 +254,30 @@ public class GoXLRService : IDisposable
 
         try
         {
-            Logger.Debug("GoXLR Service", $"Setting {buttonId} to color {color}");
+            Logger.Info("GoXLR Service", $"SetButtonColorAsync called: buttonId={buttonId}, color={color}");
             
             if (_apiClient != null)
             {
                 // Check if it's the global color
                 if (buttonId == "Global")
                 {
-                    Logger.Info("GoXLR Service", $"? GLOBAL COLOR DETECTED! Setting to {color}");
+                    Logger.Info("GoXLR Service", "========================================");
+                    Logger.Info("GoXLR Service", "? GLOBAL COLOR DETECTED!");
+                    Logger.Info("GoXLR Service", $"? Setting Global to: {color}");
+                    Logger.Info("GoXLR Service", $"? Serial: {SerialNumber}");
+                    Logger.Info("GoXLR Service", "========================================");
+                    
                     Console.WriteLine($"[GoXLR Service] ??? GLOBAL DETECTED: {color} ???");
                     await _apiClient.SetGlobalColourAsync(SerialNumber, color);
-                    Logger.Info("GoXLR Service", "? Global color command sent");
+                    
+                    Logger.Info("GoXLR Service", "? SetGlobalColourAsync completed");
                 }
                 // Check if it's accent (uses SetSimpleColour with Accent target)
                 else if (buttonId == "Accent")
                 {
                     Logger.Info("GoXLR Service", $"Accent color detected, setting to {color}");
                     await _apiClient.SetSimpleColorAsync(SerialNumber, "Accent", color);
+                    Logger.Info("GoXLR Service", "? SetSimpleColorAsync completed");
                 }
                 // Check if it's a fader color
                 else if (buttonId.StartsWith("Fader") && buttonId.Length == 6) // FaderA, FaderB, etc.

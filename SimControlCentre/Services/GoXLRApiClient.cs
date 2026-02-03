@@ -463,6 +463,11 @@ public class GoXLRApiClient : IDisposable
     {
         try
         {
+            Logger.Info("GoXLR API", "========================================");
+            Logger.Info("GoXLR API", "SetGlobalColour API METHOD CALLED");
+            Logger.Info("GoXLR API", $"Serial: {serialNumber}");
+            Logger.Info("GoXLR API", $"Colour: {colour}");
+            
             Console.WriteLine($"[GoXLR] ========================================");
             Console.WriteLine($"[GoXLR] SetGlobalColour CALLED");
             Console.WriteLine($"[GoXLR] Serial: {serialNumber}");
@@ -470,28 +475,37 @@ public class GoXLRApiClient : IDisposable
             
             var command = GoXLRCommandRequest.SetGlobalColour(serialNumber, colour);
             var json = System.Text.Json.JsonSerializer.Serialize(command);
+            
+            Logger.Info("GoXLR API", $"JSON Payload: {json}");
             Console.WriteLine($"[GoXLR] JSON: {json}");
             
             var response = await _httpClient.PostAsJsonAsync("/api/command", command);
+            
+            Logger.Info("GoXLR API", $"HTTP Status: {response.StatusCode}");
             Console.WriteLine($"[GoXLR] HTTP Status: {response.StatusCode}");
             
             var responseBody = await response.Content.ReadAsStringAsync();
+            Logger.Info("GoXLR API", $"Response Body: {responseBody}");
             Console.WriteLine($"[GoXLR] Response Body: {responseBody}");
             Console.WriteLine($"[GoXLR] ========================================");
+            Logger.Info("GoXLR API", "========================================");
             
             if (response.IsSuccessStatusCode)
             {
+                Logger.Info("GoXLR API", "? Global color set successfully");
                 Console.WriteLine($"[GoXLR] ? Global color set successfully");
                 return true;
             }
             else
             {
+                Logger.Error("GoXLR API", $"? Failed to set global color - Status: {response.StatusCode}");
                 Console.WriteLine($"[GoXLR] ? Failed to set global color");
                 return false;
             }
         }
         catch (Exception ex)
         {
+            Logger.Error("GoXLR API", $"? Exception setting global color: {ex.Message}", ex);
             Console.WriteLine($"[GoXLR] ? Exception setting global color: {ex.Message}");
             Console.WriteLine($"[GoXLR] Stack: {ex.StackTrace}");
             return false;
