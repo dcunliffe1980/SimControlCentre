@@ -91,16 +91,56 @@ namespace SimControlCentre.Views.Tabs
             
             _goxlrPlugin.ApplyConfiguration(config);
             
+            // Save to settings
+            var app = (App)Application.Current;
+            app.Settings.Lighting.GoXlrSelectedButtons = selectedButtons;
+            app.SaveSettings();
+            
+            Logger.Info("Lighting Tab", $"Button selection saved: {string.Join(", ", selectedButtons)}");
+            
             // Reinitialize devices
             _ = Task.Run(async () => await _lightingService.InitializeAsync());
-            
-            Logger.Info("Lighting Tab", $"Button selection updated: {string.Join(", ", selectedButtons)}");
         }
 
         private void LoadSettings()
         {
-            // For now, always enabled (will add settings later)
-            EnableLightingCheckBox.IsChecked = true;
+            var app = (App)Application.Current;
+            
+            // Load enable/disable state
+            EnableLightingCheckBox.IsChecked = app.Settings.Lighting.EnableFlagLighting;
+            
+            // TODO: Load plugin enabled states when checkboxes are added to XAML
+            // EnableGoXlrPluginCheckBox.IsChecked = app.Settings.Lighting.EnabledPlugins.GetValueOrDefault("goxlr", true);
+        }
+
+        private void EnableLighting_Changed(object sender, RoutedEventArgs e)
+        {
+            var app = (App)Application.Current;
+            app.Settings.Lighting.EnableFlagLighting = EnableLightingCheckBox.IsChecked == true;
+            app.SaveSettings();
+            
+            Logger.Info("Lighting Tab", $"Flag lighting {(app.Settings.Lighting.EnableFlagLighting ? "enabled" : "disabled")}");
+        }
+
+        private void PluginEnabled_Changed(object sender, RoutedEventArgs e)
+        {
+            if (sender is not CheckBox checkbox || checkbox.Tag is not string pluginId)
+                return;
+
+            var app = (App)Application.Current;
+            bool isEnabled = checkbox.IsChecked == true;
+            
+            app.Settings.Lighting.EnabledPlugins[pluginId] = isEnabled;
+            app.SaveSettings();
+            
+            Logger.Info("Lighting Tab", $"Plugin '{pluginId}' {(isEnabled ? "enabled" : "disabled")}");
+            
+            // Show restart message
+            MessageBox.Show(
+                $"Plugin changes will take effect after restarting the application.",
+                "Restart Required",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
 
         private void UpdateDevicesList()
@@ -140,26 +180,6 @@ namespace SimControlCentre.Views.Tabs
                 CurrentFlagText.Text = e.NewFlag.ToString();
                 CurrentFlagText.Foreground = GetFlagColor(e.NewFlag);
             });
-        }
-
-        private void EnableLighting_Changed(object sender, RoutedEventArgs e)
-        {
-            // Future: Save to settings and enable/disable lighting
-            var isEnabled = EnableLightingCheckBox.IsChecked ?? false;
-            
-            if (isEnabled)
-            {
-                StatusText.Text = "Active";
-                StatusText.Foreground = Brushes.Green;
-            }
-            else
-            {
-                StatusText.Text = "Disabled";
-                StatusText.Foreground = Brushes.Gray;
-                
-                // Clear any active flags
-                _ = Task.Run(async () => await _lightingService.UpdateForFlagAsync(FlagStatus.None));
-            }
         }
 
         private async void TestFlag_Click(object sender, RoutedEventArgs e)

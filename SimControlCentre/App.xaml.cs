@@ -29,6 +29,22 @@ public partial class App : Application
     private LightingService? _lightingService;
     public AppSettings Settings { get; private set; } = new();
 
+    /// <summary>
+    /// Saves current settings to disk
+    /// </summary>
+    public void SaveSettings()
+    {
+        try
+        {
+            _configService.Save(Settings);
+            Logger.Info("App", "Settings saved successfully");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("App", "Failed to save settings", ex);
+        }
+    }
+
     public App()
     {
         // Add global exception handlers
@@ -104,9 +120,35 @@ public partial class App : Application
             // Initialize lighting service
             _lightingService = new LightingService();
             
-            // Register GoXLR lighting plugin
-            var goxlrPlugin = new GoXLRLightingPlugin(_goXLRService, Settings);
-            _lightingService.RegisterPlugin(goxlrPlugin);
+            // Register GoXLR lighting plugin if enabled
+            if (Settings.Lighting.EnabledPlugins.GetValueOrDefault("goxlr", true))
+            {
+                Logger.Info("App", "GoXLR lighting plugin enabled, registering...");
+                var goxlrPlugin = new GoXLRLightingPlugin(_goXLRService, Settings);
+                
+                // Apply saved button selection
+                if (Settings.Lighting.GoXlrSelectedButtons?.Any() == true)
+                {
+                    goxlrPlugin.ApplyConfiguration(new Dictionary<string, object>
+                    {
+                        { "selected_buttons", Settings.Lighting.GoXlrSelectedButtons }
+                    });
+                    Logger.Info("App", $"Loaded button selection: {string.Join(", ", Settings.Lighting.GoXlrSelectedButtons)}");
+                }
+                
+                _lightingService.RegisterPlugin(goxlrPlugin);
+            }
+            else
+            {
+                Logger.Info("App", "GoXLR lighting plugin disabled in settings");
+            }
+            
+            // TODO: Future plugins (Philips Hue, Nanoleaf, etc.)
+            // if (Settings.Lighting.EnabledPlugins.GetValueOrDefault("hue", false))
+            // {
+            //     var huePlugin = new PhilipsHuePlugin(Settings);
+            //     _lightingService.RegisterPlugin(huePlugin);
+            // }
             
             // Initialize all plugins and wait for completion
             Logger.Info("App", "Initializing lighting devices...");

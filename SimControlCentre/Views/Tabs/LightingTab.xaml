@@ -21,7 +21,37 @@
                     <TextBlock Text="When enabled, connected lighting devices will display racing flag colors."
                                TextWrapping="Wrap"
                                Foreground="Gray"
-                               FontSize="11"/>
+                               FontSize="11"
+                               Margin="0,0,0,15"/>
+                    
+                    <TextBlock Text="Enabled Plugins:"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,5"/>
+                    
+                    <!-- Plugin Enable/Disable -->
+                    <CheckBox x:Name="EnableGoXlrPluginCheckBox"
+                              Content="GoXLR Lighting"
+                              IsChecked="True"
+                              Checked="PluginEnabled_Changed"
+                              Unchecked="PluginEnabled_Changed"
+                              Tag="goxlr"
+                              Margin="0,0,0,5"/>
+                    
+                    <CheckBox x:Name="EnableHuePluginCheckBox"
+                              Content="Philips Hue (coming soon)"
+                              IsChecked="False"
+                              IsEnabled="False"
+                              Tag="hue"
+                              Margin="0,0,0,5"
+                              Foreground="Gray"/>
+                    
+                    <CheckBox x:Name="EnableNanoleafPluginCheckBox"
+                              Content="Nanoleaf (coming soon)"
+                              IsChecked="False"
+                              IsEnabled="False"
+                              Tag="nanoleaf"
+                              Margin="0,0,0,5"
+                              Foreground="Gray"/>
                 </StackPanel>
             </GroupBox>
 
