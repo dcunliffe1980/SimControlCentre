@@ -79,6 +79,9 @@ namespace SimControlCentre.Views.Tabs
                         _settings.Lighting.EnableFlagLighting = false;
                         _configService.Save(_settings);
                     }
+                    
+                    // Notify MainWindow to refresh LightingTab
+                    _mainWindow?.RefreshLightingTab();
                 }
                 
                 // Update UI visibility

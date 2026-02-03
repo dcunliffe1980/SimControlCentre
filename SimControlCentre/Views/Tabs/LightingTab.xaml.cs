@@ -36,7 +36,7 @@ namespace SimControlCentre.Views.Tabs
             });
         }
 
-        private void CheckPluginAvailability()
+        public void CheckPluginAvailability()
         {
             // Check if any lighting plugins are enabled
             bool hasEnabledPlugins = _lightingService.Plugins.Any(p => p.IsEnabled);
@@ -47,6 +47,11 @@ namespace SimControlCentre.Views.Tabs
                 EnableLightingCheckBox.IsEnabled = false;
                 EnableLightingCheckBox.IsChecked = false;
                 NoPluginsWarning.Visibility = Visibility.Visible;
+                
+                // Also disable flag lighting in settings
+                var app = (App)Application.Current;
+                app.Settings.Lighting.EnableFlagLighting = false;
+                app.SaveSettings();
             }
             else
             {

@@ -100,6 +100,11 @@ namespace SimControlCentre
             _hotkeysTab?.RefreshHotkeys();
         }
 
+        public void RefreshLightingTab()
+        {
+            _lightingTab?.CheckPluginAvailability();
+        }
+
         private void RestoreWindowSettings()
         {
             if (_settings.Window.Width > 0 && _settings.Window.Height > 0)
