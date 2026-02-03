@@ -87,13 +87,6 @@ namespace SimControlCentre.Views.Tabs
                     UpdateGoXlrComponentsVisibility();
                 }
                 
-                // Show message about effect
-                string message = isEnabled 
-                    ? $"Plugin '{pluginId}' has been enabled. Lighting features are now available."
-                    : $"Plugin '{pluginId}' has been disabled. All GoXLR functionality has been disabled.";
-                
-                MessageBox.Show(message, "Plugin Status Changed", MessageBoxButton.OK, MessageBoxImage.Information);
-                
                 Logger.Info("Plugins", $"Plugin '{pluginId}' {(isEnabled ? "enabled" : "disabled")}");
             }
         }

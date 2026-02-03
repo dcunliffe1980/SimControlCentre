@@ -37,6 +37,13 @@ namespace SimControlCentre.Views.Tabs
                 _updateCheckService.StatusChanged += OnUpdateCheckStatusChanged;
             }
 
+            // Initialize PluginsTab at startup
+            var lightingService = App.GetLightingService();
+            if (lightingService != null)
+            {
+                _pluginsTab = new PluginsTab(_configService, _settings, lightingService, _mainWindow);
+            }
+
             // Select first category by default
             CategoryListBox.SelectedIndex = 0;
         }
@@ -397,15 +404,10 @@ namespace SimControlCentre.Views.Tabs
             };
             SettingsContent.Children.Add(title);
 
-            // Embed the ControllersTab content if available
+            // Add the entire UserControl to the settings content
             if (_controllersTab != null)
             {
-                var controllersContent = _controllersTab.Content as UIElement;
-                if (controllersContent != null)
-                {
-                    _controllersTab.Content = null; // Detach from original parent
-                    SettingsContent.Children.Add(controllersContent);
-                }
+                SettingsContent.Children.Add(_controllersTab);
             }
             else
             {
@@ -423,25 +425,10 @@ namespace SimControlCentre.Views.Tabs
 
         private void LoadPluginsSettings()
         {
-            // Initialize plugins tab if not already done
-            if (_pluginsTab == null)
-            {
-                var lightingService = App.GetLightingService();
-                if (lightingService != null)
-                {
-                    _pluginsTab = new PluginsTab(_configService, _settings, lightingService, _mainWindow);
-                }
-            }
-
-            // Embed the PluginsTab content if available
+            // Add the entire UserControl to the settings content
             if (_pluginsTab != null)
             {
-                var pluginsContent = _pluginsTab.Content as UIElement;
-                if (pluginsContent != null)
-                {
-                    _pluginsTab.Content = null; // Detach from original parent
-                    SettingsContent.Children.Add(pluginsContent);
-                }
+                SettingsContent.Children.Add(_pluginsTab);
             }
             else
             {
