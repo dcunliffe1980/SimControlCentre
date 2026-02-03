@@ -158,7 +158,24 @@ namespace SimControlCentre.Services
         /// </summary>
         public static List<IDeviceControlPlugin> GetDeviceControlPlugins(List<IPlugin> plugins)
         {
-            return plugins.OfType<IDeviceControlPlugin>().ToList();
+            Logger.Info("Plugin Loader", $"GetDeviceControlPlugins called with {plugins.Count} plugins");
+            foreach (var plugin in plugins)
+            {
+                Logger.Info("Plugin Loader", $"Plugin '{plugin.PluginId}' type: {plugin.GetType().Name}");
+                bool isDeviceControl = plugin is IDeviceControlPlugin;
+                Logger.Info("Plugin Loader", $"  Is IDeviceControlPlugin: {isDeviceControl}");
+                
+                var interfaces = plugin.GetType().GetInterfaces();
+                Logger.Info("Plugin Loader", $"  Implements {interfaces.Length} interfaces:");
+                foreach (var iface in interfaces)
+                {
+                    Logger.Info("Plugin Loader", $"    - {iface.FullName}");
+                }
+            }
+            
+            var result = plugins.OfType<IDeviceControlPlugin>().ToList();
+            Logger.Info("Plugin Loader", $"GetDeviceControlPlugins returning {result.Count} plugins");
+            return result;
         }
     }
 }
