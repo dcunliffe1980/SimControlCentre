@@ -34,11 +34,18 @@ namespace SimControlCentre.Services
         public double Progress => _recording != null && _recording.Snapshots.Count > 0
             ? (double)_currentSnapshotIndex / _recording.Snapshots.Count
             : 0;
+        
+        public double CurrentTime => _recording != null && _currentSnapshotIndex > 0 && _currentSnapshotIndex <= _recording.Snapshots.Count
+            ? _recording.Snapshots[_currentSnapshotIndex - 1].TimestampMs / 1000.0
+            : 0;
+        
+        public double TotalDuration => _recording?.Metadata.DurationSeconds ?? 0;
 
         public event EventHandler<TelemetryUpdatedEventArgs>? TelemetryUpdated;
         public event EventHandler<bool>? ConnectionChanged;
 
         public void LoadRecording(TelemetryRecording recording)
+
         {
             Stop();
             _recording = recording;
@@ -171,8 +178,36 @@ namespace SimControlCentre.Services
                 Stop();
             }
         }
+        
+        /// <summary>
+        /// Seek to a specific position in the recording (0.0 to 1.0)
+        /// </summary>
+        public void Seek(double position)
+        {
+            if (_recording == null) return;
+            
+            position = Math.Max(0, Math.Min(1.0, position));
+            
+            var targetIndex = (int)(position * _recording.Snapshots.Count);
+            targetIndex = Math.Max(0, Math.Min(_recording.Snapshots.Count - 1, targetIndex));
+            
+            _currentSnapshotIndex = targetIndex;
+            
+            // Update playback start time to match the new position
+            if (_currentSnapshotIndex < _recording.Snapshots.Count)
+            {
+                var targetTimeMs = _recording.Snapshots[_currentSnapshotIndex].TimestampMs;
+                _playbackStartTime = DateTime.Now.AddMilliseconds(-targetTimeMs / _playbackSpeed);
+                
+                // Send telemetry update for the new position
+                TelemetryUpdated?.Invoke(this, new TelemetryUpdatedEventArgs(_recording.Snapshots[_currentSnapshotIndex].Data));
+                
+                Logger.Info("Telemetry Playback", $"Seeked to {position:P0} (snapshot {_currentSnapshotIndex}/{_recording.Snapshots.Count})");
+            }
+        }
 
         public void Dispose()
+
         {
             if (_isDisposed) return;
 

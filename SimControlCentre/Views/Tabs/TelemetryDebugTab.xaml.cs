@@ -31,9 +31,19 @@ namespace SimControlCentre.Views.Tabs
             _telemetryService.ConnectionChanged += OnConnectionChanged;
             _telemetryService.FlagChanged += OnFlagChanged;
             
+            // Handle canvas resize to redraw markers
+            FlagMarkersCanvas.SizeChanged += (s, e) =>
+            {
+                if (e.WidthChanged)
+                {
+                    RenderFlagMarkers();
+                }
+            };
+            
             UpdateConnectionStatus();
             LoadAvailableRecordings();
         }
+
 
         private void OnTelemetryUpdated(object? sender, TelemetryUpdatedEventArgs e)
         {
@@ -309,6 +319,23 @@ namespace SimControlCentre.Views.Tabs
                 DeleteRecordingButton.IsEnabled = true;
                 PlaybackStatusText.Text = "Ready to play";
                 PlaybackStatusText.Foreground = Brushes.Gray;
+                
+                // Load recording and build timeline markers
+                var filePath = item.Tag as string;
+                if (filePath != null)
+                {
+                    var recording = _telemetryService.Recorder.LoadRecording(filePath);
+                    if (recording != null)
+                    {
+                        BuildFlagMarkers(recording);
+                        TimelinePanel.Visibility = Visibility.Visible;
+                        
+                        // Update time display
+                        TotalTimeText.Text = FormatTime(recording.Metadata.DurationSeconds);
+                        CurrentTimeText.Text = "0:00";
+                        TimelineSlider.Value = 0;
+                    }
+                }
             }
             else
             {
@@ -316,8 +343,10 @@ namespace SimControlCentre.Views.Tabs
                 DeleteRecordingButton.IsEnabled = false;
                 PlaybackStatusText.Text = "No recording selected";
                 PlaybackStatusText.Foreground = Brushes.Gray;
+                TimelinePanel.Visibility = Visibility.Collapsed;
             }
         }
+
 
         private void Play_Click(object sender, RoutedEventArgs e)
         {
@@ -350,10 +379,10 @@ namespace SimControlCentre.Views.Tabs
             PlaybackStatusText.Text = $"Playing: {recording.Metadata.Description}";
             PlaybackStatusText.Foreground = Brushes.Green;
             
-            // Start timer to update playback status
+            // Start timer to update playback status and timeline
             _playbackTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(250)
+                Interval = TimeSpan.FromMilliseconds(100) // Update more frequently for smooth timeline
             };
             _playbackTimer.Tick += (s, args) =>
             {
@@ -362,12 +391,16 @@ namespace SimControlCentre.Views.Tabs
                     var progress = _playbackProvider.Progress * 100;
                     PlaybackStatusText.Text = $"Playing: {progress:F0}%";
                     
+                    // Update timeline
+                    UpdateTimelineUI();
+                    
                     if (!_playbackProvider.IsPlaying && !_playbackProvider.Loop)
                     {
                         StopPlayback_Click(this, new RoutedEventArgs());
                     }
                 }
             };
+
             _playbackTimer.Start();
             
             AddRawLogEntry("========================================");
@@ -427,6 +460,197 @@ namespace SimControlCentre.Views.Tabs
                 }
             }
         }
+        
+        // ==================== Timeline/Scrubbing ====================
+        
+        private bool _isUserScrubbing = false;
+        private List<FlagChangeMarker> _flagMarkers = new();
+        
+        private void TimelineSlider_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            _isUserScrubbing = true;
+            _playbackTimer?.Stop(); // Pause playback while scrubbing
+        }
+        
+        private void TimelineSlider_PreviewMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            _isUserScrubbing = false;
+            
+            // Seek to the selected position
+            if (_playbackProvider != null)
+            {
+                var position = TimelineSlider.Value / 100.0; // 0.0 to 1.0
+                _playbackProvider.Seek(position);
+                
+                Logger.Info("Telemetry Debug", $"Seeked to {position:P0}");
+            }
+            
+            // Resume playback if it was playing
+            if (_playbackProvider?.IsPlaying == true && _playbackTimer != null)
+            {
+                _playbackTimer.Start();
+            }
+        }
+        
+        private void TimelineSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_isUserScrubbing && _playbackProvider != null)
+            {
+                // Update time display while scrubbing
+                var position = e.NewValue / 100.0;
+                var currentSeconds = position * _playbackProvider.TotalDuration;
+                CurrentTimeText.Text = FormatTime(currentSeconds);
+            }
+        }
+        
+        private void UpdateTimelineUI()
+        {
+            if (_playbackProvider == null) return;
+            
+            // Update slider position
+            if (!_isUserScrubbing)
+            {
+                TimelineSlider.Value = _playbackProvider.Progress * 100.0;
+            }
+            
+            // Update time display
+            CurrentTimeText.Text = FormatTime(_playbackProvider.CurrentTime);
+            TotalTimeText.Text = FormatTime(_playbackProvider.TotalDuration);
+        }
+        
+        private void BuildFlagMarkers(TelemetryRecording recording)
+        {
+            _flagMarkers.Clear();
+            FlagMarkersCanvas.Children.Clear();
+            FlagLegendPanel.Children.Clear();
+            
+            // Add legend label
+            var legendLabel = new TextBlock
+            {
+                Text = "Markers: ",
+                FontSize = 10,
+                Foreground = Brushes.Gray,
+                Margin = new Thickness(0, 0, 10, 0)
+            };
+            FlagLegendPanel.Children.Add(legendLabel);
+            
+            if (recording == null || recording.Snapshots.Count == 0)
+            {
+                return;
+            }
+            
+            // Find all flag changes
+            FlagStatus? previousFlag = null;
+            var uniqueFlags = new HashSet<FlagStatus>();
+            
+            for (int i = 0; i < recording.Snapshots.Count; i++)
+            {
+                var snapshot = recording.Snapshots[i];
+                var currentFlag = snapshot.Data.CurrentFlag;
+                
+                // Detect flag change
+                if (previousFlag.HasValue && currentFlag != previousFlag.Value)
+                {
+                    var position = (double)i / recording.Snapshots.Count;
+                    _flagMarkers.Add(new FlagChangeMarker
+                    {
+                        Position = position,
+                        FromFlag = previousFlag.Value,
+                        ToFlag = currentFlag,
+                        SnapshotIndex = i
+                    });
+                    
+                    uniqueFlags.Add(currentFlag);
+                }
+                
+                previousFlag = currentFlag;
+            }
+            
+            // Render markers on canvas
+            RenderFlagMarkers();
+            
+            // Build legend
+            BuildFlagLegend(uniqueFlags);
+            
+            Logger.Info("Telemetry Debug", $"Found {_flagMarkers.Count} flag changes");
+        }
+        
+        private void RenderFlagMarkers()
+        {
+            FlagMarkersCanvas.Children.Clear();
+            
+            if (FlagMarkersCanvas.ActualWidth == 0) return;
+            
+            foreach (var marker in _flagMarkers)
+            {
+                var x = marker.Position * FlagMarkersCanvas.ActualWidth;
+                
+                // Draw vertical line
+                var line = new System.Windows.Shapes.Line
+                {
+                    X1 = x,
+                    Y1 = 0,
+                    X2 = x,
+                    Y2 = 30,
+                    Stroke = GetFlagColor(marker.ToFlag),
+                    StrokeThickness = 2,
+                    ToolTip = $"{marker.FromFlag} ? {marker.ToFlag}"
+                };
+                
+                FlagMarkersCanvas.Children.Add(line);
+            }
+        }
+        
+        private void BuildFlagLegend(HashSet<FlagStatus> flags)
+        {
+            foreach (var flag in flags.OrderBy(f => f))
+            {
+                var legendItem = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Margin = new Thickness(0, 0, 10, 0)
+                };
+                
+                // Color indicator
+                var colorBox = new System.Windows.Shapes.Rectangle
+                {
+                    Width = 12,
+                    Height = 12,
+                    Fill = GetFlagColor(flag),
+                    Margin = new Thickness(0, 0, 4, 0),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                legendItem.Children.Add(colorBox);
+                
+                // Flag name
+                var flagText = new TextBlock
+                {
+                    Text = flag.ToString(),
+                    FontSize = 10,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                legendItem.Children.Add(flagText);
+                
+                FlagLegendPanel.Children.Add(legendItem);
+            }
+        }
+        
+        private string FormatTime(double seconds)
+        {
+            var ts = TimeSpan.FromSeconds(seconds);
+            return ts.TotalMinutes >= 10 
+                ? $"{(int)ts.TotalMinutes}:{ts.Seconds:D2}" 
+                : $"{(int)ts.TotalMinutes}:{ts.Seconds:D2}";
+        }
+        
+        private class FlagChangeMarker
+        {
+            public double Position { get; set; } // 0.0 to 1.0
+            public FlagStatus FromFlag { get; set; }
+            public FlagStatus ToFlag { get; set; }
+            public int SnapshotIndex { get; set; }
+        }
     }
 }
+
 

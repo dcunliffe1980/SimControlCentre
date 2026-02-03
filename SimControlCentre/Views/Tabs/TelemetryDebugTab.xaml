@@ -97,7 +97,70 @@
                               VerticalAlignment="Center"
                               Margin="0,0,0,10"/>
                     
+                    <!-- Timeline Scrubber -->
+                    <Border BorderBrush="#E0E0E0" 
+                            BorderThickness="1" 
+                            CornerRadius="4" 
+                            Padding="10"
+                            Margin="0,0,0,10"
+                            Visibility="Collapsed"
+                            x:Name="TimelinePanel">
+                        <StackPanel>
+                            <TextBlock Text="Timeline" 
+                                       FontWeight="SemiBold" 
+                                       Margin="0,0,0,5"/>
+                            
+                            <!-- Time display -->
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                <TextBlock x:Name="CurrentTimeText" 
+                                           Text="0:00" 
+                                           FontFamily="Consolas"
+                                           FontSize="12"/>
+                                <TextBlock Text=" / " 
+                                           Margin="3,0"
+                                           FontSize="12"/>
+                                <TextBlock x:Name="TotalTimeText" 
+                                           Text="0:00"
+                                           FontFamily="Consolas"
+                                           FontSize="12"
+                                           Foreground="Gray"/>
+                            </StackPanel>
+                            
+                            <!-- Timeline with flag markers -->
+                            <Grid Height="40" Margin="0,5,0,0">
+                                <!-- Flag change markers (rendered behind slider) -->
+                                <Canvas x:Name="FlagMarkersCanvas" 
+                                        Background="Transparent"
+                                        Height="30"
+                                        VerticalAlignment="Top"/>
+                                
+                                <!-- Scrubber slider -->
+                                <Slider x:Name="TimelineSlider"
+                                        Minimum="0"
+                                        Maximum="100"
+                                        Value="0"
+                                        TickFrequency="1"
+                                        IsSnapToTickEnabled="False"
+                                        VerticalAlignment="Bottom"
+                                        ValueChanged="TimelineSlider_ValueChanged"
+                                        PreviewMouseDown="TimelineSlider_PreviewMouseDown"
+                                        PreviewMouseUp="TimelineSlider_PreviewMouseUp"/>
+                            </Grid>
+                            
+                            <!-- Flag legend -->
+                            <StackPanel Orientation="Horizontal" 
+                                        Margin="0,5,0,0"
+                                        x:Name="FlagLegendPanel">
+                                <TextBlock Text="Markers: " 
+                                           FontSize="10" 
+                                           Foreground="Gray"
+                                           Margin="0,0,10,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    
                     <TextBlock x:Name="PlaybackStatusText" 
+
                                Text="No recording selected" 
                                FontSize="11" 
                                Foreground="Gray"/>
