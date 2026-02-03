@@ -165,7 +165,10 @@ public partial class App : Application
             }
             
             // Register device control plugins (always register, just set IsEnabled)
+            Logger.Info("App", "Getting device control plugins...");
             var deviceControlPlugins = PluginLoader.GetDeviceControlPlugins(loadedPlugins);
+            Logger.Info("App", $"Found {deviceControlPlugins.Count} device control plugin(s)");
+            
             foreach (var plugin in deviceControlPlugins)
             {
                 // Check if component is enabled
@@ -177,6 +180,8 @@ public partial class App : Application
                 Logger.Info("App", $"Registering device control plugin: {plugin.DisplayName} (Enabled: {isEnabled})");
                 _deviceControlService.RegisterPlugin(plugin);
             }
+            
+
             
 
             
