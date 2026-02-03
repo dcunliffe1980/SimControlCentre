@@ -116,6 +116,7 @@ public class GoXLRService : IDisposable
         return new VolumeChangeResult { Success = false, Message = "Failed to adjust volume. Check if GoXLR Utility is running and serial number is correct." };
     }
     
+    
     /// <summary>
     /// Pre-warms the volume cache for a channel to avoid first-press delays
     /// </summary>
@@ -131,6 +132,40 @@ public class GoXLRService : IDisposable
         catch
         {
             // Silently ignore cache warming failures
+        }
+    }
+
+    /// <summary>
+    /// Pre-warms the button color API to avoid first-press delays
+    /// Makes a dummy call to establish HTTP connection and cache
+    /// </summary>
+    public async Task WarmButtonColorApiAsync()
+    {
+        if (_apiClient == null || !IsConfigured)
+        {
+            Logger.Warning("GoXLR Service", "Cannot warm button API - not configured");
+            return;
+        }
+
+        try
+        {
+            Logger.Info("GoXLR Service", "Warming button color API...");
+            
+            // Get current device status to establish HTTP connection
+            var status = await _apiClient.GetDeviceStatusAsync(SerialNumber);
+            
+            if (status != null)
+            {
+                Logger.Info("GoXLR Service", "? Button color API connection established and ready");
+            }
+            else
+            {
+                Logger.Warning("GoXLR Service", "Button API warmup returned null status");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("GoXLR Service", $"Could not warm button API: {ex.Message}");
         }
     }
 

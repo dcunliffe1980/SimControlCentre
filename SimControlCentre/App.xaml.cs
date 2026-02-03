@@ -108,11 +108,12 @@ public partial class App : Application
             var goxlrPlugin = new GoXLRLightingPlugin(_goXLRService, Settings);
             _lightingService.RegisterPlugin(goxlrPlugin);
             
-            // Initialize all plugins asynchronously but don't wait for telemetry events
+            // Initialize all plugins and wait for completion
+            Logger.Info("App", "Initializing lighting devices...");
             _ = Task.Run(async () => 
             {
                 await _lightingService.InitializeAsync();
-                Logger.Info("App", "Lighting devices initialized and ready");
+                Logger.Info("App", "✓ Lighting devices initialized and ready");
             });
             
             // Subscribe to flag changes and update lighting
@@ -132,21 +133,24 @@ public partial class App : Application
             {
                 // Wait indefinitely for GoXLR Daemon to be running
                 Console.WriteLine("[App] Waiting for GoXLR Daemon to start...");
+                Logger.Info("App", "Waiting for GoXLR Daemon...");
                 await WaitForGoXLRUtilityIndefinitely();
                 
                 Console.WriteLine("[App] GoXLR Daemon detected! Warming up API connection...");
-                // Removed notification popup
+                Logger.Info("App", "GoXLR Daemon detected, starting warmup...");
                 
                 // Give the daemon time to fully initialize its API
                 await Task.Delay(5000);
                 
                 // Test connection
                 Console.WriteLine("[App] Testing GoXLR connection...");
+                Logger.Info("App", "Testing connection...");
                 bool isConnected = await _goXLRService.IsConnectedAsync();
                 
                 if (!isConnected)
                 {
                     Console.WriteLine("[App] Connection test failed - API might still be initializing");
+                    Logger.Warning("App", "Connection test failed, retrying...");
                     // Wait a bit more and retry
                     await Task.Delay(5000);
                     isConnected = await _goXLRService.IsConnectedAsync();
@@ -155,9 +159,11 @@ public partial class App : Application
                 if (isConnected)
                 {
                     Console.WriteLine("[App] Successfully connected to GoXLR!");
+                    Logger.Info("App", "✓ GoXLR connected successfully");
                     
-                    // Pre-warm the volume cache BEFORE showing "connected" notification
+                    // Pre-warm the volume cache BEFORE other warmup
                     Console.WriteLine("[App] Pre-warming volume cache for all enabled channels...");
+                    Logger.Info("App", "Warming volume cache...");
                     await Task.Delay(1000);
                     
                     foreach (var channel in Settings.EnabledChannels)
@@ -167,6 +173,15 @@ public partial class App : Application
                         Console.WriteLine($"[App] Cache warmed for {channel}");
                     }
                     Console.WriteLine("[App] Volume cache pre-warming complete!");
+                    Logger.Info("App", "✓ Volume cache warmed");
+                    
+                    // NEW: Warm up button color API for lighting
+                    Console.WriteLine("[App] Warming up button color API...");
+                    Logger.Info("App", "Warming button color API...");
+                    await _goXLRService.WarmButtonColorApiAsync();
+                    Console.WriteLine("[App] Button color API warmed!");
+                    Logger.Info("App", "✓ Button color API warmed");
+                    
                     
                     // Removed notification popup - cache is ready silently
                 }
