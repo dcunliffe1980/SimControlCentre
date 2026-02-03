@@ -16,22 +16,39 @@ Located in root directory:
 
 ### Building Process
 
-#### 1. Update Version Number
-Before building, update version in:
-- `SimControlCentre/SimControlCentre.csproj`:
-  ```xml
-  <AssemblyVersion>1.2.0</AssemblyVersion>
-  <FileVersion>1.2.0</FileVersion>
-  <Version>1.2.0</Version>
-  ```
+The `build-release.ps1` script automates everything:
 
-#### 2. Run Build Script
+**What it does**:
+1. **Cleans** previous builds
+2. **Creates** `Installers/` folder
+3. **Builds framework-dependent** version (~1MB)
+   - Uses `dotnet publish` with `--self-contained false`
+   - Output: `SimControlCentre\bin\Release\Publish`
+4. **Builds self-contained** version (~155MB) 
+   - Uses `dotnet publish` with `--self-contained true`
+   - Single file with compression
+   - Output: `SimControlCentre\bin\Release\net8.0-windows\win-x64\publish`
+5. **Creates installers** with Inno Setup (if installed)
+   - Framework-dependent: Runs `installer.iss`
+   - Standalone: Runs `installer-standalone.iss`
+
+**Run the script**:
 ```powershell
-# Close the app first!
+# IMPORTANT: Close SimControlCentre.exe first!
 .\build-release.ps1
 ```
 
-This creates two installers in `Installers/` folder:
+**Script Output**:
+- ? Cleaned previous builds
+- ? Framework-dependent build (~1MB)
+- ? Self-contained build (~155MB)
+- ? Framework-dependent installer (~3MB) ? `Installers/`
+- ? Standalone installer (~70MB) ? `Installers/`
+
+**Requirements**:
+- .NET 8 SDK installed
+- Inno Setup 6 installed at `C:\Program Files (x86)\Inno Setup 6\ISCC.exe`
+- App must be closed (or build will fail with "file locked")
 
 #### 3. Output Files
 
