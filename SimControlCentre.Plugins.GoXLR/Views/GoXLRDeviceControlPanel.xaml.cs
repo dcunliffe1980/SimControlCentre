@@ -636,21 +636,22 @@ namespace SimControlCentre.Plugins.GoXLR.Views
                 var eventInfo = directInputService.GetType().GetEvent("ButtonPressed");
                 if (eventInfo != null)
                 {
-                    // Create a lambda wrapper to avoid signature matching issues
-                    // EventHandler<string> signature: (object? sender, string e)
-                    Action<object?, string> wrapper = (sender, buttonString) =>
+                    // Get our wrapper method that has the exact signature
+                    var methodInfo = GetType().GetMethod("ButtonPressedHandler", 
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    
+                    if (methodInfo != null)
                     {
-                        OnCombinedButtonCaptured(sender, buttonString);
-                    };
-                    
-                    _buttonPressedHandler = Delegate.CreateDelegate(
-                        eventInfo.EventHandlerType!, 
-                        wrapper.Target, 
-                        wrapper.Method);
-                    
-                    eventInfo.AddEventHandler(directInputService, _buttonPressedHandler);
+                        _buttonPressedHandler = Delegate.CreateDelegate(
+                            eventInfo.EventHandlerType!, 
+                            this, 
+                            methodInfo);
+                        
+                        eventInfo.AddEventHandler(directInputService, _buttonPressedHandler);
+                    }
                 }
             }
+
 
 
 
@@ -754,6 +755,13 @@ namespace SimControlCentre.Plugins.GoXLR.Views
                 PopulateUI();
             });
         }
+
+        // Wrapper method that exactly matches EventHandler<string> signature for reflection
+        private void ButtonPressedHandler(object sender, string e)
+        {
+            OnCombinedButtonCaptured(sender, e);
+        }
+
 
         private void SaveCombinedHotkey(string? channel, string? action, string? keyboard, string? button)
         {
