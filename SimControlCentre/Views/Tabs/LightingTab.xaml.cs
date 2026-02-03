@@ -26,7 +26,6 @@ namespace SimControlCentre.Views.Tabs
             _telemetryService.FlagChanged += OnFlagChanged;
             
             LoadSettings();
-            UpdateDevicesList();
             
             // Load button selection after a short delay to allow device detection
             _ = Task.Run(async () =>
@@ -52,20 +51,22 @@ namespace SimControlCentre.Views.Tabs
                 {
                     var currentSelection = (List<string>?)buttonOption.DefaultValue ?? new List<string>();
                     
-                    foreach (var button in buttonOption.AvailableOptions)
+                foreach (var button in buttonOption.AvailableOptions)
+                {
+                    var checkbox = new CheckBox
                     {
-                        var checkbox = new CheckBox
-                        {
-                            Content = button,
-                            IsChecked = currentSelection.Contains(button),
-                            Margin = new Thickness(0, 0, 15, 5)
-                        };
-                        
-                        checkbox.Checked += ButtonSelection_Changed;
-                        checkbox.Unchecked += ButtonSelection_Changed;
-                        
-                        ButtonSelectionPanel.Children.Add(checkbox);
-                    }
+                        Content = GoXLRLightingPlugin.GetDisplayName(button),
+                        Tag = button, // Store internal ID in Tag
+                        IsChecked = currentSelection.Contains(button),
+                        Margin = new Thickness(0, 0, 15, 5),
+                        MinWidth = 120 // Consistent width for better layout
+                    };
+                    
+                    checkbox.Checked += ButtonSelection_Changed;
+                    checkbox.Unchecked += ButtonSelection_Changed;
+                    
+                    ButtonSelectionPanel.Children.Add(checkbox);
+                }
                 }
             }
         }
@@ -74,13 +75,11 @@ namespace SimControlCentre.Views.Tabs
         {
             if (_goxlrPlugin == null) return;
 
-            // Collect selected buttons
+            // Collect selected buttons using Tag (internal ID)
             var selectedButtons = ButtonSelectionPanel.Children
                 .OfType<CheckBox>()
-                .Where(cb => cb.IsChecked == true)
-                .Select(cb => cb.Content.ToString())
-                .Where(s => s != null)
-                .Cast<string>()
+                .Where(cb => cb.IsChecked == true && cb.Tag is string)
+                .Select(cb => (string)cb.Tag!)
                 .ToList();
 
             // Apply configuration
@@ -143,35 +142,6 @@ namespace SimControlCentre.Views.Tabs
                 MessageBoxImage.Information);
         }
 
-        private void UpdateDevicesList()
-        {
-            DevicesPanel.Children.Clear();
-
-            // Get registered devices via reflection (since LightingService doesn't expose them)
-            // For now, just show that GoXLR is registered
-            var deviceInfo = new StackPanel { Orientation = Orientation.Horizontal };
-            
-            var statusIcon = new TextBlock
-            {
-                Text = "?",
-                Foreground = Brushes.Green,
-                FontSize = 16,
-                Margin = new Thickness(0, 0, 10, 0),
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            
-            var deviceName = new TextBlock
-            {
-                Text = "GoXLR (Fader Button LEDs)",
-                FontWeight = FontWeights.SemiBold,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            
-            deviceInfo.Children.Add(statusIcon);
-            deviceInfo.Children.Add(deviceName);
-            
-            DevicesPanel.Children.Add(deviceInfo);
-        }
 
         private void OnFlagChanged(object? sender, FlagChangedEventArgs e)
         {

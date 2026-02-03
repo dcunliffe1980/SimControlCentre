@@ -21,44 +21,79 @@ namespace SimControlCentre.Services
         public string Description => "GoXLR fader mute button LEDs";
         public bool IsEnabled { get; set; } = true;
 
-        // All available buttons (will be filtered by device type)
-        // Note: Sampler buttons are virtual (software) and not useful for lighting
-        private static readonly List<string> FullSizeButtons = new()
-        {
-            // Fader Mute Buttons (physical hardware - best for lighting)
-            "Fader1Mute", "Fader2Mute", "Fader3Mute", "Fader4Mute",
-            
-            // Function Buttons (physical hardware)
-            "Bleep", "Cough",
-            
-            // Effect Selection Buttons (physical hardware - Full-size only)
-            "EffectSelect1", "EffectSelect2", "EffectSelect3",
-            "EffectSelect4", "EffectSelect5", "EffectSelect6",
-            
-            // Effect Type Buttons (physical hardware - Full-size only)
-            "EffectFx", "EffectMegaphone", "EffectRobot", "EffectHardTune",
-            
-            // Global Color Controls (affects all LEDs)
-            "Global", "Accent",
-            
-            // Fader Display Colors (scribble strip colors)
-            "FaderA", "FaderB", "FaderC", "FaderD"
-        };
+    // All available buttons (will be filtered by device type)
+    // Note: Sampler buttons are virtual (software) and not useful for lighting
+    private static readonly List<string> FullSizeButtons = new()
+    {
+        // Global Color Controls (affects all LEDs)
+        "Global", "Accent",
+        
+        // Fader Display Colors (scribble strip colors)
+        "FaderA", "FaderB", "FaderC", "FaderD",
+        
+        // Fader Mute Buttons (physical hardware - best for lighting)
+        "Fader1Mute", "Fader2Mute", "Fader3Mute", "Fader4Mute",
+        
+        // Function Buttons (physical hardware)
+        "Bleep", "Cough",
+        
+        // Effect Selection Buttons (physical hardware - Full-size only)
+        "EffectSelect1", "EffectSelect2", "EffectSelect3",
+        "EffectSelect4", "EffectSelect5", "EffectSelect6",
+        
+        // Effect Type Buttons (physical hardware - Full-size only)
+        "EffectFx", "EffectMegaphone", "EffectRobot", "EffectHardTune",
+    };
 
-        private static readonly List<string> MiniButtons = new()
-        {
-            // Fader Mute Buttons (physical hardware - Mini has 4 faders!)
-            "Fader1Mute", "Fader2Mute", "Fader3Mute", "Fader4Mute",
-            
-            // Function Buttons (physical hardware)
-            "Bleep", "Cough",
-            
-            // Global Color Controls (affects all LEDs)
-            "Global", "Accent",
-            
-            // Fader Display Colors (scribble strip colors - Mini has 4)
-            "FaderA", "FaderB", "FaderC", "FaderD"
-        };
+    private static readonly List<string> MiniButtons = new()
+    {
+        // Global Color Controls (affects all LEDs)
+        "Global", "Accent",
+        
+        // Fader Display Colors (scribble strip colors - Mini has 4)
+        "FaderA", "FaderB", "FaderC", "FaderD",
+        
+        // Fader Mute Buttons (physical hardware - Mini has 4 faders!)
+        "Fader1Mute", "Fader2Mute", "Fader3Mute", "Fader4Mute",
+        
+        // Function Buttons (physical hardware)
+        "Bleep", "Cough",
+    };
+
+    // Display name mapping for user-friendly labels
+    private static readonly Dictionary<string, string> ButtonDisplayNames = new()
+    {
+        { "Global", "Global" },
+        { "Accent", "Accent" },
+        { "FaderA", "Fader 1" },
+        { "FaderB", "Fader 2" },
+        { "FaderC", "Fader 3" },
+        { "FaderD", "Fader 4" },
+        { "Fader1Mute", "Fader 1 Mute" },
+        { "Fader2Mute", "Fader 2 Mute" },
+        { "Fader3Mute", "Fader 3 Mute" },
+        { "Fader4Mute", "Fader 4 Mute" },
+        { "Bleep", "Bleep" },
+        { "Cough", "Cough" },
+        { "EffectSelect1", "Effect Select 1" },
+        { "EffectSelect2", "Effect Select 2" },
+        { "EffectSelect3", "Effect Select 3" },
+        { "EffectSelect4", "Effect Select 4" },
+        { "EffectSelect5", "Effect Select 5" },
+        { "EffectSelect6", "Effect Select 6" },
+        { "EffectFx", "Effect FX" },
+        { "EffectMegaphone", "Effect Megaphone" },
+        { "EffectRobot", "Effect Robot" },
+        { "EffectHardTune", "Effect Hard Tune" },
+    };
+
+    // Get display name for a button ID
+    public static string GetDisplayName(string buttonId)
+    {
+        return ButtonDisplayNames.TryGetValue(buttonId, out var displayName) 
+            ? displayName 
+            : buttonId;
+    }
 
         // Exposed list of available buttons based on device type
         public List<string> AvailableButtons { get; private set; } = new();

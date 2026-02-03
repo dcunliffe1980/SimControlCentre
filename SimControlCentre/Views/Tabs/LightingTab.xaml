@@ -4,7 +4,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="20">
             <!-- Title -->
-            <TextBlock Text="Flag Lighting" 
+            <TextBlock Text="Lighting" 
                        FontSize="24" 
                        FontWeight="Bold" 
                        Margin="0,0,0,20"/>
@@ -36,31 +36,6 @@
                               Unchecked="PluginEnabled_Changed"
                               Tag="goxlr"
                               Margin="0,0,0,5"/>
-                    
-                    <CheckBox x:Name="EnableHuePluginCheckBox"
-                              Content="Philips Hue (coming soon)"
-                              IsChecked="False"
-                              IsEnabled="False"
-                              Tag="hue"
-                              Margin="0,0,0,5"
-                              Foreground="Gray"/>
-                    
-                    <CheckBox x:Name="EnableNanoleafPluginCheckBox"
-                              Content="Nanoleaf (coming soon)"
-                              IsChecked="False"
-                              IsEnabled="False"
-                              Tag="nanoleaf"
-                              Margin="0,0,0,5"
-                              Foreground="Gray"/>
-                </StackPanel>
-            </GroupBox>
-
-            <!-- Connected Devices -->
-            <GroupBox Header="Connected Devices" Padding="10" Margin="0,0,0,15">
-                <StackPanel x:Name="DevicesPanel">
-                    <TextBlock Text="No devices registered" 
-                               Foreground="Gray"
-                               FontStyle="Italic"/>
                 </StackPanel>
             </GroupBox>
 
