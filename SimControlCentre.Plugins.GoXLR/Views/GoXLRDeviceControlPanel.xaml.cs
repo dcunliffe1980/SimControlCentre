@@ -24,9 +24,7 @@ namespace SimControlCentre.Plugins.GoXLR.Views
         private string? _captureChannel;
         private string? _captureAction;
         private int _captureTextBoxHash;
-        
-        // Store the delegate so we can unsubscribe later
-        private Delegate? _buttonPressedHandler;
+
 
 
         public GoXLRDeviceControlPanel(IPluginContext context, GoXLRDeviceControlPlugin plugin)
@@ -240,10 +238,12 @@ namespace SimControlCentre.Plugins.GoXLR.Views
             {
                 Content = "Clear",
                 Padding = new Thickness(8, 5, 8, 5),
-                Margin = new Thickness(0, 0, 15, 0),
+                Margin = new Thickness(0, 0, 0, 0),
                 Tag = $"{channel}|VolumeUp",
                 ToolTip = "Clear hotkey"
             };
+
+
             upClearButton.Click += ClearHotkey_Click;
             Grid.SetColumn(upClearButton, 4);
             channelGrid.Children.Add(upClearButton);
@@ -286,10 +286,12 @@ namespace SimControlCentre.Plugins.GoXLR.Views
             {
                 Content = "Clear",
                 Padding = new Thickness(8, 5, 8, 5),
-                Margin = new Thickness(0, 0, 15, 0),
+                Margin = new Thickness(0, 0, 0, 0),
                 Tag = $"{channel}|VolumeDown",
                 ToolTip = "Clear hotkey"
             };
+
+
             downClearButton.Click += ClearHotkey_Click;
             Grid.SetColumn(downClearButton, 8);
             channelGrid.Children.Add(downClearButton);
@@ -297,13 +299,14 @@ namespace SimControlCentre.Plugins.GoXLR.Views
             // Remove Channel Button
             var removeButton = new Button
             {
-                Content = "? Remove",
+                Content = "Remove",
                 Padding = new Thickness(8, 5, 8, 5),
-                Margin = new Thickness(10, 0, 0, 0),
+                Margin = new Thickness(5, 0, 0, 0),
                 Tag = channel,
-                ToolTip = $"Remove {channel} channel",
-                Background = System.Windows.Media.Brushes.LightCoral
+                ToolTip = $"Remove {channel} channel"
             };
+
+
             removeButton.Click += RemoveChannel_Click;
             Grid.SetColumn(removeButton, 9);
             channelGrid.Children.Add(removeButton);
@@ -420,9 +423,12 @@ namespace SimControlCentre.Plugins.GoXLR.Views
             {
                 Content = "Clear",
                 Padding = new Thickness(10, 5, 10, 5),
+                Margin = new Thickness(0, 0, 0, 0),
                 Tag = $"Profile|{profile}",
                 ToolTip = "Clear hotkey"
             };
+
+
             clearButton.Click += ClearHotkey_Click;
             Grid.SetColumn(clearButton, 3);
             profileGrid.Children.Add(clearButton);
@@ -430,13 +436,14 @@ namespace SimControlCentre.Plugins.GoXLR.Views
             // Remove Profile Button
             var removeButton = new Button
             {
-                Content = "? Remove",
+                Content = "Remove",
                 Padding = new Thickness(8, 5, 8, 5),
                 Margin = new Thickness(5, 0, 0, 0),
                 Tag = profile,
-                ToolTip = $"Remove {profile} profile",
-                Background = System.Windows.Media.Brushes.LightCoral
+                ToolTip = $"Remove {profile} profile"
             };
+
+
             removeButton.Click += RemoveProfile_Click;
             Grid.SetColumn(removeButton, 4);
             profileGrid.Children.Add(removeButton);
@@ -626,39 +633,43 @@ namespace SimControlCentre.Plugins.GoXLR.Views
             _captureTextBoxHash = int.Parse(parts[2]);
             _isCapturingCombined = true;
 
-            button.Content = "Press key or button...";
-            button.IsEnabled = false;
-            
-            // Subscribe to DirectInput button events using reflection
-            var directInputService = GetDirectInputService();
-            if (directInputService != null)
+            // Find the textbox and show capture prompt in it
+            var textBox = FindTextBoxByHash(_captureTextBoxHash);
+            if (textBox != null)
             {
-                var eventInfo = directInputService.GetType().GetEvent("ButtonPressed");
-                if (eventInfo != null)
-                {
-                    // Get our wrapper method that has the exact signature
-                    var methodInfo = GetType().GetMethod("ButtonPressedHandler", 
-                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                    
-                    if (methodInfo != null)
-                    {
-                        _buttonPressedHandler = Delegate.CreateDelegate(
-                            eventInfo.EventHandlerType!, 
-                            this, 
-                            methodInfo);
-                        
-                        eventInfo.AddEventHandler(directInputService, _buttonPressedHandler);
-                    }
-                }
+                textBox.Text = "Press key or button...";
+                textBox.Foreground = System.Windows.Media.Brushes.Gray;
             }
-
-
-
-
+            
+            // Use IPluginContext callback API for button capture
+            _context.StartButtonCapture((buttonString) =>
+            {
+                // This is called on DirectInput thread, need to invoke on UI thread
+                Dispatcher.Invoke(() =>
+                {
+                    if (_isCapturingCombined)
+                    {
+                        bool success = SaveCombinedHotkey(_captureChannel, _captureAction, keyboard: null, button: buttonString);
+                        
+                        if (success)
+                        {
+                            StopCombinedCapture();
+                            PopulateUI();
+                        }
+                        else
+                        {
+                            // Failed due to duplicate - stop capture but don't refresh UI (keeps error message visible)
+                            StopCombinedCapture();
+                        }
+                    }
+                });
+            });
 
             
             Focus(); // Focus this control to receive key events
         }
+
+
 
         private void ClearHotkey_Click(object sender, RoutedEventArgs e)
         {
@@ -734,41 +745,66 @@ namespace SimControlCentre.Plugins.GoXLR.Views
             var hotkey = BuildHotkeyString(System.Windows.Input.Keyboard.Modifiers, e.Key);
 
             // Save as KEYBOARD hotkey
-            SaveCombinedHotkey(_captureChannel, _captureAction, keyboard: hotkey, button: null);
+            bool success = SaveCombinedHotkey(_captureChannel, _captureAction, keyboard: hotkey, button: null);
 
-            StopCombinedCapture();
-            PopulateUI();
-        }
-
-        private void OnCombinedButtonCaptured(object? sender, string buttonString)
-        {
-            if (!_isCapturingCombined)
-                return;
-
-            // Dispatcher because this comes from DirectInput thread
-            Dispatcher.Invoke(() =>
+            if (success)
             {
-                // Save as BUTTON hotkey
-                SaveCombinedHotkey(_captureChannel, _captureAction, keyboard: null, button: buttonString);
-                
                 StopCombinedCapture();
                 PopulateUI();
-            });
+            }
+            else
+            {
+                // Failed due to duplicate - stop capture but don't refresh UI
+                StopCombinedCapture();
+            }
         }
 
-        // Wrapper method that exactly matches EventHandler<string> signature for reflection
-        private void ButtonPressedHandler(object sender, string e)
+
+        private TextBox? FindTextBoxByHash(int hash)
         {
-            OnCombinedButtonCaptured(sender, e);
+            return FindTextBoxInPanel(VolumeHotkeysPanel, hash) 
+                ?? FindTextBoxInPanel(ProfileHotkeysPanel, hash);
         }
 
+        private TextBox? FindTextBoxInPanel(StackPanel panel, int hash)
+        {
+            foreach (var child in panel.Children)
+            {
+                if (child is Grid grid)
+                {
+                    foreach (var gridChild in grid.Children)
+                    {
+                        if (gridChild is TextBox textBox && textBox.GetHashCode() == hash)
+                            return textBox;
+                    }
+                }
+            }
+            return null;
+        }
 
-        private void SaveCombinedHotkey(string? channel, string? action, string? keyboard, string? button)
+        private bool SaveCombinedHotkey(string? channel, string? action, string? keyboard, string? button)
         {
             if (string.IsNullOrEmpty(channel) || string.IsNullOrEmpty(action))
-                return;
+                return false;
+
+            // Check for duplicates before saving
+            var duplicate = FindDuplicateAssignment(keyboard, button, channel, action);
+            if (duplicate != null)
+            {
+                // Show conflict in the textbox instead of popup
+                var textBox = FindTextBoxByHash(_captureTextBoxHash);
+                if (textBox != null)
+                {
+                    textBox.Text = $"Already assigned to: {duplicate}";
+                    textBox.Foreground = System.Windows.Media.Brushes.Red;
+                }
+                
+                _context.LogWarning("GoXLR Device Control", $"Cannot assign {keyboard ?? button} - already assigned to {duplicate}");
+                return false; // Indicate failure
+            }
 
             if (channel == "Profile")
+
             {
                 // Save profile hotkey/button
                 var profileHotkeys = _context.Settings.GetValue<Dictionary<string, string>>("ProfileHotkeys") 
@@ -820,33 +856,109 @@ namespace SimControlCentre.Plugins.GoXLR.Views
             }
 
             _context.SaveSettings();
+            return true; // Indicate success
+        }
+
+
+
+        private string? FindDuplicateAssignment(string? keyboard, string? button, string excludeChannel, string excludeAction)
+        {
+            var volumeHotkeys = _context.Settings.GetValue<Dictionary<string, object>>("VolumeHotkeys") 
+                ?? new Dictionary<string, object>();
+            var profileHotkeys = _context.Settings.GetValue<Dictionary<string, string>>("ProfileHotkeys") 
+                ?? new Dictionary<string, string>();
+            var profileButtons = _context.Settings.GetValue<Dictionary<string, string>>("ProfileButtons") 
+                ?? new Dictionary<string, string>();
+
+            // Check volume channel hotkeys
+            foreach (var kvp in volumeHotkeys)
+            {
+                var channelName = kvp.Key;
+                if (kvp.Value is Dictionary<string, object> channelHotkeys)
+                {
+                    if (keyboard != null)
+                    {
+                        // Check VolumeUp keyboard
+                        if (channelHotkeys.TryGetValue("VolumeUp", out var upObj) && 
+                            upObj?.ToString() == keyboard &&
+                            !(excludeChannel == channelName && excludeAction == "VolumeUp"))
+                        {
+                            return $"{channelName} Volume Up";
+                        }
+                        
+                        // Check VolumeDown keyboard
+                        if (channelHotkeys.TryGetValue("VolumeDown", out var downObj) && 
+                            downObj?.ToString() == keyboard &&
+                            !(excludeChannel == channelName && excludeAction == "VolumeDown"))
+                        {
+                            return $"{channelName} Volume Down";
+                        }
+                    }
+                    
+                    if (button != null)
+                    {
+                        // Check VolumeUp button
+                        if (channelHotkeys.TryGetValue("VolumeUpButton", out var upBtnObj) && 
+                            upBtnObj?.ToString() == button &&
+                            !(excludeChannel == channelName && excludeAction == "VolumeUp"))
+                        {
+                            return $"{channelName} Volume Up";
+                        }
+                        
+                        // Check VolumeDown button
+                        if (channelHotkeys.TryGetValue("VolumeDownButton", out var downBtnObj) && 
+                            downBtnObj?.ToString() == button &&
+                            !(excludeChannel == channelName && excludeAction == "VolumeDown"))
+                        {
+                            return $"{channelName} Volume Down";
+                        }
+                    }
+                }
+            }
+
+            // Check profile hotkeys
+            if (keyboard != null)
+            {
+                foreach (var kvp in profileHotkeys)
+                {
+                    if (kvp.Value == keyboard && 
+                        !(excludeChannel == "Profile" && excludeAction == kvp.Key))
+                    {
+                        return $"Profile: {kvp.Key}";
+                    }
+                }
+            }
+            
+            // Check profile buttons
+            if (button != null)
+            {
+                foreach (var kvp in profileButtons)
+                {
+                    if (kvp.Value == button && 
+                        !(excludeChannel == "Profile" && excludeAction == kvp.Key))
+                    {
+                        return $"Profile: {kvp.Key}";
+                    }
+                }
+            }
+
+            return null; // No duplicate found
         }
 
         private void StopCombinedCapture()
+
         {
             _isCapturingCombined = false;
             _captureChannel = null;
             _captureAction = null;
             _captureTextBoxHash = 0;
             
-            // Unsubscribe from DirectInput using stored delegate
-            var directInputService = GetDirectInputService();
-            if (directInputService != null && _buttonPressedHandler != null)
-            {
-                var eventInfo = directInputService.GetType().GetEvent("ButtonPressed");
-                if (eventInfo != null)
-                {
-                    eventInfo.RemoveEventHandler(directInputService, _buttonPressedHandler);
-                    _buttonPressedHandler = null;
-                }
-            }
-
-
-
-
+            // Stop button capture via IPluginContext
+            _context.StopButtonCapture();
         }
 
         private bool IsModifierKey(System.Windows.Input.Key key)
+
         {
             return key == System.Windows.Input.Key.LeftCtrl || key == System.Windows.Input.Key.RightCtrl ||
                    key == System.Windows.Input.Key.LeftShift || key == System.Windows.Input.Key.RightShift ||
@@ -871,27 +983,6 @@ namespace SimControlCentre.Plugins.GoXLR.Views
 
             return string.Join("+", parts);
         }
-
-        private object? GetDirectInputService()
-        {
-            // Use reflection to get DirectInputService from main app
-            try
-            {
-                var appType = Type.GetType("SimControlCentre.App, SimControlCentre");
-                if (appType != null)
-                {
-                    var method = appType.GetMethod("GetDirectInputService", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                    if (method != null)
-                    {
-                        return method.Invoke(null, null);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _context.LogError("GoXLR Device Control", $"Failed to get DirectInputService: {ex.Message}", ex);
-            }
-            return null;
-        }
     }
 }
+

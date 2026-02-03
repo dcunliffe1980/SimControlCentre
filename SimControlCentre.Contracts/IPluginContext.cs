@@ -39,6 +39,19 @@ namespace SimControlCentre.Contracts
         /// Get the plugin data directory for storing plugin-specific files
         /// </summary>
         string GetPluginDataDirectory(string pluginId);
+        
+        /// <summary>
+        /// Start capturing button input from controllers.
+        /// When a button is pressed, the callback will be invoked with a formatted string like "PXN-CB1: Btn 5"
+        /// </summary>
+        /// <param name="onButtonCaptured">Callback invoked when a button is captured</param>
+        void StartButtonCapture(Action<string> onButtonCaptured);
+        
+        /// <summary>
+        /// Stop capturing button input
+        /// </summary>
+        void StopButtonCapture();
     }
 }
+
 

@@ -12,6 +12,7 @@ namespace SimControlCentre.Services
     {
         private readonly AppSettings _settings;
         private readonly ConfigurationService _configService;
+        private Action<string>? _buttonCaptureCallback;
 
         public IPluginSettings Settings { get; }
 
@@ -59,7 +60,49 @@ namespace SimControlCentre.Services
             Directory.CreateDirectory(directory);
             return directory;
         }
+
+        public void StartButtonCapture(Action<string> onButtonCaptured)
+        {
+            _buttonCaptureCallback = onButtonCaptured;
+            
+            // Subscribe to DirectInputService
+            var directInputService = App.GetDirectInputService();
+            if (directInputService != null)
+            {
+                directInputService.ButtonPressed += OnDirectInputButtonPressed;
+                LogDebug("Plugin Context", "Started button capture");
+            }
+            else
+            {
+                LogWarning("Plugin Context", "DirectInputService not available for button capture");
+            }
+        }
+
+        public void StopButtonCapture()
+        {
+            // Unsubscribe from DirectInputService
+            var directInputService = App.GetDirectInputService();
+            if (directInputService != null)
+            {
+                directInputService.ButtonPressed -= OnDirectInputButtonPressed;
+                LogDebug("Plugin Context", "Stopped button capture");
+            }
+            
+            _buttonCaptureCallback = null;
+        }
+
+        private void OnDirectInputButtonPressed(object? sender, ButtonPressedEventArgs e)
+        {
+            // Format button string like: "DeviceName:{ProductGuid}:Button:{number}"
+            // This matches the existing format used by HotkeyManager
+            var buttonString = $"{e.DeviceName}:{{{e.ProductGuid}}}:Button:{e.ButtonNumber}";
+            
+            // Invoke the plugin's callback
+            _buttonCaptureCallback?.Invoke(buttonString);
+        }
+
     }
+
 
     /// <summary>
     /// Wrapper around AppSettings that implements IPluginSettings
@@ -85,6 +128,25 @@ namespace SimControlCentre.Services
                 // Direct AppSettings property (no dot)
                 if (parts.Length == 1)
                 {
+                    // Special handling for VolumeHotkeys type conversion
+                    if (key == "VolumeHotkeys" && typeof(T) == typeof(Dictionary<string, object>))
+                    {
+                        // Convert Dictionary<string, ChannelHotkeys> to Dictionary<string, object>
+                        var volumeHotkeys = _settings.VolumeHotkeys;
+                        var converted = new Dictionary<string, object>();
+                        foreach (var kvp in volumeHotkeys)
+                        {
+                            converted[kvp.Key] = new Dictionary<string, object>
+                            {
+                                { "VolumeUp", kvp.Value.VolumeUp ?? "" },
+                                { "VolumeUpButton", kvp.Value.VolumeUpButton ?? "" },
+                                { "VolumeDown", kvp.Value.VolumeDown ?? "" },
+                                { "VolumeDownButton", kvp.Value.VolumeDownButton ?? "" }
+                            };
+                        }
+                        return (T)(object)converted;
+                    }
+                    
                     var property = typeof(AppSettings).GetProperty(key);
                     if (property != null && property.CanRead)
                     {
@@ -94,6 +156,7 @@ namespace SimControlCentre.Services
                     }
                     return default;
                 }
+
                 
                 // Dotted notation: Section.Property
                 if (parts.Length != 2) return default;
@@ -142,6 +205,32 @@ namespace SimControlCentre.Services
                 // Direct AppSettings property (no dot)
                 if (parts.Length == 1)
                 {
+                    // Special handling for VolumeHotkeys type conversion
+                    if (key == "VolumeHotkeys" && value is Dictionary<string, object> volumeDict)
+                    {
+                        // Convert Dictionary<string, object> to Dictionary<string, ChannelHotkeys>
+                        var converted = new Dictionary<string, ChannelHotkeys>();
+                        foreach (var kvp in volumeDict)
+                        {
+                            if (kvp.Value is Dictionary<string, object> channelDict)
+                            {
+                                var channelHotkeys = new ChannelHotkeys();
+                                if (channelDict.TryGetValue("VolumeUp", out var upObj))
+                                    channelHotkeys.VolumeUp = upObj?.ToString() ?? "";
+                                if (channelDict.TryGetValue("VolumeUpButton", out var upBtnObj))
+                                    channelHotkeys.VolumeUpButton = upBtnObj?.ToString() ?? "";
+                                if (channelDict.TryGetValue("VolumeDown", out var downObj))
+                                    channelHotkeys.VolumeDown = downObj?.ToString() ?? "";
+                                if (channelDict.TryGetValue("VolumeDownButton", out var downBtnObj))
+                                    channelHotkeys.VolumeDownButton = downBtnObj?.ToString() ?? "";
+                                
+                                converted[kvp.Key] = channelHotkeys;
+                            }
+                        }
+                        _settings.VolumeHotkeys = converted;
+                        return;
+                    }
+                    
                     var property = typeof(AppSettings).GetProperty(key);
                     if (property != null && property.CanWrite)
                     {
@@ -149,6 +238,7 @@ namespace SimControlCentre.Services
                     }
                     return;
                 }
+
                 
                 // Dotted notation: Section.Property
                 if (parts.Length != 2) return;
