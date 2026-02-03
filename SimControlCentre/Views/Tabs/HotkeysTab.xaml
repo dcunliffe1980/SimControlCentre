@@ -31,26 +31,10 @@
             </StackPanel>
         </Border>
             
-        <!-- Hotkeys content panel - displays plugin-provided UI -->
-        <StackPanel x:Name="HotkeysContentPanel">
-            <!-- Generic Hotkeys Section -->
-            <GroupBox Header="Hotkeys Configuration" Padding="10" Margin="0,0,0,20">
-                <StackPanel x:Name="GenericHotkeysPanel">
-                    <!-- Will be populated dynamically with generic hotkeys -->
-                </StackPanel>
-            </GroupBox>
-            
-            <!-- Plugin-specific configuration UI -->
-            <Border x:Name="PluginConfigContainer" 
-                    BorderBrush="#E0E0E0" 
-                    BorderThickness="1" 
-                    CornerRadius="4"
-                    Padding="10"
-                    Margin="0,0,0,20">
-                <ContentControl x:Name="PluginConfigContent"/>
-            </Border>
-        </StackPanel>
+        <!-- Plugin-provided configuration UI (ENTIRE interface comes from plugin) -->
+        <ContentControl x:Name="PluginConfigContent"/>
     </StackPanel>
 </ScrollViewer>
 </UserControl>
+
 
