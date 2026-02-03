@@ -123,6 +123,14 @@ namespace SimControlCentre.Services
 
         private void TryConnect()
         {
+            // Check if iRacing process is running first
+            var iRacingProcesses = System.Diagnostics.Process.GetProcessesByName("iRacingSim64DX11");
+            if (iRacingProcesses.Length == 0)
+            {
+                // iRacing not running, don't spam the logs
+                return;
+            }
+
             try
             {
                 Logger.Debug("iRacing Telemetry", $"Attempting to open: {MemoryMapName}");

@@ -92,9 +92,9 @@ public class GoXLRCommandRequest
             Command = new object[]
             {
                 serialNumber,
-                new Dictionary<string, object[]>
+                new Dictionary<string, object>
                 {
-                    { "SetGlobalColour", new object[] { colour } }
+                    { "SetGlobalColour", colour } // Direct string, NOT array!
                 }
             }
         };
