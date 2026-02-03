@@ -1,17 +1,19 @@
 # SimControlCentre - GoXLR Control Center
 
-A comprehensive Windows application for controlling the TC-Helicon GoXLR audio mixer via keyboard hotkeys and controller buttons.
+A comprehensive Windows application for controlling the TC-Helicon GoXLR audio mixer via keyboard hotkeys, controller buttons, and iRacing flag-based lighting.
 
-## ? Features
+## Features
 
-- **?? Keyboard Hotkeys** - Global hotkeys for volume control and profile switching
-- **?? Controller Support** - Use button boxes, wheels, or any DirectInput device
-- **?? Volume Control** - Adjust volume for any GoXLR channel
-- **?? Profile Management** - Quick profile switching with hotkeys or buttons
-- **?? Easy Configuration** - Intuitive UI for managing channels, profiles, and hotkeys
-- **?? Auto-Start** - Start with Windows and minimize to system tray
-- **? Fast & Reliable** - Intelligent caching and retry logic for smooth operation
-- **?? Stable Mappings** - Controller buttons work consistently across reboots
+- **Keyboard Hotkeys** - Global hotkeys for volume control and profile switching
+- **Controller Support** - Use button boxes, wheels, or any DirectInput device
+- **Volume Control** - Adjust volume for any GoXLR channel
+- **Profile Management** - Quick profile switching with hotkeys or buttons
+- **iRacing Flag Lighting** - GoXLR LEDs change color based on racing flags
+- **Plugin System** - Extensible support for multiple lighting devices (GoXLR, future: Philips Hue, Nanoleaf)
+- **Easy Configuration** - Intuitive UI for managing channels, profiles, and hotkeys
+- **Auto-Start** - Start with Windows and minimize to system tray
+- **Fast & Reliable** - Intelligent caching and retry logic for smooth operation
+- **Stable Mappings** - Controller buttons work consistently across reboots
 
 ## ?? Quick Start
 
