@@ -14,7 +14,7 @@ namespace SimControlCentre.Plugins.GoXLR.Services
     public class GoXLRDeviceControlPlugin : IDeviceControlPlugin
     {
         private readonly GoXLRService _goXLRService;
-        private readonly AppSettings _settings;
+        
         private IPluginContext? _context;
         
         public string PluginId => "goxlr-control";
@@ -24,10 +24,10 @@ namespace SimControlCentre.Plugins.GoXLR.Services
         public string Author => "SimControlCentre";
         public bool IsEnabled { get; set; } = true;
 
-        public GoXLRDeviceControlPlugin(GoXLRService goXLRService, AppSettings settings)
+        public GoXLRDeviceControlPlugin(GoXLRService goXLRService)
         {
             _goXLRService = goXLRService;
-            _settings = settings;
+            
         }
 
         public void Initialize(IPluginContext context)
@@ -326,10 +326,12 @@ namespace SimControlCentre.Plugins.GoXLR.Services
             return new List<PluginConfigOption>();
         }
 
-        public void ApplyConfiguration(Dictionary<string, object> config)
         {
             // Configuration is handled by GoXLRService/AppSettings
             // Nothing to do here
         }
     }
 }
+
+
+

@@ -13,7 +13,7 @@ namespace SimControlCentre.Plugins.GoXLR.Services
     public class GoXLRLightingPlugin : ILightingPlugin
     {
         private readonly GoXLRService _goXLRService;
-        private readonly AppSettings _settings;
+        
         private List<string> _selectedButtons = new();
         private string _deviceType = "Full"; // Default to Full
         private IPluginContext? _context;
@@ -119,10 +119,9 @@ namespace SimControlCentre.Plugins.GoXLR.Services
         // Exposed list of available buttons based on device type
         public List<string> AvailableButtons { get; private set; } = new();
 
-        public GoXLRLightingPlugin(GoXLRService goXLRService, AppSettings settings)
+        public GoXLRLightingPlugin(GoXLRService goXLRService)
         {
             _goXLRService = goXLRService;
-            _settings = settings;
             
             // Start with Mini buttons (safer default)
             AvailableButtons = new List<string>(MiniButtons);
@@ -158,7 +157,7 @@ namespace SimControlCentre.Plugins.GoXLR.Services
 
         public ILightingDevice CreateDevice()
         {
-            return new GoXLRLightingDevice(_goXLRService, _settings, _selectedButtons);
+            return new GoXLRLightingDevice(_goXLRService, _context, _selectedButtons);
         }
 
         public IEnumerable<DeviceConfigOption> GetConfigOptions()
@@ -187,3 +186,6 @@ namespace SimControlCentre.Plugins.GoXLR.Services
         }
     }
 }
+
+
+

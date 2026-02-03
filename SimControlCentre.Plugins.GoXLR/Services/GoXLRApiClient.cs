@@ -469,10 +469,10 @@ public class GoXLRApiClient : IDisposable
     {
         try
         {
-            Logger.Info("GoXLR API", "========================================");
-            Logger.Info("GoXLR API", "SetGlobalColour API METHOD CALLED");
-            Logger.Info("GoXLR API", $"Serial: {serialNumber}");
-            Logger.Info("GoXLR API", $"Colour: {colour}");
+            _context.LogInfo("GoXLR API", "========================================");
+            _context.LogInfo("GoXLR API", "SetGlobalColour API METHOD CALLED");
+            _context.LogInfo("GoXLR API", $"Serial: {serialNumber}");
+            _context.LogInfo("GoXLR API", $"Colour: {colour}");
             
             Console.WriteLine($"[GoXLR] ========================================");
             Console.WriteLine($"[GoXLR] SetGlobalColour CALLED");
@@ -482,36 +482,36 @@ public class GoXLRApiClient : IDisposable
             var command = GoXLRCommandRequest.SetGlobalColour(serialNumber, colour);
             var json = System.Text.Json.JsonSerializer.Serialize(command);
             
-            Logger.Info("GoXLR API", $"JSON Payload: {json}");
+            _context.LogInfo("GoXLR API", $"JSON Payload: {json}");
             Console.WriteLine($"[GoXLR] JSON: {json}");
             
             var response = await _httpClient.PostAsJsonAsync("/api/command", command);
             
-            Logger.Info("GoXLR API", $"HTTP Status: {response.StatusCode}");
+            _context.LogInfo("GoXLR API", $"HTTP Status: {response.StatusCode}");
             Console.WriteLine($"[GoXLR] HTTP Status: {response.StatusCode}");
             
             var responseBody = await response.Content.ReadAsStringAsync();
-            Logger.Info("GoXLR API", $"Response Body: {responseBody}");
+            _context.LogInfo("GoXLR API", $"Response Body: {responseBody}");
             Console.WriteLine($"[GoXLR] Response Body: {responseBody}");
             Console.WriteLine($"[GoXLR] ========================================");
-            Logger.Info("GoXLR API", "========================================");
+            _context.LogInfo("GoXLR API", "========================================");
             
             if (response.IsSuccessStatusCode)
             {
-                Logger.Info("GoXLR API", "? Global color set successfully");
+                _context.LogInfo("GoXLR API", "? Global color set successfully");
                 Console.WriteLine($"[GoXLR] ? Global color set successfully");
                 return true;
             }
             else
             {
-                Logger.Error("GoXLR API", $"? Failed to set global color - Status: {response.StatusCode}");
+                _context.LogError("GoXLR API", $"? Failed to set global color - Status: {response.StatusCode}");
                 Console.WriteLine($"[GoXLR] ? Failed to set global color");
                 return false;
             }
         }
         catch (Exception ex)
         {
-            Logger.Error("GoXLR API", $"? Exception setting global color: {ex.Message}", ex);
+            _context.LogError("GoXLR API", $"? Exception setting global color: {ex.Message}", ex);
             Console.WriteLine($"[GoXLR] ? Exception setting global color: {ex.Message}");
             Console.WriteLine($"[GoXLR] Stack: {ex.StackTrace}");
             return false;
@@ -557,26 +557,26 @@ public class GoXLRApiClient : IDisposable
     {
         try
         {
-            Logger.Info("GoXLR API", $"SetFaderMuteState - Fader: {faderName}, State: {muteState}");
+            _context.LogInfo("GoXLR API", $"SetFaderMuteState - Fader: {faderName}, State: {muteState}");
             
             var command = GoXLRCommandRequest.SetFaderMuteState(serialNumber, faderName, muteState);
             var response = await _httpClient.PostAsJsonAsync("/api/command", command);
             
             if (response.IsSuccessStatusCode)
             {
-                Logger.Info("GoXLR API", $"Fader mute state set successfully");
+                _context.LogInfo("GoXLR API", $"Fader mute state set successfully");
                 return true;
             }
             else
             {
                 var errorBody = await response.Content.ReadAsStringAsync();
-                Logger.Error("GoXLR API", $"Error response: {errorBody}");
+                _context.LogError("GoXLR API", $"Error response: {errorBody}");
                 return false;
             }
         }
         catch (Exception ex)
         {
-            Logger.Error("GoXLR API", $"Error setting fader mute state: {ex.Message}", ex);
+            _context.LogError("GoXLR API", $"Error setting fader mute state: {ex.Message}", ex);
             return false;
         }
     }
@@ -621,3 +621,4 @@ public class GoXLRApiClient : IDisposable
         public DateTime Timestamp { get; set; }
     }
 }
+

@@ -74,17 +74,17 @@ public class GoXLRService : IDisposable
             if (status?.Hardware?.DeviceType != null)
             {
                 var deviceType = status.Hardware.DeviceType;
-                Logger.Info("GoXLR Service", $"Detected device type from hardware: {deviceType}");
+                _context.LogInfo("GoXLR Service", $"Detected device type from hardware: {deviceType}");
                 return deviceType;
             }
         }
         catch (Exception ex)
         {
-            Logger.Error("GoXLR Service", "Error getting device type", ex);
+            _context.LogError("GoXLR Service", "Error getting device type", ex);
         }
 
         // Default to Mini to be conservative (show fewer effect buttons)
-        Logger.Warning("GoXLR Service", "Could not detect device type, defaulting to Mini");
+        _context.LogWarning("GoXLR Service", "Could not detect device type, defaulting to Mini");
         return "Mini";
     }
 
@@ -158,29 +158,29 @@ public class GoXLRService : IDisposable
     {
         if (_apiClient == null || !IsConfigured)
         {
-            Logger.Warning("GoXLR Service", "Cannot warm button API - not configured");
+            _context.LogWarning("GoXLR Service", "Cannot warm button API - not configured");
             return;
         }
 
         try
         {
-            Logger.Info("GoXLR Service", "Warming button color API...");
+            _context.LogInfo("GoXLR Service", "Warming button color API...");
             
             // Get current device status to establish HTTP connection
             var status = await _apiClient.GetDeviceStatusAsync(SerialNumber);
             
             if (status != null)
             {
-                Logger.Info("GoXLR Service", "? Button color API connection established and ready");
+                _context.LogInfo("GoXLR Service", "? Button color API connection established and ready");
             }
             else
             {
-                Logger.Warning("GoXLR Service", "Button API warmup returned null status");
+                _context.LogWarning("GoXLR Service", "Button API warmup returned null status");
             }
         }
         catch (Exception ex)
         {
-            Logger.Warning("GoXLR Service", $"Could not warm button API: {ex.Message}");
+            _context.LogWarning("GoXLR Service", $"Could not warm button API: {ex.Message}");
         }
     }
 
@@ -298,36 +298,36 @@ public class GoXLRService : IDisposable
     {
         if (!IsConfigured)
         {
-            Logger.Warning("GoXLR Service", "Cannot set button color - not configured");
+            _context.LogWarning("GoXLR Service", "Cannot set button color - not configured");
             return;
         }
 
         try
         {
-            Logger.Info("GoXLR Service", $"SetButtonColorAsync called: buttonId={buttonId}, color={color}");
+            _context.LogInfo("GoXLR Service", $"SetButtonColorAsync called: buttonId={buttonId}, color={color}");
             
             if (_apiClient != null)
             {
                 // Check if it's the global color
                 if (buttonId == "Global")
                 {
-                    Logger.Info("GoXLR Service", "========================================");
-                    Logger.Info("GoXLR Service", "? GLOBAL COLOR DETECTED!");
-                    Logger.Info("GoXLR Service", $"? Setting Global to: {color}");
-                    Logger.Info("GoXLR Service", $"? Serial: {SerialNumber}");
-                    Logger.Info("GoXLR Service", "========================================");
+                    _context.LogInfo("GoXLR Service", "========================================");
+                    _context.LogInfo("GoXLR Service", "? GLOBAL COLOR DETECTED!");
+                    _context.LogInfo("GoXLR Service", $"? Setting Global to: {color}");
+                    _context.LogInfo("GoXLR Service", $"? Serial: {SerialNumber}");
+                    _context.LogInfo("GoXLR Service", "========================================");
                     
                     Console.WriteLine($"[GoXLR Service] ??? GLOBAL DETECTED: {color} ???");
                     await _apiClient.SetGlobalColourAsync(SerialNumber, color);
                     
-                    Logger.Info("GoXLR Service", "? SetGlobalColourAsync completed");
+                    _context.LogInfo("GoXLR Service", "? SetGlobalColourAsync completed");
                 }
                 // Check if it's accent (uses SetSimpleColour with Accent target)
                 else if (buttonId == "Accent")
                 {
-                    Logger.Info("GoXLR Service", $"Accent color detected, setting to {color}");
+                    _context.LogInfo("GoXLR Service", $"Accent color detected, setting to {color}");
                     await _apiClient.SetSimpleColorAsync(SerialNumber, "Accent", color);
-                    Logger.Info("GoXLR Service", "? SetSimpleColorAsync completed");
+                    _context.LogInfo("GoXLR Service", "? SetSimpleColorAsync completed");
                 }
                 // Check if it's a fader color
                 else if (buttonId.StartsWith("Fader") && buttonId.Length == 6) // FaderA, FaderB, etc.
@@ -344,7 +344,7 @@ public class GoXLRService : IDisposable
         }
         catch (Exception ex)
         {
-            Logger.Error("GoXLR Service", $"Error setting button color", ex);
+            _context.LogError("GoXLR Service", $"Error setting button color", ex);
         }
     }
 
@@ -357,18 +357,18 @@ public class GoXLRService : IDisposable
     {
         if (!IsConfigured || _apiClient == null)
         {
-            Logger.Warning("GoXLR Service", "Cannot set mute state - not configured");
+            _context.LogWarning("GoXLR Service", "Cannot set mute state - not configured");
             return false;
         }
 
         try
         {
-            Logger.Info("GoXLR Service", $"Setting mute state for {channelName} to {muteState}");
+            _context.LogInfo("GoXLR Service", $"Setting mute state for {channelName} to {muteState}");
             return await _apiClient.SetFaderMuteStateAsync(SerialNumber, channelName, muteState);
         }
         catch (Exception ex)
         {
-            Logger.Error("GoXLR Service", $"Error setting mute state", ex);
+            _context.LogError("GoXLR Service", $"Error setting mute state", ex);
             return false;
         }
     }
@@ -391,3 +391,4 @@ public class VolumeChangeResult
     public int Percentage { get; set; }
     public string Message { get; set; } = string.Empty;
 }
+

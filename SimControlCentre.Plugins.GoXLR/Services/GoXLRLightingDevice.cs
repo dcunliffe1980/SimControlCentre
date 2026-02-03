@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using SimControlCentre.Plugins.GoXLR.Models;
@@ -12,23 +15,67 @@ namespace SimControlCentre.Plugins.GoXLR.Services
     public class GoXLRLightingDevice : ILightingDevice
     {
         private readonly GoXLRService _goXLRService;
-        private readonly AppSettings _settings;
+        private readonly IPluginContext _context;
         private readonly List<string> _activeButtons;
         private Timer? _flashTimer;
         private bool _isFlashing;
         private LightingColor _flashColor1;
         private LightingColor _flashColor2;
         private bool _flashState;
-        private string? _savedState; // Store previous button states
+        private Dictionary<string, string>? _savedButtonStates;
 
+        // ILightingDevice interface properties
+        public string DeviceId => "goxlr";
         public string DeviceName => "GoXLR";
-        public bool IsAvailable => _goXLRService != null;
+        public bool IsConnected => _goXLRService.IsConnected;
 
-        public GoXLRLightingDevice(GoXLRService goXLRService, AppSettings settings, List<string> activeButtons)
+        public GoXLRLightingDevice(GoXLRService goXLRService, IPluginContext context, List<string> activeButtons)
         {
             _goXLRService = goXLRService;
-            _settings = settings;
+            _context = context;
             _activeButtons = activeButtons ?? new List<string> { "Fader1Mute", "Fader2Mute", "Fader3Mute", "Fader4Mute" };
+        }
+
+        // ILightingDevice interface methods
+        public Task<bool> InitializeAsync()
+        {
+            return Task.FromResult(true);
+        }
+
+        public Task DisconnectAsync()
+        {
+            StopFlashingAsync().Wait();
+            return Task.CompletedTask;
+        }
+
+        public Task SetColorAsync(string hexColor)
+        {
+            var color = ParseHexToLightingColor(hexColor);
+            return SetColorAsync(color);
+        }
+
+        public async Task SetColorsAsync(Dictionary<string, string> buttonColors)
+        {
+            foreach (var kvp in buttonColors)
+            {
+                await _goXLRService.SetButtonColorAsync(kvp.Key, kvp.Value);
+            }
+        }
+
+        private LightingColor ParseHexToLightingColor(string hexColor)
+        {
+            return hexColor.ToUpper() switch
+            {
+                "FF0000" => LightingColor.Red,
+                "00FF00" => LightingColor.Green,
+                "0000FF" => LightingColor.Blue,
+                "FFFF00" => LightingColor.Yellow,
+                "FFFFFF" => LightingColor.White,
+                "FF8800" => LightingColor.Orange,
+                "FF00FF" => LightingColor.Purple,
+                "000000" => LightingColor.Off,
+                _ => LightingColor.White
+            };
         }
 
         public async Task SetColorAsync(LightingColor color)
@@ -37,37 +84,37 @@ namespace SimControlCentre.Plugins.GoXLR.Services
 
             var goxlrColor = MapToGoXLRColor(color);
             
-            Logger.Info("GoXLR Lighting", $"SetColorAsync: {color} (hex: {goxlrColor}) on {_activeButtons.Count} button(s)");
-            Logger.Info("GoXLR Lighting", $"Active Buttons: {string.Join(", ", _activeButtons)}");
+            _context.LogInfo("GoXLR Lighting", $"SetColorAsync: {color} (hex: {goxlrColor}) on {_activeButtons.Count} button(s)");
+            _context.LogInfo("GoXLR Lighting", $"Active Buttons: {string.Join(", ", _activeButtons)}");
             
             // Check if Global is in the list
             if (_activeButtons.Contains("Global"))
             {
-                Logger.Info("GoXLR Lighting", "? Global IS in active buttons list");
+                _context.LogInfo("GoXLR Lighting", "? Global IS in active buttons list");
             }
             else
             {
-                Logger.Info("GoXLR Lighting", "? Global is NOT in active buttons list");
+                _context.LogInfo("GoXLR Lighting", "? Global is NOT in active buttons list");
             }
             
             // Send all commands at once (parallel) for instant update
             var sw = System.Diagnostics.Stopwatch.StartNew();
             var tasks = _activeButtons.Select(button => 
             {
-                Logger.Debug("GoXLR Lighting", $"Queuing {button}");
+                _context.LogDebug("GoXLR Lighting", $"Queuing {button}");
                 return SetButtonColorAsync(button, goxlrColor);
             }).ToList();
             
-            Logger.Info("GoXLR Lighting", $"Waiting for {tasks.Count} parallel tasks...");
+            _context.LogInfo("GoXLR Lighting", $"Waiting for {tasks.Count} parallel tasks...");
             await Task.WhenAll(tasks);
             sw.Stop();
             
-            Logger.Info("GoXLR Lighting", $"Color update complete in {sw.ElapsedMilliseconds}ms");
+            _context.LogInfo("GoXLR Lighting", $"Color update complete in {sw.ElapsedMilliseconds}ms");
         }
 
         public Task StartFlashingAsync(LightingColor color1, LightingColor color2, int intervalMs)
         {
-            Logger.Info("GoXLR Lighting", $"Starting flash: {color1}/{color2} at {intervalMs}ms interval");
+            _context.LogInfo("GoXLR Lighting", $"Starting flash: {color1}/{color2} at {intervalMs}ms interval");
             
             _isFlashing = true;
             _flashColor1 = color1;
@@ -80,7 +127,7 @@ namespace SimControlCentre.Plugins.GoXLR.Services
             // Create and start new timer
             _flashTimer = new Timer(async _ => await FlashUpdate(), null, 0, intervalMs);
             
-            Logger.Info("GoXLR Lighting", "Flash timer started");
+            _context.LogInfo("GoXLR Lighting", "Flash timer started");
             
             return Task.CompletedTask;
         }
@@ -89,7 +136,7 @@ namespace SimControlCentre.Plugins.GoXLR.Services
         {
             if (_isFlashing)
             {
-                Logger.Info("GoXLR Lighting", "Stopping flash");
+                _context.LogInfo("GoXLR Lighting", "Stopping flash");
             }
             
             _isFlashing = false;
@@ -107,7 +154,7 @@ namespace SimControlCentre.Plugins.GoXLR.Services
                 // Get current button colors from GoXLR
                 // Store them so we can restore later
                 // For now, just log that we're saving state
-                Logger.Debug("GoXLR Lighting", "Saving current button states");
+                _context.LogDebug("GoXLR Lighting", "Saving current button states");
                 
                 // TODO: Query actual button states from GoXLR API if possible
                 _savedState = "saved"; // Placeholder
@@ -116,7 +163,7 @@ namespace SimControlCentre.Plugins.GoXLR.Services
             }
             catch (Exception ex)
             {
-                Logger.Error("GoXLR Lighting", "Error saving state", ex);
+                _context.LogError("GoXLR Lighting", "Error saving state", ex);
             }
         }
 
@@ -126,7 +173,7 @@ namespace SimControlCentre.Plugins.GoXLR.Services
             {
                 if (_savedState != null)
                 {
-                    Logger.Debug("GoXLR Lighting", "Restoring previous button states");
+                    _context.LogDebug("GoXLR Lighting", "Restoring previous button states");
                     
                     // For now, turn off all buttons (return to default)
                     await SetColorAsync(LightingColor.Off);
@@ -136,7 +183,7 @@ namespace SimControlCentre.Plugins.GoXLR.Services
             }
             catch (Exception ex)
             {
-                Logger.Error("GoXLR Lighting", "Error restoring state", ex);
+                _context.LogError("GoXLR Lighting", "Error restoring state", ex);
             }
         }
 
@@ -144,7 +191,7 @@ namespace SimControlCentre.Plugins.GoXLR.Services
         {
             if (!_isFlashing)
             {
-                Logger.Debug("GoXLR Lighting", "Flash update called but not flashing");
+                _context.LogDebug("GoXLR Lighting", "Flash update called but not flashing");
                 return;
             }
 
@@ -154,17 +201,17 @@ namespace SimControlCentre.Plugins.GoXLR.Services
                 var color = _flashState ? _flashColor1 : _flashColor2;
                 var goxlrColor = MapToGoXLRColor(color);
 
-                Logger.Debug("GoXLR Lighting", $"Flash update: state={_flashState}, color={color}, hex={goxlrColor}");
+                _context.LogDebug("GoXLR Lighting", $"Flash update: state={_flashState}, color={color}, hex={goxlrColor}");
 
                 // Send all commands at once for synchronized flashing
                 var tasks = _activeButtons.Select(button => SetButtonColorAsync(button, goxlrColor)).ToList();
                 await Task.WhenAll(tasks);
                 
-                Logger.Debug("GoXLR Lighting", $"Flash update complete: {tasks.Count} buttons updated");
+                _context.LogDebug("GoXLR Lighting", $"Flash update complete: {tasks.Count} buttons updated");
             }
             catch (Exception ex)
             {
-                Logger.Error("GoXLR Lighting", "Error during flash update", ex);
+                _context.LogError("GoXLR Lighting", "Error during flash update", ex);
             }
         }
 
@@ -176,7 +223,7 @@ namespace SimControlCentre.Plugins.GoXLR.Services
             }
             catch (Exception ex)
             {
-                Logger.Error("GoXLR Lighting", $"Error setting button {buttonId} to {color}", ex);
+                _context.LogError("GoXLR Lighting", $"Error setting button {buttonId} to {color}", ex);
             }
         }
 
@@ -197,4 +244,5 @@ namespace SimControlCentre.Plugins.GoXLR.Services
         }
     }
 }
+
 
