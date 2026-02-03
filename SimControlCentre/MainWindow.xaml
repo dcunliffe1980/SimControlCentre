@@ -13,8 +13,8 @@
             <!-- Settings Tab -->
             <TabItem Header="Settings" x:Name="SettingsTabItem"/>
             
-            <!-- GoXLR Control Tab -->
-            <TabItem Header="GoXLR Control" x:Name="HotkeysTabItem"/>
+            <!-- Device Control Tab -->
+            <TabItem Header="Device Control" x:Name="DeviceControlTabItem"/>
             
             <!-- Application Manager Tab -->
             <TabItem Header="Application Manager" x:Name="iRacingTabItem"/>

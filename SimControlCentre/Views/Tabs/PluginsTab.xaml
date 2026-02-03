@@ -38,57 +38,46 @@
                         
                         <!-- Lighting Component -->
                         <StackPanel Margin="0,0,0,10">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                
-                                <TextBlock Text="* " 
-                                           Foreground="#4CAF50" 
-                                           FontSize="14"
-                                           VerticalAlignment="Center"
-                                           Grid.Column="0"/>
-                                
-                                <TextBlock Text="Lighting (Flag-based)" 
-                                           FontWeight="SemiBold"
-                                           VerticalAlignment="Center"
-                                           Grid.Column="1"/>
-                            </Grid>
+                            <CheckBox x:Name="EnableLightingComponentCheckBox"
+                                      Content="Lighting (Flag-based)"
+                                      FontWeight="SemiBold"
+                                      Checked="ComponentEnabled_Changed"
+                                      Unchecked="ComponentEnabled_Changed"
+                                      Tag="lighting"
+                                      Margin="0,0,0,5"/>
                             
                             <TextBlock Text="Controls GoXLR button colors based on iRacing flags. Configure buttons in the Lighting tab."
                                        TextWrapping="Wrap"
                                        Foreground="Gray"
                                        FontSize="11"
-                                       Margin="15,5,0,0"/>
+                                       Margin="20,0,0,0"/>
                         </StackPanel>
 
                         <!-- Device Control Component -->
                         <StackPanel Margin="0,0,0,0">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                
-                                <TextBlock Text="* " 
-                                           Foreground="#4CAF50" 
-                                           FontSize="14"
-                                           VerticalAlignment="Center"
-                                           Grid.Column="0"/>
-                                
-                                <TextBlock Text="Device Control" 
-                                           FontWeight="SemiBold"
-                                           VerticalAlignment="Center"
-                                           Grid.Column="1"/>
-                            </Grid>
+                            <CheckBox x:Name="EnableDeviceControlComponentCheckBox"
+                                      Content="Device Control"
+                                      FontWeight="SemiBold"
+                                      Checked="ComponentEnabled_Changed"
+                                      Unchecked="ComponentEnabled_Changed"
+                                      Tag="device_control"
+                                      Margin="0,0,0,5"/>
                             
                             <TextBlock Text="Provides profile switching, volume control, and channel muting via hotkeys."
                                        TextWrapping="Wrap"
                                        Foreground="Gray"
                                        FontSize="11"
-                                       Margin="15,5,0,0"/>
+                                       Margin="20,0,0,0"/>
                         </StackPanel>
+                        
+                        <!-- Warning when no components enabled -->
+                        <TextBlock x:Name="NoComponentsWarning"
+                                   Text="At least one component must be enabled for the plugin to function."
+                                   TextWrapping="Wrap"
+                                   Foreground="#D32F2F"
+                                   FontSize="11"
+                                   Margin="0,10,0,0"
+                                   Visibility="Collapsed"/>
                     </StackPanel>
                 </Border>
 
@@ -113,7 +102,7 @@
                 Margin="0,10,0,0">
             <StackPanel>
                 <TextBlock FontWeight="SemiBold" Foreground="#1976D2" Margin="0,0,0,5">
-                    [i] About Plugins
+                    About Plugins
                 </TextBlock>
                 <TextBlock TextWrapping="Wrap" Foreground="#1976D2" FontSize="11">
                     Plugins extend SimControlCentre with support for different devices and features. Each plugin can be enabled or disabled independently.

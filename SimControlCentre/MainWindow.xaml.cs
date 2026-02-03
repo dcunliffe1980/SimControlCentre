@@ -45,8 +45,8 @@ namespace SimControlCentre
             _settingsTab = new SettingsTab(_configService, _settings, _goXLRService, this);
             SettingsTabItem.Content = _settingsTab;
             
-            // Create Hotkeys Tab (only if GoXLR enabled)
-            UpdateHotkeysTabVisibility();
+            // Create Device Control Tab (only if plugins enabled)
+            UpdateDeviceControlTabVisibility();
             
             // Initialize Channels & Profiles in Settings Tab
             _settingsTab.InitializeChannelsProfilesTab();
@@ -76,22 +76,25 @@ namespace SimControlCentre
             _settingsTab?.InitializeControllersTab(directInputService);
         }
 
-        public void UpdateHotkeysTabVisibility()
+        public void UpdateDeviceControlTabVisibility()
         {
-            if (_settings.General.GoXLREnabled)
+            var deviceControlService = App.GetDeviceControlService();
+            bool hasEnabledPlugins = deviceControlService?.Plugins.Any(p => p.IsEnabled) ?? false;
+            
+            if (hasEnabledPlugins)
             {
-                // Show Hotkeys tab
+                // Show Device Control tab
                 if (_hotkeysTab == null)
                 {
                     _hotkeysTab = new HotkeysTab(_configService, _settings);
-                    HotkeysTabItem.Content = _hotkeysTab;
+                    DeviceControlTabItem.Content = _hotkeysTab;
                 }
-                HotkeysTabItem.Visibility = Visibility.Visible;
+                DeviceControlTabItem.Visibility = Visibility.Visible;
             }
             else
             {
-                // Hide Hotkeys tab
-                HotkeysTabItem.Visibility = Visibility.Collapsed;
+                // Hide Device Control tab
+                DeviceControlTabItem.Visibility = Visibility.Collapsed;
             }
         }
 

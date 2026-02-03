@@ -224,14 +224,14 @@ namespace SimControlCentre.Views.Tabs
             {
                 _settings.General.GoXLREnabled = true;
                 _configService.Save(_settings);
-                _mainWindow.UpdateHotkeysTabVisibility();
+                _mainWindow.UpdateDeviceControlTabVisibility();
                 RefreshGoXLRSettings();
             };
             enableGoXLRCheck.Unchecked += (s, e) =>
             {
                 _settings.General.GoXLREnabled = false;
                 _configService.Save(_settings);
-                _mainWindow.UpdateHotkeysTabVisibility();
+                _mainWindow.UpdateDeviceControlTabVisibility();
                 RefreshGoXLRSettings();
             };
             SettingsContent.Children.Add(enableGoXLRCheck);

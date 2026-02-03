@@ -39,6 +39,10 @@ namespace SimControlCentre.Views.Tabs
                 EnableGoXlrPluginCheckBox.IsChecked = true; // Default to enabled
             }
             
+            // Load component states
+            EnableLightingComponentCheckBox.IsChecked = _settings.Lighting?.EnabledPlugins?.GetValueOrDefault("goxlr-lighting", true) ?? true;
+            EnableDeviceControlComponentCheckBox.IsChecked = _settings.Lighting?.EnabledPlugins?.GetValueOrDefault("goxlr-device-control", true) ?? true;
+            
             UpdateGoXlrComponentsVisibility();
         }
 
@@ -96,6 +100,74 @@ namespace SimControlCentre.Views.Tabs
                 }
                 
                 Logger.Info("Plugins", $"Plugin '{pluginId}' {(isEnabled ? "enabled" : "disabled")}");
+            }
+        }
+
+        private void ComponentEnabled_Changed(object sender, RoutedEventArgs e)
+        {
+            if (sender is CheckBox checkbox && checkbox.Tag is string componentId)
+            {
+                bool isEnabled = checkbox.IsChecked == true;
+                
+                // Check if at least one component is enabled
+                bool lightingEnabled = EnableLightingComponentCheckBox.IsChecked == true;
+                bool deviceControlEnabled = EnableDeviceControlComponentCheckBox.IsChecked == true;
+                
+                if (!lightingEnabled && !deviceControlEnabled)
+                {
+                    // Prevent disabling both - re-enable this one
+                    checkbox.IsChecked = true;
+                    NoComponentsWarning.Visibility = Visibility.Visible;
+                    return;
+                }
+                else
+                {
+                    NoComponentsWarning.Visibility = Visibility.Collapsed;
+                }
+                
+                // Update settings
+                if (_settings.Lighting == null)
+                {
+                    _settings.Lighting = new LightingSettings();
+                }
+                
+                if (_settings.Lighting.EnabledPlugins == null)
+                {
+                    _settings.Lighting.EnabledPlugins = new Dictionary<string, bool>();
+                }
+                
+                string pluginKey = componentId == "lighting" ? "goxlr-lighting" : "goxlr-device-control";
+                _settings.Lighting.EnabledPlugins[pluginKey] = isEnabled;
+                
+                // Save settings
+                _configService.Save(_settings);
+                
+                // Apply changes based on component
+                if (componentId == "lighting")
+                {
+                    // Toggle lighting plugin
+                    var lightingPlugin = _lightingService.Plugins.FirstOrDefault(p => p.PluginId == "goxlr");
+                    if (lightingPlugin != null)
+                    {
+                        lightingPlugin.IsEnabled = isEnabled;
+                        _ = _lightingService.InitializeAsync();
+                    }
+                    
+                    // Notify lighting tab
+                    _mainWindow?.RefreshLightingTab();
+                }
+                else if (componentId == "device_control")
+                {
+                    // Toggle device control plugin
+                    var deviceControlService = App.GetDeviceControlService();
+                    var deviceControlPlugin = deviceControlService?.GetPlugin("goxlr-control");
+                    if (deviceControlPlugin != null)
+                    {
+                        deviceControlPlugin.IsEnabled = isEnabled;
+                    }
+                }
+                
+                Logger.Info("Plugins", $"Component '{componentId}' {(isEnabled ? "enabled" : "disabled")}");
             }
         }
 
