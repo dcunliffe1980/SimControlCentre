@@ -1,7 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\SimControlCentre.Contracts\SimControlCentre.Contracts.csproj" />
+    <!-- Reference Contracts but don't copy to output - main app provides it -->
+    <ProjectReference Include="..\SimControlCentre.Contracts\SimControlCentre.Contracts.csproj">
+      <Private>false</Private>
+    </ProjectReference>
   </ItemGroup>
 
   <PropertyGroup>
@@ -12,4 +15,6 @@
   </PropertyGroup>
 
 </Project>
+
+
 
