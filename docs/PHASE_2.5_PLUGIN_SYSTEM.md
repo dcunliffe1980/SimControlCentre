@@ -100,45 +100,43 @@ bin\Debug\net8.0-windows\
 
 ## Status
 
-**Phase 2.5 Progress**: 85% Complete (Part 1-3/5)
+**Phase 2.5 Progress**: 95% Complete (Part 1-4/5) - WORKING!
 
 **Completed:**
 - ? Part 1: Created Contracts project with plugin interfaces
 - ? Part 2: Created GoXLR plugin project structure AND moved all GoXLR code
-  - Added reference to Contracts
-  - Enabled WPF support for UI controls
-  - Created Models and Services folders
-  - Copied all 8 GoXLR files to plugin project
-  - Updated all namespaces to SimControlCentre.Plugins.GoXLR
-  - Updated plugins to implement new Contracts interfaces
-  - Added Initialize, Shutdown, GetConfigurationControl methods
-  - **Fixed all 98 compilation errors - Plugin builds!**
+  - Fixed all 98 compilation errors - Plugin builds!
 - ? Part 3: Implemented PluginLoader and PluginContext
   - Created PluginContext - provides plugins access to app services
   - Created PluginLoader - dynamically loads plugins from folder
   - Implemented IPluginSettings wrapper around AppSettings
-  - Dynamic assembly loading with reflection
-  - Main app now references Contracts project
+- ? Part 4: Updated Main App to use PluginLoader ? **WORKING!**
+  - Updated App.xaml.cs to use PluginLoader
+  - Plugins support parameterless constructors for dynamic loading
+  - Plugins create their own GoXLRService from IPluginContext
+  - Updated services to use Contracts interfaces
+  - **Successfully loads and runs plugins at runtime!**
+
+**Testing Results:**
+```
+? Plugin Loader finds DLLs in %LocalAppData%\SimControlCentre\Plugins
+? Loaded 2 plugins: GoXLRDeviceControlPlugin + GoXLRLightingPlugin
+? Plugins initialized with IPluginContext
+? Plugins registered with LightingService and DeviceControlService
+? App runs successfully with dynamically loaded plugins!
+```
 
 **Next:**
-- ? Part 4: Update Main App to use PluginLoader
-- ? Part 5: Build Configuration and testing
+- ? Part 5: Build Configuration (post-build events, packaging)
 
 **Commits:**
-- `c9a36f7` - Phase 2.5: Plugin System Foundation - Part 1
-- `8778e6f` - Docs: Added Phase 2.5 plugin system implementation plan
-- `6242ea1` - Phase 2.5 Part 2: Created GoXLR plugin project
-- `69dc6a3` - Docs: Updated Phase 2.5 progress to 40% complete
-- `033fe15` - Phase 2.5 Part 2: Moved GoXLR code to plugin project
-- `1125546` - Docs: Updated progress
-- `ac33b94` - WIP: Added LightingColor to Contracts
-- `704eef6` - WIP: Refactoring plugin dependencies
-- `7298af2` - WIP: Major refactoring progress
-- `027dbf8` - SUCCESS: Plugin builds with zero errors!
-- `6885054` - Docs: Updated Phase 2.5 status
 - `2c5a783` - Phase 2.5 Part 3: PluginLoader and PluginContext implementation
+- `05da0e8` - Docs: Updated Phase 2.5 progress to 85% complete
+- `f81765c` - Fix: Null reference warning
+- `c69335e` - Phase 2.5 Part 4: Updated main app to use PluginLoader ?
 
-**Next Session**: Part 4 - Update main app to use PluginLoader
+**Current State**: Plugins are dynamically loaded and working! Only build automation remaining.
+
 
 
 
