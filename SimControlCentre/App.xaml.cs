@@ -188,6 +188,7 @@ public partial class App : Application
                 Logger.Info("App", "Lighting devices initialized and ready");
             });
             
+            
             // Subscribe to flag changes and update lighting
             _telemetryService.FlagChanged += async (s, e) =>
             {
@@ -198,7 +199,18 @@ public partial class App : Application
                 }
             };
             
+            // Subscribe to telemetry connection changes to restore profile lighting on disconnect
+            _telemetryService.ConnectionChanged += async (s, isConnected) =>
+            {
+                if (!isConnected && _lightingService.Devices.Any())
+                {
+                    Logger.Info("App", "Telemetry disconnected - restoring profile lighting");
+                    await _lightingService.RestoreProfileLightingAsync();
+                }
+            };
+            
             Logger.Info("App", "Plugin system initialized");
+
 
 
             

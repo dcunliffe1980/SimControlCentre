@@ -41,5 +41,8 @@ namespace SimControlCentre.Contracts
         Task StartFlashingAsync(LightingColor color1, LightingColor color2, int intervalMs);
         Task StopFlashingAsync();
         Task DisconnectAsync();
+        Task SaveStateAsync();
+        Task RestoreStateAsync();
     }
 }
+

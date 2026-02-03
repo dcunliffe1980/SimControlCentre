@@ -151,19 +151,13 @@ namespace SimControlCentre.Plugins.GoXLR.Services
         {
             try
             {
-                // Get current button colors from GoXLR
-                // Store them so we can restore later
-                // For now, just log that we're saving state
-                _context.LogDebug("GoXLR Lighting", "Saving current button states");
-                
-                // TODO: Query actual button states from GoXLR API if possible
-                _savedButtonStates = new Dictionary<string, string>(); // TODO: Save actual state
-                
-                await Task.CompletedTask;
+                _context.LogInfo("GoXLR Lighting", "Marking that we need to restore profile after flag clears");
+                // We don't need to actually save anything - we'll just reload the profile later
+                _savedButtonStates = new Dictionary<string, string>(); // Non-null means "we need to restore"
             }
             catch (Exception ex)
             {
-                _context.LogError("GoXLR Lighting", "Error saving state", ex);
+                _context.LogError("GoXLR Lighting", "Error in SaveStateAsync", ex);
             }
         }
 
@@ -173,12 +167,19 @@ namespace SimControlCentre.Plugins.GoXLR.Services
             {
                 if (_savedButtonStates != null)
                 {
-                    _context.LogDebug("GoXLR Lighting", "Restoring previous button states");
+                    _context.LogInfo("GoXLR Lighting", "Restoring profile button colors by reloading current profile");
                     
-                    // For now, turn off all buttons (return to default)
-                    await SetColorAsync(LightingColor.Off);
+                    // Reload the current profile to restore all button colors
+                    await _goXLRService.ReloadCurrentProfileAsync();
                     
                     _savedButtonStates = null;
+                    _context.LogInfo("GoXLR Lighting", "Profile reloaded - button colors restored");
+                }
+                else
+                {
+                    _context.LogInfo("GoXLR Lighting", "No saved state marker, turning off buttons");
+                    // If we never saved (e.g., manual Clear Flag button), just turn off
+                    await SetColorAsync(LightingColor.Off);
                 }
             }
             catch (Exception ex)
@@ -186,6 +187,8 @@ namespace SimControlCentre.Plugins.GoXLR.Services
                 _context.LogError("GoXLR Lighting", "Error restoring state", ex);
             }
         }
+
+
 
         private async Task FlashUpdate()
         {

@@ -17,8 +17,11 @@ namespace SimControlCentre.Services
         private readonly List<ILightingPlugin> _plugins = new();
         private FlagStatus _currentFlag = FlagStatus.None;
         private bool _isDisposed;
+        private DateTime _lastNoneFlagTime = DateTime.MinValue;
+        private const int NoneDebounceMs = 500; // Ignore None flags for 500ms after a real flag
 
         public IReadOnlyList<ILightingPlugin> Plugins => _plugins.AsReadOnly();
+
         public IReadOnlyList<SimControlCentre.Contracts.ILightingDevice> Devices => _devices.AsReadOnly();
 
         public LightingService()
@@ -99,6 +102,22 @@ namespace SimControlCentre.Services
         {
             Logger.Info("Lighting Service", $"UpdateForFlagAsync called with: {flag}, current: {_currentFlag}, devices: {_devices.Count}");
             
+            // Debounce None flags - ignore brief None flags that might be telemetry glitches
+            if (flag == FlagStatus.None && _currentFlag != FlagStatus.None)
+            {
+                var timeSinceNone = (DateTime.Now - _lastNoneFlagTime).TotalMilliseconds;
+                if (timeSinceNone < NoneDebounceMs)
+                {
+                    Logger.Debug("Lighting Service", $"Ignoring brief None flag (only {timeSinceNone}ms since last real flag)");
+                    return;
+                }
+                
+                Logger.Info("Lighting Service", $"Flag cleared after {timeSinceNone}ms - restoring profile lighting");
+                _currentFlag = FlagStatus.None;
+                await RestoreAllDevicesAsync();
+                return;
+            }
+            
             if (flag == _currentFlag)
             {
                 Logger.Debug("Lighting Service", "Flag unchanged, skipping");
@@ -109,25 +128,24 @@ namespace SimControlCentre.Services
 
             var previousFlag = _currentFlag;
             _currentFlag = flag;
-
-            // If going from a flag to None, restore previous state
-            if (flag == FlagStatus.None && previousFlag != FlagStatus.None)
+            
+            // Track when we got a non-None flag
+            if (flag != FlagStatus.None)
             {
-                Logger.Info("Lighting Service", "Flag cleared - restoring previous lighting state");
-                await RestoreAllDevicesAsync();
-                return;
+                _lastNoneFlagTime = DateTime.Now;
             }
 
-            // If this is a new flag (not just None), save current state first
+            // If this is a new flag (from None), save current state first
             if (previousFlag == FlagStatus.None && flag != FlagStatus.None)
             {
-                Logger.Info("Lighting Service", "New flag detected - saving current lighting state");
+                Logger.Info("Lighting Service", "New flag detected - saving current profile lighting state");
                 await SaveAllDevicesAsync();
             }
 
             // Apply the flag lighting
             await ApplyFlagLightingAsync(flag);
         }
+
 
         private async Task ApplyFlagLightingAsync(FlagStatus flag)
         {
@@ -227,15 +245,54 @@ namespace SimControlCentre.Services
 
         private async Task SaveAllDevicesAsync()
         {
-            // State saving is handled internally by devices during flashing
-            await Task.CompletedTask;
+            Logger.Info("Lighting Service", "Saving device states before flag lighting");
+            
+            foreach (var device in _devices.Where(d => d.IsConnected))
+            {
+                try
+                {
+                    await device.SaveStateAsync();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Lighting Service", $"Error saving state for {device.DeviceName}", ex);
+                }
+            }
         }
 
         private async Task RestoreAllDevicesAsync()
         {
-            // State restoration is handled internally by devices when flashing stops
-            await Task.CompletedTask;
+            Logger.Info("Lighting Service", "Restoring device states (clearing flags)");
+            
+            foreach (var device in _devices.Where(d => d.IsConnected))
+            {
+                try
+                {
+                    await device.StopFlashingAsync();
+                    await device.RestoreStateAsync();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Lighting Service", $"Error restoring state for {device.DeviceName}", ex);
+                }
+            }
         }
+        
+        /// <summary>
+        /// Restore profile lighting (called when telemetry disconnects)
+        /// </summary>
+        public async Task RestoreProfileLightingAsync()
+        {
+            Logger.Info("Lighting Service", "Restoring profile lighting after session end");
+            
+            // Reset flag state
+            _currentFlag = FlagStatus.None;
+            _lastNoneFlagTime = DateTime.MinValue;
+            
+            // Stop any flashing and restore saved state
+            await RestoreAllDevicesAsync();
+        }
+
 
         public void Dispose()
         {

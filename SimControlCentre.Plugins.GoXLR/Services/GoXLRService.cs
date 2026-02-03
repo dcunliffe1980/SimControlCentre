@@ -377,6 +377,57 @@ public class GoXLRService : IDisposable
             _context.LogError("GoXLR Service", $"Error setting button color", ex);
         }
     }
+    
+    /// <summary>
+    /// Get current button colors from the active GoXLR profile (not available via API)
+    /// Returns null as GoXLR stores colors in profile files, not runtime state
+    /// </summary>
+    public async Task<Dictionary<string, string>?> GetCurrentButtonColorsAsync()
+    {
+        // The GoXLR API doesn't expose current button colors in runtime state
+        // Colors are stored in the profile XML files
+        // To restore colors, we need to reload the profile instead
+        await Task.CompletedTask;
+        return null;
+    }
+    
+    /// <summary>
+    /// Reload the current profile to restore all button colors to their saved state
+    /// </summary>
+    public async Task ReloadCurrentProfileAsync()
+    {
+        if (!IsConfigured || _apiClient == null)
+        {
+            _context.LogWarning("GoXLR Service", "Cannot reload profile - not configured");
+            return;
+        }
+
+        try
+        {
+            // Get current profile name
+            var currentProfile = await _apiClient.GetCurrentProfileAsync(SerialNumber);
+            if (currentProfile == null)
+            {
+                _context.LogWarning("GoXLR Service", "Could not get current profile name");
+                return;
+            }
+
+            _context.LogInfo("GoXLR Service", $"Reloading profile: {currentProfile}");
+            
+            // Load the same profile again - this resets all colors
+            await _apiClient.LoadProfileAsync(SerialNumber, currentProfile);
+            
+            _context.LogInfo("GoXLR Service", "Profile reloaded - button colors restored");
+        }
+        catch (Exception ex)
+        {
+            _context.LogError("GoXLR Service", $"Error reloading profile", ex);
+        }
+    }
+
+
+
+
 
     /// <summary>
     /// Sets the mute state for a channel/fader
