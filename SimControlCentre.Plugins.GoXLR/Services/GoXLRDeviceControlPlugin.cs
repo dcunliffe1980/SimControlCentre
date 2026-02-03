@@ -70,7 +70,26 @@ namespace SimControlCentre.Plugins.GoXLR.Services
             }
         }
 
+        /// <summary>
+        /// Get available GoXLR channels from device
+        /// </summary>
+        public async Task<List<string>> GetAvailableChannelsAsync()
+        {
+            try
+            {
+                return await _goXLRService.GetChannelsAsync();
+            }
+            catch (Exception ex)
+            {
+                _context?.LogError("GoXLR Device Control Plugin", $"Failed to get channels: {ex.Message}", ex);
+                return new List<string>();
+            }
+        }
+
+
+
         public object? GetConfigurationControl()
+
         {
             // Return GoXLR-specific configuration UI
             return new SimControlCentre.Plugins.GoXLR.Views.GoXLRDeviceControlPanel(_context, this);

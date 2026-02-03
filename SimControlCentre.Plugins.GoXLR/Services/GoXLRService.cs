@@ -262,9 +262,35 @@ public class GoXLRService : IDisposable
     }
 
     /// <summary>
+    /// Gets all available channels from GoXLR device
+    /// </summary>
+    public async Task<List<string>> GetChannelsAsync()
+    {
+        if (!IsConfigured || _apiClient == null)
+            return new List<string>();
+
+        try
+        {
+            var device = await _apiClient.GetDeviceStatusAsync(SerialNumber);
+            if (device?.Levels?.Volumes != null)
+            {
+                return device.Levels.Volumes.Keys.OrderBy(k => k).ToList();
+            }
+            return new List<string>();
+        }
+        catch (Exception ex)
+        {
+            _context.LogError("GoXLR Service", $"Failed to get channels: {ex.Message}", ex);
+            return new List<string>();
+        }
+    }
+
+
+    /// <summary>
     /// Gets currently active profile name
     /// </summary>
     public async Task<string?> GetCurrentProfileAsync()
+
     {
         if (!IsConfigured || _apiClient == null)
             return null;

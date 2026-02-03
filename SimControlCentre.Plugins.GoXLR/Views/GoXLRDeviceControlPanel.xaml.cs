@@ -10,17 +10,17 @@ using SimControlCentre.Plugins.GoXLR.Services;
 namespace SimControlCentre.Plugins.GoXLR.Views
 {
     /// <summary>
-    /// GoXLR-specific device control UI panel
-    /// Manages channels and profiles for GoXLR device
+    /// GoXLR-specific device control UI panel with COMPLETE functionality
     /// </summary>
     public partial class GoXLRDeviceControlPanel : UserControl
     {
         private readonly IPluginContext _context;
         private readonly GoXLRDeviceControlPlugin _plugin;
         private List<string> _allAvailableProfiles = new List<string>();
+        private List<string> _allAvailableChannels = new List<string>();
         
-        // Hotkey capture state
-        private bool _isCapturingHotkey = false;
+        // Combined hotkey+button capture state
+        private bool _isCapturingCombined = false;
         private string? _captureChannel;
         private string? _captureAction;
         private int _captureTextBoxHash;
@@ -32,16 +32,30 @@ namespace SimControlCentre.Plugins.GoXLR.Views
             _context = context;
             _plugin = plugin;
             
-            // Add key handler for hotkey capture
+            // Hook into keyboard events for hotkey capture
             PreviewKeyDown += GoXLRDeviceControlPanel_PreviewKeyDown;
             
             Loaded += async (s, e) =>
             {
+                await LoadAvailableChannelsAsync();
                 await LoadAvailableProfilesAsync();
                 PopulateUI();
             };
         }
 
+        private async Task LoadAvailableChannelsAsync()
+        {
+            try
+            {
+                _allAvailableChannels = await _plugin.GetAvailableChannelsAsync();
+                _context.LogInfo("GoXLR Device Control", $"Loaded {_allAvailableChannels.Count} channels from device");
+            }
+            catch (Exception ex)
+            {
+                _context.LogError("GoXLR Device Control", $"Failed to load channels: {ex.Message}", ex);
+                _allAvailableChannels = new List<string>();
+            }
+        }
 
         private void PopulateUI()
         {
@@ -55,12 +69,8 @@ namespace SimControlCentre.Plugins.GoXLR.Views
         {
             ChannelComboBox.Items.Clear();
             
-            var allChannels = new[] { "Game", "Music", "Chat", "System" };
-            
-            // Access settings directly - EnabledChannels is a property on AppSettings
             var enabledChannels = _context.Settings.GetValue<List<string>>("EnabledChannels") ?? new List<string>();
-            
-            var availableChannels = allChannels.Where(c => !enabledChannels.Contains(c));
+            var availableChannels = _allAvailableChannels.Where(c => !enabledChannels.Contains(c));
             
             foreach (var channel in availableChannels)
             {
@@ -78,13 +88,11 @@ namespace SimControlCentre.Plugins.GoXLR.Views
             }
         }
 
-
         private void UpdateProfileDropdown()
         {
             ProfileComboBox.Items.Clear();
             
-            var settings = _context.Settings;
-            var profileHotkeys = settings.GetValue<Dictionary<string, string>>("ProfileHotkeys") 
+            var profileHotkeys = _context.Settings.GetValue<Dictionary<string, string>>("ProfileHotkeys") 
                 ?? new Dictionary<string, string>();
             
             var availableProfiles = _allAvailableProfiles
@@ -118,8 +126,7 @@ namespace SimControlCentre.Plugins.GoXLR.Views
         {
             VolumeHotkeysPanel.Children.Clear();
             
-            var settings = _context.Settings;
-            var enabledChannels = settings.GetValue<List<string>>("EnabledChannels") ?? new List<string>();
+            var enabledChannels = _context.Settings.GetValue<List<string>>("EnabledChannels") ?? new List<string>();
             
             if (enabledChannels.Count == 0)
             {
@@ -136,168 +143,200 @@ namespace SimControlCentre.Plugins.GoXLR.Views
 
             foreach (var channel in enabledChannels.OrderBy(c => c))
             {
-                CreateChannelRow(channel);
+                CreateVolumeHotkeyRow(channel);
             }
         }
 
-        private void CreateChannelRow(string channel)
+        private void CreateVolumeHotkeyRow(string channel)
         {
-            // Get hotkeys for this channel
+            // Get existing hotkeys for this channel
             var volumeHotkeys = _context.Settings.GetValue<Dictionary<string, object>>("VolumeHotkeys") 
                 ?? new Dictionary<string, object>();
             
-            // Try to get the channel hotkeys
-            object? channelHotkeysObj = null;
-            string upHotkey = "";
-            string downHotkey = "";
+            string upKeyboard = "";
+            string upButton = "";
+            string downKeyboard = "";
+            string downButton = "";
             
-            if (volumeHotkeys.TryGetValue(channel, out channelHotkeysObj))
+            if (volumeHotkeys.TryGetValue(channel, out var channelHotkeysObj))
             {
-                // Channel hotkeys exist - extract up/down
-                var channelHotkeysDict = channelHotkeysObj as Dictionary<string, object>;
-                if (channelHotkeysDict != null)
+                var channelHotkeys = channelHotkeysObj as Dictionary<string, object>;
+                if (channelHotkeys != null)
                 {
-                    if (channelHotkeysDict.TryGetValue("VolumeUp", out var upObj))
-                        upHotkey = upObj?.ToString() ?? "";
-                    if (channelHotkeysDict.TryGetValue("VolumeDown", out var downObj))
-                        downHotkey = downObj?.ToString() ?? "";
+                    if (channelHotkeys.TryGetValue("VolumeUp", out var upObj))
+                        upKeyboard = upObj?.ToString() ?? "";
+                    if (channelHotkeys.TryGetValue("VolumeUpButton", out var upBtnObj))
+                        upButton = upBtnObj?.ToString() ?? "";
+                    if (channelHotkeys.TryGetValue("VolumeDown", out var downObj))
+                        downKeyboard = downObj?.ToString() ?? "";
+                    if (channelHotkeys.TryGetValue("VolumeDownButton", out var downBtnObj))
+                        downButton = downBtnObj?.ToString() ?? "";
                 }
             }
 
-            var panel = new StackPanel
-            {
-                Margin = new Thickness(0, 0, 0, 15)
-            };
-
-            // Channel header
-            var headerPanel = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                Margin = new Thickness(0, 0, 0, 5)
-            };
-
+            // Create Grid with horizontal layout (OLD STYLE)
+            var channelGrid = new Grid { Margin = new Thickness(0, 0, 0, 15) };
+            channelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) }); // 0: Label
+            channelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });       // 1: "Up:"
+            channelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // 2: Up textbox
+            channelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });       // 3: Up Capture
+            channelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });       // 4: Up Clear
+            channelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });       // 5: "Down:"
+            channelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // 6: Down textbox
+            channelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });       // 7: Down Capture
+            channelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });       // 8: Down Clear
+            channelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });       // 9: Remove button
+            
+            // Channel Label
             var label = new TextBlock
             {
-                Text = channel,
+                Text = channel + ":",
                 FontWeight = FontWeights.Bold,
-                FontSize = 14,
                 VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 15, 0)
+                Margin = new Thickness(0, 0, 10, 0)
             };
-            headerPanel.Children.Add(label);
-
+            Grid.SetColumn(label, 0);
+            channelGrid.Children.Add(label);
+            
+            // Volume Up section
+            var upLabel = new TextBlock
+            {
+                Text = "Up:",
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 5, 0),
+                Foreground = System.Windows.Media.Brushes.Gray
+            };
+            Grid.SetColumn(upLabel, 1);
+            channelGrid.Children.Add(upLabel);
+            
+            var upBox = new TextBox
+            {
+                Text = GetCombinedHotkeyDisplay(upKeyboard, upButton),
+                IsReadOnly = true,
+                Padding = new Thickness(5),
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Tag = $"{channel}|VolumeUp",
+                MinWidth = 150
+            };
+            Grid.SetColumn(upBox, 2);
+            channelGrid.Children.Add(upBox);
+            
+            var upCaptureButton = new Button
+            {
+                Content = "Capture",
+                Padding = new Thickness(8, 5, 8, 5),
+                Margin = new Thickness(5, 0, 5, 0),
+                Tag = $"{channel}|VolumeUp|{upBox.GetHashCode()}"
+            };
+            upCaptureButton.Click += StartCombinedCapture_Click;
+            Grid.SetColumn(upCaptureButton, 3);
+            channelGrid.Children.Add(upCaptureButton);
+            
+            var upClearButton = new Button
+            {
+                Content = "Clear",
+                Padding = new Thickness(8, 5, 8, 5),
+                Margin = new Thickness(0, 0, 15, 0),
+                Tag = $"{channel}|VolumeUp",
+                ToolTip = "Clear hotkey"
+            };
+            upClearButton.Click += ClearHotkey_Click;
+            Grid.SetColumn(upClearButton, 4);
+            channelGrid.Children.Add(upClearButton);
+            
+            // Volume Down section
+            var downLabel = new TextBlock
+            {
+                Text = "Down:",
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 5, 0),
+                Foreground = System.Windows.Media.Brushes.Gray
+            };
+            Grid.SetColumn(downLabel, 5);
+            channelGrid.Children.Add(downLabel);
+            
+            var downBox = new TextBox
+            {
+                Text = GetCombinedHotkeyDisplay(downKeyboard, downButton),
+                IsReadOnly = true,
+                Padding = new Thickness(5),
+                VerticalContentAlignment = VerticalAlignment.Center,
+                Tag = $"{channel}|VolumeDown",
+                MinWidth = 150
+            };
+            Grid.SetColumn(downBox, 6);
+            channelGrid.Children.Add(downBox);
+            
+            var downCaptureButton = new Button
+            {
+                Content = "Capture",
+                Padding = new Thickness(8, 5, 8, 5),
+                Margin = new Thickness(5, 0, 5, 0),
+                Tag = $"{channel}|VolumeDown|{downBox.GetHashCode()}"
+            };
+            downCaptureButton.Click += StartCombinedCapture_Click;
+            Grid.SetColumn(downCaptureButton, 7);
+            channelGrid.Children.Add(downCaptureButton);
+            
+            var downClearButton = new Button
+            {
+                Content = "Clear",
+                Padding = new Thickness(8, 5, 8, 5),
+                Margin = new Thickness(0, 0, 15, 0),
+                Tag = $"{channel}|VolumeDown",
+                ToolTip = "Clear hotkey"
+            };
+            downClearButton.Click += ClearHotkey_Click;
+            Grid.SetColumn(downClearButton, 8);
+            channelGrid.Children.Add(downClearButton);
+            
+            // Remove Channel Button
             var removeButton = new Button
             {
-                Content = "? Remove Channel",
-                Padding = new Thickness(8, 4, 8, 4),
+                Content = "? Remove",
+                Padding = new Thickness(8, 5, 8, 5),
+                Margin = new Thickness(10, 0, 0, 0),
                 Tag = channel,
+                ToolTip = $"Remove {channel} channel",
                 Background = System.Windows.Media.Brushes.LightCoral
             };
             removeButton.Click += RemoveChannel_Click;
-            headerPanel.Children.Add(removeButton);
-
-            panel.Children.Add(headerPanel);
-
-            // Volume Up row
-            var upPanel = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                Margin = new Thickness(20, 0, 0, 5)
-            };
+            Grid.SetColumn(removeButton, 9);
+            channelGrid.Children.Add(removeButton);
             
-            upPanel.Children.Add(new TextBlock 
-            { 
-                Text = "Volume Up:", 
-                Width = 100,
-                VerticalAlignment = VerticalAlignment.Center 
-            });
-            
-            var upTextBox = new TextBox
-            {
-                Text = upHotkey,
-                Width = 200,
-                IsReadOnly = true,
-                Margin = new Thickness(0, 0, 5, 0),
-                Tag = $"{channel}|VolumeUp"
-            };
-            upPanel.Children.Add(upTextBox);
-            
-            var upCaptureBtn = new Button
-            {
-                Content = "Capture",
-                Padding = new Thickness(10, 4, 10, 4),
-                Margin = new Thickness(0, 0, 5, 0),
-                Tag = $"{channel}|VolumeUp|{upTextBox.GetHashCode()}"
-            };
-            upCaptureBtn.Click += CaptureHotkey_Click;
-            upPanel.Children.Add(upCaptureBtn);
-            
-            var upClearBtn = new Button
-            {
-                Content = "Clear",
-                Padding = new Thickness(10, 4, 10, 4),
-                Tag = $"{channel}|VolumeUp"
-            };
-            upClearBtn.Click += ClearHotkey_Click;
-            upPanel.Children.Add(upClearBtn);
-
-            panel.Children.Add(upPanel);
-
-            // Volume Down row
-            var downPanel = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                Margin = new Thickness(20, 0, 0, 5)
-            };
-            
-            downPanel.Children.Add(new TextBlock 
-            { 
-                Text = "Volume Down:", 
-                Width = 100,
-                VerticalAlignment = VerticalAlignment.Center 
-            });
-            
-            var downTextBox = new TextBox
-            {
-                Text = downHotkey,
-                Width = 200,
-                IsReadOnly = true,
-                Margin = new Thickness(0, 0, 5, 0),
-                Tag = $"{channel}|VolumeDown"
-            };
-            downPanel.Children.Add(downTextBox);
-            
-            var downCaptureBtn = new Button
-            {
-                Content = "Capture",
-                Padding = new Thickness(10, 4, 10, 4),
-                Margin = new Thickness(0, 0, 5, 0),
-                Tag = $"{channel}|VolumeDown|{downTextBox.GetHashCode()}"
-            };
-            downCaptureBtn.Click += CaptureHotkey_Click;
-            downPanel.Children.Add(downCaptureBtn);
-            
-            var downClearBtn = new Button
-            {
-                Content = "Clear",
-                Padding = new Thickness(10, 4, 10, 4),
-                Tag = $"{channel}|VolumeDown"
-            };
-            downClearBtn.Click += ClearHotkey_Click;
-            downPanel.Children.Add(downClearBtn);
-
-            panel.Children.Add(downPanel);
-
-            VolumeHotkeysPanel.Children.Add(panel);
+            VolumeHotkeysPanel.Children.Add(channelGrid);
         }
 
+        private string GetCombinedHotkeyDisplay(string? keyboard, string? button)
+        {
+            var parts = new List<string>();
+            
+            if (!string.IsNullOrWhiteSpace(keyboard))
+                parts.Add(keyboard);
+            
+            if (!string.IsNullOrWhiteSpace(button))
+            {
+                // Parse button string: DeviceName:{ProductGuid}:Button:{number}
+                // Format as: DeviceName: Btn X
+                var buttonParts = button.Split(':');
+                if (buttonParts.Length >= 4)
+                {
+                    var deviceName = buttonParts[0].Trim();
+                    var buttonNumber = buttonParts[3];
+                    parts.Add($"{deviceName}: Btn {buttonNumber}");
+                }
+            }
+            
+            return parts.Count > 0 ? string.Join(" OR ", parts) : "";
+        }
 
         private void RenderProfileHotkeys()
         {
             ProfileHotkeysPanel.Children.Clear();
             
-            var settings = _context.Settings;
-            var profileHotkeys = settings.GetValue<Dictionary<string, string>>("ProfileHotkeys") 
+            var profileHotkeys = _context.Settings.GetValue<Dictionary<string, string>>("ProfileHotkeys") 
+                ?? new Dictionary<string, string>();
+            var profileButtons = _context.Settings.GetValue<Dictionary<string, string>>("ProfileButtons") 
                 ?? new Dictionary<string, string>();
             
             if (profileHotkeys.Count == 0)
@@ -323,68 +362,86 @@ namespace SimControlCentre.Plugins.GoXLR.Views
         {
             var profileHotkeys = _context.Settings.GetValue<Dictionary<string, string>>("ProfileHotkeys") 
                 ?? new Dictionary<string, string>();
+            var profileButtons = _context.Settings.GetValue<Dictionary<string, string>>("ProfileButtons") 
+                ?? new Dictionary<string, string>();
             
             string hotkey = profileHotkeys.ContainsKey(profile) ? profileHotkeys[profile] : "";
+            string button = profileButtons.ContainsKey(profile) ? profileButtons[profile] : "";
 
-            var panel = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                Margin = new Thickness(0, 0, 0, 10)
-            };
-
+            var profileGrid = new Grid { Margin = new Thickness(0, 0, 0, 10) };
+            profileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) }); // 0: Label
+            profileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) }); // 1: Textbox
+            profileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // 2: Capture
+            profileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // 3: Clear
+            profileGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // 4: Remove
+            
+            // Profile Label
             var label = new TextBlock
             {
-                Text = profile,
+                Text = profile + ":",
                 FontWeight = FontWeights.Bold,
-                Width = 200,
-                VerticalAlignment = VerticalAlignment.Center
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 10, 0),
+                TextWrapping = TextWrapping.Wrap
             };
-            panel.Children.Add(label);
-
-            var hotkeyTextBox = new TextBox
+            Grid.SetColumn(label, 0);
+            profileGrid.Children.Add(label);
+            
+            // Hotkey Textbox
+            var hotkeyBox = new TextBox
             {
-                Text = hotkey,
-                Width = 200,
+                Text = GetCombinedHotkeyDisplay(hotkey, button),
                 IsReadOnly = true,
-                Margin = new Thickness(0, 0, 5, 0),
+                Padding = new Thickness(5),
+                VerticalContentAlignment = VerticalAlignment.Center,
                 Tag = $"Profile|{profile}"
             };
-            panel.Children.Add(hotkeyTextBox);
-
-            var captureBtn = new Button
+            Grid.SetColumn(hotkeyBox, 1);
+            profileGrid.Children.Add(hotkeyBox);
+            
+            // Capture Button
+            var captureButton = new Button
             {
                 Content = "Capture",
-                Padding = new Thickness(10, 4, 10, 4),
-                Margin = new Thickness(0, 0, 5, 0),
-                Tag = $"Profile|{profile}|{hotkeyTextBox.GetHashCode()}"
+                Padding = new Thickness(10, 5, 10, 5),
+                Margin = new Thickness(5, 0, 5, 0),
+                Tag = $"Profile|{profile}|{hotkeyBox.GetHashCode()}"
             };
-            captureBtn.Click += CaptureHotkey_Click;
-            panel.Children.Add(captureBtn);
-
-            var clearBtn = new Button
+            captureButton.Click += StartCombinedCapture_Click;
+            Grid.SetColumn(captureButton, 2);
+            profileGrid.Children.Add(captureButton);
+            
+            // Clear Button
+            var clearButton = new Button
             {
                 Content = "Clear",
-                Padding = new Thickness(10, 4, 10, 4),
-                Margin = new Thickness(0, 0, 5, 0),
-                Tag = $"Profile|{profile}"
+                Padding = new Thickness(10, 5, 10, 5),
+                Tag = $"Profile|{profile}",
+                ToolTip = "Clear hotkey"
             };
-            clearBtn.Click += ClearHotkey_Click;
-            panel.Children.Add(clearBtn);
-
+            clearButton.Click += ClearHotkey_Click;
+            Grid.SetColumn(clearButton, 3);
+            profileGrid.Children.Add(clearButton);
+            
+            // Remove Profile Button
             var removeButton = new Button
             {
                 Content = "? Remove",
-                Padding = new Thickness(8, 4, 8, 4),
+                Padding = new Thickness(8, 5, 8, 5),
+                Margin = new Thickness(5, 0, 0, 0),
                 Tag = profile,
+                ToolTip = $"Remove {profile} profile",
                 Background = System.Windows.Media.Brushes.LightCoral
             };
             removeButton.Click += RemoveProfile_Click;
-            panel.Children.Add(removeButton);
-
-            ProfileHotkeysPanel.Children.Add(panel);
+            Grid.SetColumn(removeButton, 4);
+            profileGrid.Children.Add(removeButton);
+            
+            ProfileHotkeysPanel.Children.Add(profileGrid);
         }
 
-
+        // ==================== Channel/Profile Management ====================
+        
         private void AddChannel_Click(object sender, RoutedEventArgs e)
         {
             var selectedItem = ChannelComboBox.SelectedItem as ComboBoxItem;
@@ -397,8 +454,7 @@ namespace SimControlCentre.Plugins.GoXLR.Views
 
             string channelName = selectedItem.Tag?.ToString() ?? "";
             
-            var settings = _context.Settings;
-            var enabledChannels = settings.GetValue<List<string>>("EnabledChannels") ?? new List<string>();
+            var enabledChannels = _context.Settings.GetValue<List<string>>("EnabledChannels") ?? new List<string>();
             
             if (enabledChannels.Contains(channelName))
             {
@@ -408,9 +464,24 @@ namespace SimControlCentre.Plugins.GoXLR.Views
             }
 
             enabledChannels.Add(channelName);
-            settings.SetValue("EnabledChannels", enabledChannels);
-            _context.SaveSettings();
+            _context.Settings.SetValue("EnabledChannels", enabledChannels);
             
+            // Initialize hotkeys dict if needed
+            var volumeHotkeys = _context.Settings.GetValue<Dictionary<string, object>>("VolumeHotkeys") 
+                ?? new Dictionary<string, object>();
+            if (!volumeHotkeys.ContainsKey(channelName))
+            {
+                volumeHotkeys[channelName] = new Dictionary<string, object>
+                {
+                    { "VolumeUp", "" },
+                    { "VolumeUpButton", "" },
+                    { "VolumeDown", "" },
+                    { "VolumeDownButton", "" }
+                };
+                _context.Settings.SetValue("VolumeHotkeys", volumeHotkeys);
+            }
+            
+            _context.SaveSettings();
             _context.LogInfo("GoXLR Device Control", $"Added channel: {channelName}");
             
             PopulateUI();
@@ -426,10 +497,9 @@ namespace SimControlCentre.Plugins.GoXLR.Views
                 return;
             }
 
-            var settings = _context.Settings;
-            var profileHotkeys = settings.GetValue<Dictionary<string, string>>("ProfileHotkeys") 
+            var profileHotkeys = _context.Settings.GetValue<Dictionary<string, string>>("ProfileHotkeys") 
                 ?? new Dictionary<string, string>();
-            var profileButtons = settings.GetValue<Dictionary<string, string>>("ProfileButtons") 
+            var profileButtons = _context.Settings.GetValue<Dictionary<string, string>>("ProfileButtons") 
                 ?? new Dictionary<string, string>();
             
             if (profileHotkeys.ContainsKey(selectedProfile))
@@ -441,8 +511,8 @@ namespace SimControlCentre.Plugins.GoXLR.Views
 
             profileHotkeys[selectedProfile] = "";
             profileButtons[selectedProfile] = "";
-            settings.SetValue("ProfileHotkeys", profileHotkeys);
-            settings.SetValue("ProfileButtons", profileButtons);
+            _context.Settings.SetValue("ProfileHotkeys", profileHotkeys);
+            _context.Settings.SetValue("ProfileButtons", profileButtons);
             _context.SaveSettings();
             
             _context.LogInfo("GoXLR Device Control", $"Added profile: {selectedProfile}");
@@ -486,16 +556,14 @@ namespace SimControlCentre.Plugins.GoXLR.Views
 
             if (result == MessageBoxResult.Yes)
             {
-                var settings = _context.Settings;
-                var enabledChannels = settings.GetValue<List<string>>("EnabledChannels") ?? new List<string>();
+                var enabledChannels = _context.Settings.GetValue<List<string>>("EnabledChannels") ?? new List<string>();
                 enabledChannels.Remove(channelName);
-                settings.SetValue("EnabledChannels", enabledChannels);
+                _context.Settings.SetValue("EnabledChannels", enabledChannels);
                 
-                // Also remove hotkeys
-                var volumeHotkeys = settings.GetValue<Dictionary<string, object>>("VolumeHotkeys") 
+                var volumeHotkeys = _context.Settings.GetValue<Dictionary<string, object>>("VolumeHotkeys") 
                     ?? new Dictionary<string, object>();
                 volumeHotkeys.Remove(channelName);
-                settings.SetValue("VolumeHotkeys", volumeHotkeys);
+                _context.Settings.SetValue("VolumeHotkeys", volumeHotkeys);
                 
                 _context.SaveSettings();
                 _context.LogInfo("GoXLR Device Control", $"Removed channel: {channelName}");
@@ -520,17 +588,16 @@ namespace SimControlCentre.Plugins.GoXLR.Views
 
             if (result == MessageBoxResult.Yes)
             {
-                var settings = _context.Settings;
-                var profileHotkeys = settings.GetValue<Dictionary<string, string>>("ProfileHotkeys") 
+                var profileHotkeys = _context.Settings.GetValue<Dictionary<string, string>>("ProfileHotkeys") 
                     ?? new Dictionary<string, string>();
-                var profileButtons = settings.GetValue<Dictionary<string, string>>("ProfileButtons") 
+                var profileButtons = _context.Settings.GetValue<Dictionary<string, string>>("ProfileButtons") 
                     ?? new Dictionary<string, string>();
                 
                 profileHotkeys.Remove(profileName);
                 profileButtons.Remove(profileName);
                 
-                settings.SetValue("ProfileHotkeys", profileHotkeys);
-                settings.SetValue("ProfileButtons", profileButtons);
+                _context.Settings.SetValue("ProfileHotkeys", profileHotkeys);
+                _context.Settings.SetValue("ProfileButtons", profileButtons);
                 _context.SaveSettings();
                 
                 _context.LogInfo("GoXLR Device Control", $"Removed profile: {profileName}");
@@ -538,10 +605,10 @@ namespace SimControlCentre.Plugins.GoXLR.Views
                 PopulateUI();
             }
         }
+
+        // ==================== Combined Keyboard + Button Capture ====================
         
-        // ==================== Hotkey Capture ====================
-        
-        private void CaptureHotkey_Click(object sender, RoutedEventArgs e)
+        private void StartCombinedCapture_Click(object sender, RoutedEventArgs e)
         {
             var button = sender as Button;
             var tag = button?.Tag?.ToString();
@@ -553,10 +620,24 @@ namespace SimControlCentre.Plugins.GoXLR.Views
             _captureChannel = parts[0];
             _captureAction = parts[1];
             _captureTextBoxHash = int.Parse(parts[2]);
-            _isCapturingHotkey = true;
+            _isCapturingCombined = true;
 
-            button.Content = "Press keys...";
+            button.Content = "Press key or button...";
             button.IsEnabled = false;
+            
+            // Subscribe to DirectInput button events using reflection
+            var directInputService = GetDirectInputService();
+            if (directInputService != null)
+            {
+                var eventInfo = directInputService.GetType().GetEvent("ButtonPressed");
+                if (eventInfo != null)
+                {
+                    var handler = Delegate.CreateDelegate(eventInfo.EventHandlerType!, this, nameof(OnCombinedButtonCaptured));
+                    eventInfo.AddEventHandler(directInputService, handler);
+                }
+            }
+
+
             
             Focus(); // Focus this control to receive key events
         }
@@ -573,21 +654,25 @@ namespace SimControlCentre.Plugins.GoXLR.Views
             string channel = parts[0];
             string action = parts[1];
 
-            // Clear the hotkey
             if (channel == "Profile")
             {
+                // Clear profile hotkey
                 var profileHotkeys = _context.Settings.GetValue<Dictionary<string, string>>("ProfileHotkeys") 
                     ?? new Dictionary<string, string>();
+                var profileButtons = _context.Settings.GetValue<Dictionary<string, string>>("ProfileButtons") 
+                    ?? new Dictionary<string, string>();
+                
                 if (profileHotkeys.ContainsKey(action))
-                {
                     profileHotkeys[action] = "";
-                    _context.Settings.SetValue("ProfileHotkeys", profileHotkeys);
-                    _context.SaveSettings();
-                }
+                if (profileButtons.ContainsKey(action))
+                    profileButtons[action] = "";
+                
+                _context.Settings.SetValue("ProfileHotkeys", profileHotkeys);
+                _context.Settings.SetValue("ProfileButtons", profileButtons);
             }
             else
             {
-                // Channel hotkey
+                // Clear channel hotkey
                 var volumeHotkeys = _context.Settings.GetValue<Dictionary<string, object>>("VolumeHotkeys") 
                     ?? new Dictionary<string, object>();
                 
@@ -596,20 +681,29 @@ namespace SimControlCentre.Plugins.GoXLR.Views
                     var channelHotkeys = channelHotkeysObj as Dictionary<string, object>;
                     if (channelHotkeys != null)
                     {
-                        channelHotkeys[action] = "";
+                        if (action == "VolumeUp")
+                        {
+                            channelHotkeys["VolumeUp"] = "";
+                            channelHotkeys["VolumeUpButton"] = "";
+                        }
+                        else if (action == "VolumeDown")
+                        {
+                            channelHotkeys["VolumeDown"] = "";
+                            channelHotkeys["VolumeDownButton"] = "";
+                        }
                         volumeHotkeys[channel] = channelHotkeys;
                         _context.Settings.SetValue("VolumeHotkeys", volumeHotkeys);
-                        _context.SaveSettings();
                     }
                 }
             }
 
+            _context.SaveSettings();
             PopulateUI();
         }
 
         private void GoXLRDeviceControlPanel_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            if (!_isCapturingHotkey)
+            if (!_isCapturingCombined)
                 return;
 
             e.Handled = true;
@@ -621,19 +715,108 @@ namespace SimControlCentre.Plugins.GoXLR.Views
             // Build hotkey string
             var hotkey = BuildHotkeyString(System.Windows.Input.Keyboard.Modifiers, e.Key);
 
-            // Find the textbox and update it
-            var textBox = FindTextBoxByHash(_captureTextBoxHash);
-            if (textBox != null)
+            // Save as KEYBOARD hotkey
+            SaveCombinedHotkey(_captureChannel, _captureAction, keyboard: hotkey, button: null);
+
+            StopCombinedCapture();
+            PopulateUI();
+        }
+
+        private void OnCombinedButtonCaptured(object? sender, string buttonString)
+        {
+            if (!_isCapturingCombined)
+                return;
+
+            // Dispatcher because this comes from DirectInput thread
+            Dispatcher.Invoke(() =>
             {
-                textBox.Text = hotkey;
+                // Save as BUTTON hotkey
+                SaveCombinedHotkey(_captureChannel, _captureAction, keyboard: null, button: buttonString);
+                
+                StopCombinedCapture();
+                PopulateUI();
+            });
+        }
+
+        private void SaveCombinedHotkey(string? channel, string? action, string? keyboard, string? button)
+        {
+            if (string.IsNullOrEmpty(channel) || string.IsNullOrEmpty(action))
+                return;
+
+            if (channel == "Profile")
+            {
+                // Save profile hotkey/button
+                var profileHotkeys = _context.Settings.GetValue<Dictionary<string, string>>("ProfileHotkeys") 
+                    ?? new Dictionary<string, string>();
+                var profileButtons = _context.Settings.GetValue<Dictionary<string, string>>("ProfileButtons") 
+                    ?? new Dictionary<string, string>();
+                
+                if (keyboard != null)
+                    profileHotkeys[action] = keyboard;
+                if (button != null)
+                    profileButtons[action] = button;
+                
+                _context.Settings.SetValue("ProfileHotkeys", profileHotkeys);
+                _context.Settings.SetValue("ProfileButtons", profileButtons);
+                
+                _context.LogInfo("GoXLR Device Control", $"Saved profile hotkey: {action} = {keyboard ?? button}");
+            }
+            else
+            {
+                // Save channel volume hotkey/button
+                var volumeHotkeys = _context.Settings.GetValue<Dictionary<string, object>>("VolumeHotkeys") 
+                    ?? new Dictionary<string, object>();
+                
+                if (!volumeHotkeys.TryGetValue(channel, out var channelHotkeysObj))
+                {
+                    channelHotkeysObj = new Dictionary<string, object>
+                    {
+                        { "VolumeUp", "" },
+                        { "VolumeUpButton", "" },
+                        { "VolumeDown", "" },
+                        { "VolumeDownButton", "" }
+                    };
+                    volumeHotkeys[channel] = channelHotkeysObj;
+                }
+
+                var channelHotkeys = channelHotkeysObj as Dictionary<string, object>;
+                if (channelHotkeys != null)
+                {
+                    if (keyboard != null)
+                        channelHotkeys[action] = keyboard;
+                    if (button != null)
+                        channelHotkeys[action + "Button"] = button;
+                    
+                    volumeHotkeys[channel] = channelHotkeys;
+                    _context.Settings.SetValue("VolumeHotkeys", volumeHotkeys);
+                    
+                    _context.LogInfo("GoXLR Device Control", $"Saved channel hotkey: {channel}/{action} = {keyboard ?? button}");
+                }
             }
 
-            // Save the hotkey
-            SaveHotkey(_captureChannel, _captureAction, hotkey);
+            _context.SaveSettings();
+        }
 
-            // Stop capturing
-            StopCapture();
-            PopulateUI();
+        private void StopCombinedCapture()
+        {
+            _isCapturingCombined = false;
+            _captureChannel = null;
+            _captureAction = null;
+            _captureTextBoxHash = 0;
+            
+            // Unsubscribe from DirectInput using reflection
+            var directInputService = GetDirectInputService();
+            if (directInputService != null)
+            {
+                var eventInfo = directInputService.GetType().GetEvent("ButtonPressed");
+                if (eventInfo != null)
+                {
+                    var handler = Delegate.CreateDelegate(eventInfo.EventHandlerType!, this, nameof(OnCombinedButtonCaptured));
+                    eventInfo.RemoveEventHandler(directInputService, handler);
+                }
+            }
+
+
         }
 
         private bool IsModifierKey(System.Windows.Input.Key key)
@@ -662,77 +845,26 @@ namespace SimControlCentre.Plugins.GoXLR.Views
             return string.Join("+", parts);
         }
 
-        private TextBox? FindTextBoxByHash(int hash)
+        private object? GetDirectInputService()
         {
-            return FindTextBoxInPanel(VolumeHotkeysPanel, hash) 
-                ?? FindTextBoxInPanel(ProfileHotkeysPanel, hash);
-        }
-
-        private TextBox? FindTextBoxInPanel(StackPanel panel, int hash)
-        {
-            foreach (var child in panel.Children)
+            // Use reflection to get DirectInputService from main app
+            try
             {
-                if (child is StackPanel childPanel)
+                var appType = Type.GetType("SimControlCentre.App, SimControlCentre");
+                if (appType != null)
                 {
-                    foreach (var subChild in childPanel.Children)
+                    var method = appType.GetMethod("GetDirectInputService", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    if (method != null)
                     {
-                        if (subChild is TextBox textBox && textBox.GetHashCode() == hash)
-                            return textBox;
-                        if (subChild is StackPanel subPanel)
-                        {
-                            var found = FindTextBoxInPanel(subPanel, hash);
-                            if (found != null) return found;
-                        }
+                        return method.Invoke(null, null);
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                _context.LogError("GoXLR Device Control", $"Failed to get DirectInputService: {ex.Message}", ex);
+            }
             return null;
-        }
-
-        private void SaveHotkey(string? channel, string? action, string hotkey)
-        {
-            if (string.IsNullOrEmpty(channel) || string.IsNullOrEmpty(action))
-                return;
-
-            if (channel == "Profile")
-            {
-                var profileHotkeys = _context.Settings.GetValue<Dictionary<string, string>>("ProfileHotkeys") 
-                    ?? new Dictionary<string, string>();
-                profileHotkeys[action] = hotkey;
-                _context.Settings.SetValue("ProfileHotkeys", profileHotkeys);
-                _context.SaveSettings();
-                _context.LogInfo("GoXLR Device Control", $"Saved profile hotkey: {action} = {hotkey}");
-            }
-            else
-            {
-                var volumeHotkeys = _context.Settings.GetValue<Dictionary<string, object>>("VolumeHotkeys") 
-                    ?? new Dictionary<string, object>();
-                
-                if (!volumeHotkeys.TryGetValue(channel, out var channelHotkeysObj))
-                {
-                    channelHotkeysObj = new Dictionary<string, object>();
-                    volumeHotkeys[channel] = channelHotkeysObj;
-                }
-
-                var channelHotkeys = channelHotkeysObj as Dictionary<string, object>;
-                if (channelHotkeys != null)
-                {
-                    channelHotkeys[action] = hotkey;
-                    volumeHotkeys[channel] = channelHotkeys;
-                    _context.Settings.SetValue("VolumeHotkeys", volumeHotkeys);
-                    _context.SaveSettings();
-                    _context.LogInfo("GoXLR Device Control", $"Saved channel hotkey: {channel}/{action} = {hotkey}");
-                }
-            }
-        }
-
-        private void StopCapture()
-        {
-            _isCapturingHotkey = false;
-            _captureChannel = null;
-            _captureAction = null;
-            _captureTextBoxHash = 0;
         }
     }
 }
-
