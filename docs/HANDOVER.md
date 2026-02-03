@@ -78,41 +78,58 @@
 - GoXLR Plugin section with enable/disable
 - Expandable components panel (shown when enabled)
 - Lighting component indicator (active)
+
+### Phase 2.1: GoXLR Control ? Device Control Plugin ? COMPLETE
+
+**Completed**:
+1. ? Created `IDeviceControlPlugin` interface
+2. ? Implemented `GoXLRDeviceControlPlugin` with 5 actions
+3. ? Added channel mute API support (NEW FEATURE!)
+4. ? Created `DeviceControlService` to manage plugins
+5. ? Refactored `HotkeyManager` to use plugin actions
+6. ? Refactored `ControllerManager` to use plugin actions
+7. ? Updated Plugins UI to show Device Control as ACTIVE
+
+**Files Created**:
+- `SimControlCentre\Services\IDeviceControlPlugin.cs`
+- `SimControlCentre\Services\GoXLRDeviceControlPlugin.cs`
+- `SimControlCentre\Services\DeviceControlService.cs`
+
+**Files Modified**:
+- `SimControlCentre\Models\GoXLRCommand.cs` - Added SetFaderMuteState
+- `SimControlCentre\Services\GoXLRApiClient.cs` - Added mute API
+- `SimControlCentre\Services\GoXLRService.cs` - Added mute method
+- `SimControlCentre\Services\HotkeyManager.cs` - Use plugin actions
+- `SimControlCentre\Services\ControllerManager.cs` - Use plugin actions
+- `SimControlCentre\App.xaml.cs` - Register device control plugin
+- `SimControlCentre\Views\Tabs\PluginsTab.xaml` - Show as active
+
+**Key Features**:
+- 5 plugin actions: switch_profile, adjust_volume, set_volume, mute_channel, toggle_mute
+- Channel mute states: Unmuted, MutedToX, MutedToAll
+- All hotkeys and controller buttons use plugin architecture
+- Cleaner, more maintainable codebase
+
+
 - Device Control component indicator (coming soon)
 - Auto-disables lighting when no plugins enabled
 - Warning message when no plugins available
 
 ---
 
-## ?? Next Steps - Phase 2
+## ?? Next Steps - Phase 2.2
 
-### Phase 2.1: GoXLR Control ? Device Control Plugin
+### Telemetry Optimization
 
-**Goal**: Convert existing GoXLR control to plugin architecture
+**Goal**: Only enable telemetry when actively needed
 
 **What to Build**:
+- Track which components need telemetry
+- Auto-start when lighting plugin enabled
+- Auto-stop when no components need it
+- Add `RequiresTelemetry` property to plugin interfaces
 
-1. **Create Plugin Interface**: `IDeviceControlPlugin`
-   - Actions the plugin can perform
-   - Execute action with parameters
-   - Available actions list
-
-2. **Implement GoXLR Device Control Plugin**:
-   - Profile switching action
-   - Volume control action
-   - **NEW**: Channel mute functionality
-
-3. **Refactor Existing Code**:
-   - Move from `GoXLRService` direct calls to plugin actions
-   - Hotkeys execute plugin actions
-   - Controller buttons execute plugin actions
-
-4. **Update Settings UI**:
-   - Add Device Control section to GoXLR plugin in Plugins tab
-   - Settings: Serial number, API endpoint
-   - Enable/disable independently from Lighting
-
-**Expected Duration**: 2-3 sessions
+**Expected Duration**: 1 session
 
 ---
 
