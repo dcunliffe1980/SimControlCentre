@@ -1,7 +1,7 @@
-# SimControlCentre v1.2.0 Release Build Script
+# SimControlCentre v1.3.0 Release Build Script
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "SimControlCentre v1.2.0 Release Build" -ForegroundColor Cyan
+Write-Host "SimControlCentre v1.3.0 Release Build" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -16,6 +16,18 @@ New-Item -ItemType Directory -Force -Path "Installers" | Out-Null
 Write-Host "? Cleaned" -ForegroundColor Green
 Write-Host ""
 
+# Build plugins first
+Write-Host "Building plugins..." -ForegroundColor Yellow
+dotnet build SimControlCentre.Plugins.GoXLR/SimControlCentre.Plugins.GoXLR.csproj -c Release --verbosity quiet
+
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "? GoXLR plugin built" -ForegroundColor Green
+} else {
+    Write-Host "? Plugin build failed!" -ForegroundColor Red
+    exit 1
+}
+Write-Host ""
+
 # Build 1: Framework-Dependent (requires .NET 8)
 Write-Host "Building framework-dependent version..." -ForegroundColor Yellow
 dotnet publish SimControlCentre/SimControlCentre.csproj `
@@ -26,12 +38,20 @@ dotnet publish SimControlCentre/SimControlCentre.csproj `
     --verbosity quiet
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "? Framework-dependent build complete (~1MB)" -ForegroundColor Green
+    Write-Host "? Framework-dependent build complete" -ForegroundColor Green
+    
+    # Copy plugins to publish folder
+    Write-Host "Copying plugins to publish folder..." -ForegroundColor Yellow
+    New-Item -ItemType Directory -Force -Path "SimControlCentre\bin\Release\Publish\Plugins" | Out-Null
+    Copy-Item "SimControlCentre.Plugins.GoXLR\bin\Release\net8.0-windows\SimControlCentre.Plugins.GoXLR.dll" `
+        -Destination "SimControlCentre\bin\Release\Publish\Plugins\" -Force
+    Write-Host "? Plugins copied" -ForegroundColor Green
 } else {
     Write-Host "? Build failed!" -ForegroundColor Red
     exit 1
 }
 Write-Host ""
+
 
 # Build 2: Self-Contained (includes .NET 8)
 Write-Host "Building self-contained version..." -ForegroundColor Yellow
@@ -39,18 +59,26 @@ dotnet publish SimControlCentre/SimControlCentre.csproj `
     -c Release `
     -r win-x64 `
     --self-contained true `
-    -p:PublishSingleFile=true `
+    -p:PublishSingleFile=false `
     -p:IncludeNativeLibrariesForSelfExtract=true `
-    -p:EnableCompressionInSingleFile=true `
     --verbosity quiet
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "? Self-contained build complete (~155MB)" -ForegroundColor Green
+    Write-Host "? Self-contained build complete" -ForegroundColor Green
+    
+    # Copy plugins to self-contained publish folder
+    Write-Host "Copying plugins to self-contained folder..." -ForegroundColor Yellow
+    $selfContainedPath = "SimControlCentre\bin\Release\net8.0-windows\win-x64\publish"
+    New-Item -ItemType Directory -Force -Path "$selfContainedPath\Plugins" | Out-Null
+    Copy-Item "SimControlCentre.Plugins.GoXLR\bin\Release\net8.0-windows\SimControlCentre.Plugins.GoXLR.dll" `
+        -Destination "$selfContainedPath\Plugins\" -Force
+    Write-Host "? Plugins copied" -ForegroundColor Green
 } else {
     Write-Host "? Build failed!" -ForegroundColor Red
     exit 1
 }
 Write-Host ""
+
 
 # Check for Inno Setup
 Write-Host "Checking for Inno Setup..." -ForegroundColor Yellow

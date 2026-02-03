@@ -2,8 +2,9 @@
 ; Includes .NET 8 runtime (larger file, but no dependencies)
 
 #define MyAppName "SimControlCentre"
-#define MyAppVersion "1.2.0"
+#define MyAppVersion "1.3.0"
 #define MyAppPublisher "Dave Cunliffe"
+
 #define MyAppURL "https://github.com/dcunliffe1980/SimControlCentre"
 #define MyAppExeName "SimControlCentre.exe"
 
@@ -35,11 +36,15 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "startupicon"; Description: "Start with Windows"; GroupDescription: "Startup Options:"; Flags: unchecked
 
 [Files]
-; Single self-contained executable (includes .NET runtime)
+; Self-contained executable and all dependencies (includes .NET runtime)
 Source: "SimControlCentre\bin\Release\net8.0-windows\win-x64\publish\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "SimControlCentre\bin\Release\net8.0-windows\win-x64\publish\*.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "SimControlCentre\bin\Release\net8.0-windows\win-x64\publish\*.json"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "SimControlCentre\bin\Release\net8.0-windows\win-x64\publish\Plugins\*.dll"; DestDir: "{app}\Plugins"; Flags: ignoreversion recursesubdirs
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion isreadme
 Source: "QUICKSTART.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
+
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

@@ -2,8 +2,9 @@
 ; https://jrsoftware.org/isinfo.php
 
 #define MyAppName "SimControlCentre"
-#define MyAppVersion "1.2.0"
+#define MyAppVersion "1.3.0"
 #define MyAppPublisher "Dave Cunliffe"
+
 #define MyAppURL "https://github.com/dcunliffe1980/SimControlCentre"
 #define MyAppExeName "SimControlCentre.exe"
 
@@ -42,9 +43,11 @@ Name: "startupicon"; Description: "Start with Windows"; GroupDescription: "Start
 Source: "SimControlCentre\bin\Release\Publish\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "SimControlCentre\bin\Release\Publish\*.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "SimControlCentre\bin\Release\Publish\*.json"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "SimControlCentre\bin\Release\Publish\Plugins\*.dll"; DestDir: "{app}\Plugins"; Flags: ignoreversion recursesubdirs
 Source: "README.md"; DestDir: "{app}"; Flags: ignoreversion isreadme
 Source: "QUICKSTART.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
