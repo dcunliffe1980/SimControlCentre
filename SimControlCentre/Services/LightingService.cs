@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using SimControlCentre.Models;
+using ILightingDevice = SimControlCentre.Contracts.ILightingDevice;
+using ILightingPlugin = SimControlCentre.Contracts.ILightingPlugin;
 
 namespace SimControlCentre.Services
 {
@@ -11,13 +13,13 @@ namespace SimControlCentre.Services
     /// </summary>
     public class LightingService : IDisposable
     {
-        private readonly List<ILightingDevice> _devices = new();
-        private readonly List<ILightingDevicePlugin> _plugins = new();
+        private readonly List<SimControlCentre.Contracts.ILightingDevice> _devices = new();
+        private readonly List<ILightingPlugin> _plugins = new();
         private FlagStatus _currentFlag = FlagStatus.None;
         private bool _isDisposed;
 
-        public IReadOnlyList<ILightingDevicePlugin> Plugins => _plugins.AsReadOnly();
-        public IReadOnlyList<ILightingDevice> Devices => _devices.AsReadOnly();
+        public IReadOnlyList<ILightingPlugin> Plugins => _plugins.AsReadOnly();
+        public IReadOnlyList<SimControlCentre.Contracts.ILightingDevice> Devices => _devices.AsReadOnly();
 
         public LightingService()
         {
@@ -27,7 +29,7 @@ namespace SimControlCentre.Services
         /// <summary>
         /// Register a plugin (but don't create device yet)
         /// </summary>
-        public void RegisterPlugin(ILightingDevicePlugin plugin)
+        public void RegisterPlugin(ILightingPlugin plugin)
         {
             if (_plugins.Any(p => p.PluginId == plugin.PluginId))
             {
@@ -78,7 +80,7 @@ namespace SimControlCentre.Services
         /// <summary>
         /// Register a lighting device
         /// </summary>
-        public void RegisterDevice(ILightingDevice device)
+        public void RegisterDevice(SimControlCentre.Contracts.ILightingDevice device)
         {
             if (_devices.Contains(device))
             {
@@ -129,7 +131,7 @@ namespace SimControlCentre.Services
 
         private async Task ApplyFlagLightingAsync(FlagStatus flag)
         {
-            var availableDevices = _devices.Where(d => d.IsAvailable).ToList();
+            var availableDevices = _devices.Where(d => d.IsConnected).ToList();
 
             if (!availableDevices.Any())
             {
@@ -152,67 +154,69 @@ namespace SimControlCentre.Services
             }
         }
 
-        private async Task ApplyFlagToDeviceAsync(ILightingDevice device, FlagStatus flag)
+        private async Task ApplyFlagToDeviceAsync(SimControlCentre.Contracts.ILightingDevice device, FlagStatus flag)
         {
             switch (flag)
             {
                 case FlagStatus.Green:
                     // Solid green - race start / clear track
-                    await device.SetColorAsync(LightingColor.Green);
+                    await device.SetColorAsync(SimControlCentre.Contracts.LightingColor.Green);
                     break;
 
                 case FlagStatus.Yellow:
                     // Solid yellow - caution / no passing
-                    await device.SetColorAsync(LightingColor.Yellow);
+                    await device.SetColorAsync(SimControlCentre.Contracts.LightingColor.Yellow);
                     break;
 
                 case FlagStatus.YellowWaving:
                     // Slow flashing yellow (1 second cycle) - danger ahead
-                    await device.StartFlashingAsync(LightingColor.Yellow, LightingColor.Off, 500);
+                    await device.StartFlashingAsync(SimControlCentre.Contracts.LightingColor.Yellow, SimControlCentre.Contracts.LightingColor.Off, 500);
                     break;
 
                 case FlagStatus.Blue:
                     // Solid blue - being lapped, hold your line
-                    await device.SetColorAsync(LightingColor.Blue);
+                    await device.SetColorAsync(SimControlCentre.Contracts.LightingColor.Blue);
                     break;
 
                 case FlagStatus.White:
                     // Solid white - final lap
-                    await device.SetColorAsync(LightingColor.White);
+                    await device.SetColorAsync(SimControlCentre.Contracts.LightingColor.White);
                     break;
 
                 case FlagStatus.Checkered:
                     // Fast flashing white (SimHub style: 250ms) - race end
-                    await device.StartFlashingAsync(LightingColor.White, LightingColor.Off, 250);
+                    await device.StartFlashingAsync(SimControlCentre.Contracts.LightingColor.White, SimControlCentre.Contracts.LightingColor.Off, 250);
                     break;
 
                 case FlagStatus.Red:
                     // Solid red - session stopped
-                    await device.SetColorAsync(LightingColor.Red);
+                    await device.SetColorAsync(SimControlCentre.Contracts.LightingColor.Red);
                     break;
 
                 case FlagStatus.Black:
                     // Solid red (SimHub uses red for black flag visibility)
-                    await device.SetColorAsync(LightingColor.Red);
+                    await device.SetColorAsync(SimControlCentre.Contracts.LightingColor.Red);
                     break;
 
                 case FlagStatus.Debris:
                     // Slow flashing orange - debris/surface warning
-                    await device.StartFlashingAsync(LightingColor.Orange, LightingColor.Off, 500);
+                    await device.StartFlashingAsync(SimControlCentre.Contracts.LightingColor.Orange, SimControlCentre.Contracts.LightingColor.Off, 500);
                     break;
 
                 case FlagStatus.OneLapToGreen:
                     // Medium flashing green (700ms) - one lap to restart
-                    await device.StartFlashingAsync(LightingColor.Green, LightingColor.Off, 700);
+                    await device.StartFlashingAsync(SimControlCentre.Contracts.LightingColor.Green, SimControlCentre.Contracts.LightingColor.Off, 700);
                     break;
 
                 case FlagStatus.Crossed:
                     // Solid yellow - unclear conditions (default to caution)
-                    await device.SetColorAsync(LightingColor.Yellow);
+                    await device.SetColorAsync(SimControlCentre.Contracts.LightingColor.Yellow);
                     break;
 
                 case FlagStatus.None:
-                    await device.RestoreStateAsync();
+                    // Turn off lights when no flag
+                    await device.StopFlashingAsync();
+                    await device.SetColorAsync(SimControlCentre.Contracts.LightingColor.Off);
                     break;
 
                 default:
@@ -223,32 +227,14 @@ namespace SimControlCentre.Services
 
         private async Task SaveAllDevicesAsync()
         {
-            foreach (var device in _devices.Where(d => d.IsAvailable))
-            {
-                try
-                {
-                    await device.SaveStateAsync();
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error("Lighting Service", $"Error saving state for {device.DeviceName}", ex);
-                }
-            }
+            // State saving is handled internally by devices during flashing
+            await Task.CompletedTask;
         }
 
         private async Task RestoreAllDevicesAsync()
         {
-            foreach (var device in _devices.Where(d => d.IsAvailable))
-            {
-                try
-                {
-                    await device.RestoreStateAsync();
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error("Lighting Service", $"Error restoring state for {device.DeviceName}", ex);
-                }
-            }
+            // State restoration is handled internally by devices when flashing stops
+            await Task.CompletedTask;
         }
 
         public void Dispose()
@@ -267,3 +253,7 @@ namespace SimControlCentre.Services
         }
     }
 }
+
+
+
+

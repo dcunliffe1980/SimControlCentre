@@ -118,45 +118,77 @@ public partial class App : Application
             _telemetryService.StartAll();
             Logger.Info("App", "Telemetry service started");
 
+
             // Initialize lighting service
             _lightingService = new LightingService();
             
-            // Register GoXLR lighting plugin if enabled
-            if (Settings.Lighting.EnabledPlugins.GetValueOrDefault("goxlr", true))
+            // Initialize device control service
+            _deviceControlService = new DeviceControlService();
+            
+            // Create plugin context
+            var pluginContext = new PluginContext(Settings, _configService);
+            
+            // Create plugin loader and load all plugins
+            var pluginLoader = new PluginLoader(pluginContext);
+            var loadedPlugins = pluginLoader.LoadPlugins();
+            
+            Logger.Info("App", $"Loaded {loadedPlugins.Count} plugin(s) from plugins directory");
+            
+            // Register lighting plugins
+            var lightingPlugins = PluginLoader.GetLightingPlugins(loadedPlugins);
+            foreach (var plugin in lightingPlugins)
             {
-                Logger.Info("App", "GoXLR lighting plugin enabled, registering...");
-                var goxlrPlugin = new GoXLRLightingPlugin(_goXLRService, Settings);
+                // Check if plugin is enabled in settings
+                bool isEnabled = Settings.Lighting?.EnabledPlugins?.GetValueOrDefault(plugin.PluginId, true) ?? true;
+                plugin.IsEnabled = isEnabled;
                 
-                // Apply saved button selection
-                if (Settings.Lighting.GoXlrSelectedButtons?.Any() == true)
+                if (isEnabled)
                 {
-                    goxlrPlugin.ApplyConfiguration(new Dictionary<string, object>
+                    Logger.Info("App", $"Registering lighting plugin: {plugin.DisplayName}");
+                    
+                    // Apply saved configuration if available
+                    if (plugin.PluginId == "goxlr" && Settings.Lighting?.GoXlrSelectedButtons?.Any() == true)
                     {
-                        { "selected_buttons", Settings.Lighting.GoXlrSelectedButtons }
-                    });
-                    Logger.Info("App", $"Loaded button selection: {string.Join(", ", Settings.Lighting.GoXlrSelectedButtons)}");
+                        plugin.ApplyConfiguration(new Dictionary<string, object>
+                        {
+                            { "selected_buttons", Settings.Lighting.GoXlrSelectedButtons }
+                        });
+                        Logger.Info("App", $"Applied button configuration: {string.Join(", ", Settings.Lighting.GoXlrSelectedButtons)}");
+                    }
+                    
+                    _lightingService.RegisterPlugin(plugin);
                 }
-                
-                _lightingService.RegisterPlugin(goxlrPlugin);
+                else
+                {
+                    Logger.Info("App", $"Plugin {plugin.DisplayName} is disabled in settings");
+                }
             }
-            else
+            
+            // Register device control plugins  
+            var deviceControlPlugins = PluginLoader.GetDeviceControlPlugins(loadedPlugins);
+            foreach (var plugin in deviceControlPlugins)
             {
-                Logger.Info("App", "GoXLR lighting plugin disabled in settings");
+                // Check if component is enabled
+                bool isEnabled = Settings.Lighting?.EnabledPlugins?.GetValueOrDefault("goxlr-device-control", true) ?? true;
+                plugin.IsEnabled = isEnabled;
+                
+                if (isEnabled)
+                {
+                    Logger.Info("App", $"Registering device control plugin: {plugin.DisplayName}");
+                    _deviceControlService.RegisterPlugin(plugin);
+                }
+                else
+                {
+                    Logger.Info("App", $"Device control plugin {plugin.DisplayName} is disabled in settings");
+                }
             }
             
-            // TODO: Future plugins (Philips Hue, Nanoleaf, etc.)
-            // if (Settings.Lighting.EnabledPlugins.GetValueOrDefault("hue", false))
-            // {
-            //     var huePlugin = new PhilipsHuePlugin(Settings);
-            //     _lightingService.RegisterPlugin(huePlugin);
-            // }
-            
-            // Initialize all plugins and wait for completion
+            // Initialize all lighting plugins and wait for completion
             Logger.Info("App", "Initializing lighting devices...");
             _ = Task.Run(async () => 
             {
                 await _lightingService.InitializeAsync();
-                Logger.Info("App", "✓ Lighting devices initialized and ready");
+                Logger.Info("App", "Lighting devices initialized and ready");
             });
             
             // Subscribe to flag changes and update lighting
@@ -169,26 +201,8 @@ public partial class App : Application
                 }
             };
             
-            Logger.Info("App", "Lighting service initialized with plugin system");
+            Logger.Info("App", "Plugin system initialized");
 
-            // Initialize device control service
-            var deviceControlService = new DeviceControlService();
-            
-            // Register GoXLR device control plugin if enabled
-            if (Settings.General.GoXLREnabled)
-            {
-                Logger.Info("App", "GoXLR device control plugin enabled, registering...");
-                var goxlrControlPlugin = new GoXLRDeviceControlPlugin(_goXLRService, Settings);
-                deviceControlService.RegisterPlugin(goxlrControlPlugin);
-                Logger.Info("App", "✓ GoXLR device control plugin registered");
-            }
-            else
-            {
-                Logger.Info("App", "GoXLR device control plugin disabled in settings");
-            }
-            
-            // Store service for later access
-            _deviceControlService = deviceControlService;
 
             // Always warm up the GoXLR API connection on startup
             _ = Task.Run(async () =>

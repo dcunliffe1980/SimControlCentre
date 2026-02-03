@@ -12,11 +12,11 @@ namespace SimControlCentre.Plugins.GoXLR.Services
     /// </summary>
     public class GoXLRLightingPlugin : ILightingPlugin
     {
-        private readonly GoXLRService _goXLRService;
-        
+        private GoXLRService _goXLRService;
         private List<string> _selectedButtons = new();
         private string _deviceType = "Full"; // Default to Full
         private IPluginContext? _context;
+
 
         public string PluginId => "goxlr";
         public string DisplayName => "GoXLR";
@@ -28,6 +28,15 @@ namespace SimControlCentre.Plugins.GoXLR.Services
         public void Initialize(IPluginContext context)
         {
             _context = context;
+            
+            // Create GoXLRService if not already set (dynamic loading scenario)
+            if (_goXLRService == null)
+            {
+                _goXLRService = new GoXLRService(context);
+            }
+            
+            _ = Task.Run(async () => await DetectDeviceTypeAsync());
+            
             context.LogInfo("GoXLR Lighting Plugin", "Initialized");
         }
 
@@ -119,14 +128,19 @@ namespace SimControlCentre.Plugins.GoXLR.Services
         // Exposed list of available buttons based on device type
         public List<string> AvailableButtons { get; private set; } = new();
 
-        public GoXLRLightingPlugin(GoXLRService goXLRService)
+        // Parameterless constructor for dynamic loading
+        public GoXLRLightingPlugin()
         {
-            _goXLRService = goXLRService;
+            _goXLRService = null!; // Will be set in Initialize
             
             // Start with Mini buttons (safer default)
             AvailableButtons = new List<string>(MiniButtons);
-            
-            // Initialize with detection
+        }
+
+        // Legacy constructor for backward compatibility
+        public GoXLRLightingPlugin(GoXLRService goXLRService) : this()
+        {
+            _goXLRService = goXLRService;
             _ = Task.Run(async () => await DetectDeviceTypeAsync());
         }
 

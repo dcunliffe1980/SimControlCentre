@@ -13,8 +13,7 @@ namespace SimControlCentre.Plugins.GoXLR.Services
     /// </summary>
     public class GoXLRDeviceControlPlugin : IDeviceControlPlugin
     {
-        private readonly GoXLRService _goXLRService;
-        
+        private GoXLRService _goXLRService;
         private IPluginContext? _context;
         
         public string PluginId => "goxlr-control";
@@ -24,15 +23,29 @@ namespace SimControlCentre.Plugins.GoXLR.Services
         public string Author => "SimControlCentre";
         public bool IsEnabled { get; set; } = true;
 
-        public GoXLRDeviceControlPlugin(GoXLRService goXLRService)
+        // Parameterless constructor for dynamic loading
+        public GoXLRDeviceControlPlugin()
+        {
+            _goXLRService = null!; // Will be set in Initialize
+        }
+
+        // Legacy constructor for backward compatibility
+        public GoXLRDeviceControlPlugin(GoXLRService goXLRService) : this()
         {
             _goXLRService = goXLRService;
-            
         }
 
         public void Initialize(IPluginContext context)
         {
             _context = context;
+            
+            // Create GoXLRService if not already set (dynamic loading scenario)
+            if (_goXLRService == null)
+            {
+                _goXLRService = new GoXLRService(context);
+            }
+            
+            context.LogInfo("GoXLR Device Control Plugin", "Initialized");
             context.LogInfo("GoXLR Device Control Plugin", "Initialized");
         }
 
