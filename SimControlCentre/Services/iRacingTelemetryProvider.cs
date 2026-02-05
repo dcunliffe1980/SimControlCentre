@@ -348,6 +348,16 @@ namespace SimControlCentre.Services
                 string? trackName = null;
                 string? carName = null;
                 
+                // Log first time or when it changes (for debugging)
+                if (_lastSessionInfoUpdate == -1)
+                {
+                    Logger.Info("iRacing Telemetry", $"Initial SessionInfoUpdate value: {sessionInfoUpdate}");
+                }
+                else if (_lastSessionInfoUpdate != sessionInfoUpdate)
+                {
+                    Logger.Info("iRacing Telemetry", $"SessionInfoUpdate CHANGED: {_lastSessionInfoUpdate} ? {sessionInfoUpdate} (SESSION CHANGE DETECTED!)");
+                }
+                
                 // Only re-read YAML if it has been updated (session change)
                 bool shouldReadYaml = _lastSessionInfoUpdate != sessionInfoUpdate;
                 
@@ -355,14 +365,32 @@ namespace SimControlCentre.Services
                 {
                     _lastSessionInfoUpdate = sessionInfoUpdate;
                     
+                    Logger.Info("iRacing Telemetry", $"========================================");
+                    Logger.Info("iRacing Telemetry", $"READING SESSION INFO (Update #{sessionInfoUpdate})");
+                    Logger.Info("iRacing Telemetry", $"========================================");
+                    
                     byte[] sessionInfoBytes = new byte[sessionInfoLen];
                     accessor.ReadArray(sessionInfoOffset, sessionInfoBytes, 0, sessionInfoLen);
                     string sessionInfoYaml = System.Text.Encoding.ASCII.GetString(sessionInfoBytes).TrimEnd('\0');
+
                     
                     // Parse relevant fields from YAML
                     sessionType = ParseYamlValue(sessionInfoYaml, "SessionType:");
                     trackName = ParseYamlValue(sessionInfoYaml, "TrackDisplayName:");
-                    carName = ParseYamlValue(sessionInfoYaml, "DriverCarName:");
+                    
+                    // Car name - try multiple locations
+                    // First try: CarScreenName from first driver (player)
+                    carName = ParseYamlValue(sessionInfoYaml, "CarScreenName:");
+                    if (string.IsNullOrEmpty(carName))
+                    {
+                        // Fallback: Try CarPath and clean it up
+                        var carPath = ParseYamlValue(sessionInfoYaml, "CarPath:");
+                        if (!string.IsNullOrEmpty(carPath))
+                        {
+                            // CarPath is like "bmwm4gt3" - try to make it readable
+                            carName = carPath;
+                        }
+                    }
                     
                     // Count drivers - try multiple methods
                     // Method 1: NumStarters from WeekendOptions
@@ -383,6 +411,7 @@ namespace SimControlCentre.Services
                     
                     Logger.Info("iRacing Telemetry", $"SessionInfo updated: Type={sessionType}, Track={trackName}, Car={carName}, Drivers={totalDrivers}");
                 }
+
 
                 else if (_latestData != null)
                 {
