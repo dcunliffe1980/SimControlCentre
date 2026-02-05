@@ -226,6 +226,22 @@ namespace SimControlCentre.Services
                 float? speed = null;
                 float? rpm = null;
                 int? gear = null;
+                double? sessionTime = null;
+                double? sessionTimeRemaining = null;
+                int? currentLap = null;
+                int? totalLaps = null;
+                int? position = null;
+                int? classPosition = null;
+                int? totalDrivers = null;
+                float? throttle = null;
+                float? brake = null;
+                float? clutch = null;
+                float? fuelLevel = null;
+                float? fuelUsePerLap = null;
+                float? lastLapTime = null;
+                float? bestLapTime = null;
+                bool? isOnTrack = null;
+                bool? isInPits = null;
                 
                 // Scan ALL variables to find what we need
                 for (int i = 0; i < numVars; i++)
@@ -249,29 +265,111 @@ namespace SimControlCentre.Services
                     // Calculate actual position in memory
                     int dataPos = latestBufOffset + varOffsetInBuffer;
                     
-                    // Read the value based on variable name
+                    // Read the value based on variable name and type
                     byte[] valueBytes = new byte[8]; // Enough for any primitive type
                     accessor.ReadArray(dataPos, valueBytes, 0, 8);
                     
-                    if (varName == "SessionFlags")
+                    switch (varName)
                     {
-                        sessionFlags = BitConverter.ToUInt32(valueBytes, 0);
+                        case "SessionFlags":
+                            sessionFlags = BitConverter.ToUInt32(valueBytes, 0);
+                            break;
+                        case "SessionState":
+                            sessionState = BitConverter.ToInt32(valueBytes, 0);
+                            break;
+                        case "SessionTime":
+                            sessionTime = BitConverter.ToDouble(valueBytes, 0);
+                            break;
+                        case "SessionTimeRemain":
+                            sessionTimeRemaining = BitConverter.ToDouble(valueBytes, 0);
+                            break;
+                        case "Lap":
+                            currentLap = BitConverter.ToInt32(valueBytes, 0);
+                            break;
+                        case "LapCompleted":
+                            currentLap = BitConverter.ToInt32(valueBytes, 0);
+                            break;
+                        case "SessionLapsTotal":
+                            totalLaps = BitConverter.ToInt32(valueBytes, 0);
+                            break;
+                        case "Speed":
+                            speed = BitConverter.ToSingle(valueBytes, 0);
+                            break;
+                        case "RPM":
+                            rpm = BitConverter.ToSingle(valueBytes, 0);
+                            break;
+                        case "Gear":
+                            gear = BitConverter.ToInt32(valueBytes, 0);
+                            break;
+                        case "Throttle":
+                            throttle = BitConverter.ToSingle(valueBytes, 0);
+                            break;
+                        case "Brake":
+                            brake = BitConverter.ToSingle(valueBytes, 0);
+                            break;
+                        case "Clutch":
+                            clutch = BitConverter.ToSingle(valueBytes, 0);
+                            break;
+                        case "PlayerCarPosition":
+                            position = BitConverter.ToInt32(valueBytes, 0);
+                            break;
+                        case "PlayerCarClassPosition":
+                            classPosition = BitConverter.ToInt32(valueBytes, 0);
+                            break;
+                        case "FuelLevel":
+                            fuelLevel = BitConverter.ToSingle(valueBytes, 0);
+                            break;
+                        case "FuelUsePerLap":
+                            fuelUsePerLap = BitConverter.ToSingle(valueBytes, 0);
+                            break;
+                        case "LapLastLapTime":
+                            lastLapTime = BitConverter.ToSingle(valueBytes, 0);
+                            break;
+                        case "LapBestLapTime":
+                            bestLapTime = BitConverter.ToSingle(valueBytes, 0);
+                            break;
+                        case "IsOnTrack":
+                            isOnTrack = valueBytes[0] != 0;
+                            break;
+                        case "IsInGarage":
+                            isInPits = valueBytes[0] != 0;
+                            break;
                     }
-                    else if (varName == "SessionState")
+                }
+
+                // Read SessionInfo YAML for session type and other session data
+                int sessionInfoLen = BitConverter.ToInt32(headerBytes, 16);
+                int sessionInfoOffset = BitConverter.ToInt32(headerBytes, 20);
+                
+                string? sessionType = null;
+                string? trackName = null;
+                string? carName = null;
+                
+                if (sessionInfoLen > 0 && sessionInfoOffset > 0)
+                {
+                    byte[] sessionInfoBytes = new byte[sessionInfoLen];
+                    accessor.ReadArray(sessionInfoOffset, sessionInfoBytes, 0, sessionInfoLen);
+                    string sessionInfoYaml = System.Text.Encoding.ASCII.GetString(sessionInfoBytes).TrimEnd('\0');
+                    
+                    // Parse relevant fields from YAML
+                    sessionType = ParseYamlValue(sessionInfoYaml, "SessionType:");
+                    trackName = ParseYamlValue(sessionInfoYaml, "TrackDisplayName:");
+                    carName = ParseYamlValue(sessionInfoYaml, "DriverCarName:");
+                    
+                    // Count drivers
+                    var driversSection = sessionInfoYaml.IndexOf("DriverInfo:");
+                    if (driversSection >= 0)
                     {
-                        sessionState = BitConverter.ToInt32(valueBytes, 0);
-                    }
-                    else if (varName == "Speed")
-                    {
-                        speed = BitConverter.ToSingle(valueBytes, 0);
-                    }
-                    else if (varName == "RPM")
-                    {
-                        rpm = BitConverter.ToSingle(valueBytes, 0);
-                    }
-                    else if (varName == "Gear")
-                    {
-                        gear = BitConverter.ToInt32(valueBytes, 0);
+                        var driversCountMatch = System.Text.RegularExpressions.Regex.Match(
+                            sessionInfoYaml.Substring(driversSection, Math.Min(500, sessionInfoYaml.Length - driversSection)),
+                            @"DriverCarIdx:\s*(\d+)");
+                        
+                        if (driversCountMatch.Success)
+                        {
+                            // Count all driver entries
+                            var matches = System.Text.RegularExpressions.Regex.Matches(sessionInfoYaml, @"DriverCarIdx:");
+                            totalDrivers = matches.Count;
+                        }
                     }
                 }
 
@@ -281,22 +379,49 @@ namespace SimControlCentre.Services
                     IsConnected = true,
                     SourceSim = "iRacing",
                     UpdatedAt = DateTime.Now,
+                    
+                    // Session info
+                    SessionType = sessionType ?? "Unknown",
                     SessionState = sessionState ?? 0,
+                    SessionTime = sessionTime ?? 0,
+                    SessionTimeRemaining = sessionTimeRemaining ?? 0,
+                    
+                    // Lap info
+                    CurrentLap = currentLap ?? 0,
+                    TotalLaps = totalLaps ?? 0,
+                    LastLapTime = lastLapTime ?? 0,
+                    BestLapTime = bestLapTime ?? 0,
+                    
+                    // Position
+                    Position = position ?? 0,
+                    ClassPosition = classPosition ?? 0,
+                    TotalDrivers = totalDrivers ?? 0,
+                    
+                    // Car data
                     Speed = (speed ?? 0f) * 3.6f, // Convert m/s to km/h
                     Rpm = rpm ?? 0f,
-                    Gear = gear ?? 0
+                    Gear = gear ?? 0,
+                    Throttle = throttle ?? 0f,
+                    Brake = brake ?? 0f,
+                    Clutch = clutch ?? 0f,
+                    
+                    // Fuel
+                    FuelLevel = fuelLevel ?? 0f,
+                    FuelUsePerLap = fuelUsePerLap ?? 0f,
+                    
+                    // Track/Car names
+                    TrackName = trackName ?? "Unknown",
+                    CarName = carName ?? "Unknown",
+                    
+                    // Pit status
+                    IsInPits = isInPits ?? false,
+                    
+                    // Flags
+                    CurrentFlag = sessionFlags.HasValue ? ParseFlagStatus(sessionFlags.Value) : FlagStatus.None
                 };
 
-                if (sessionFlags.HasValue)
-                {
-                    data.CurrentFlag = ParseFlagStatus(sessionFlags.Value);
-                }
-                else
-                {
-                    data.CurrentFlag = FlagStatus.None;
-                }
-
                 return data;
+
             }
             catch (Exception ex)
             {
@@ -336,7 +461,37 @@ namespace SimControlCentre.Services
             return FlagStatus.None;
         }
 
+        private string? ParseYamlValue(string yaml, string key)
+        {
+            try
+            {
+                int keyIndex = yaml.IndexOf(key);
+                if (keyIndex < 0)
+                    return null;
+
+                int valueStart = keyIndex + key.Length;
+                int lineEnd = yaml.IndexOf('\n', valueStart);
+                if (lineEnd < 0)
+                    lineEnd = yaml.Length;
+
+                string value = yaml.Substring(valueStart, lineEnd - valueStart).Trim();
+                
+                // Remove quotes if present
+                if (value.StartsWith("\"") && value.EndsWith("\""))
+                {
+                    value = value.Substring(1, value.Length - 2);
+                }
+                
+                return value;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         public void Dispose()
+
         {
             if (_isDisposed)
                 return;
