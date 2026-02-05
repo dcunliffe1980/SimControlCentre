@@ -364,16 +364,26 @@ namespace SimControlCentre.Services
                     trackName = ParseYamlValue(sessionInfoYaml, "TrackDisplayName:");
                     carName = ParseYamlValue(sessionInfoYaml, "DriverCarName:");
                     
-                    // Count drivers
-                    var driversSection = sessionInfoYaml.IndexOf("DriverInfo:");
-                    if (driversSection >= 0)
+                    // Count drivers - try multiple methods
+                    // Method 1: NumStarters from WeekendOptions
+                    var numStarters = ParseYamlValue(sessionInfoYaml, "NumStarters:");
+                    if (!string.IsNullOrEmpty(numStarters) && int.TryParse(numStarters, out int starters) && starters > 0)
                     {
-                        var matches = System.Text.RegularExpressions.Regex.Matches(sessionInfoYaml, @"DriverCarIdx:");
-                        totalDrivers = matches.Count;
+                        totalDrivers = starters;
+                    }
+                    else
+                    {
+                        // Method 2: Count DriverCarIdx entries
+                        var matches = System.Text.RegularExpressions.Regex.Matches(sessionInfoYaml, @"CarIdx:\s*\d+");
+                        if (matches.Count > 0)
+                        {
+                            totalDrivers = matches.Count;
+                        }
                     }
                     
                     Logger.Info("iRacing Telemetry", $"SessionInfo updated: Type={sessionType}, Track={trackName}, Car={carName}, Drivers={totalDrivers}");
                 }
+
                 else if (_latestData != null)
                 {
                     // Use cached values from previous read

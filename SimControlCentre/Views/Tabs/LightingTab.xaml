@@ -70,8 +70,8 @@
             <!-- GoXLR-Specific Configuration (only shown when GoXLR lighting plugin enabled) -->
             <StackPanel x:Name="GoXlrSpecificPanel" Visibility="Collapsed">
             
-            <!-- Device Selection -->
-            <GroupBox Header="Active Buttons" Padding="10" Margin="0,0,0,15">
+            <!-- Device Selection - Hidden by default, code kept for potential future use -->
+            <GroupBox Header="Active Buttons" Padding="10" Margin="0,0,0,15" Visibility="Collapsed">
                 <StackPanel>
                     <TextBlock Text="Select which GoXLR buttons to use for flag lighting:"
                                TextWrapping="Wrap"
@@ -84,6 +84,7 @@
             </GroupBox>
             
             </StackPanel> <!-- End GoXlrSpecificPanel -->
+
 
             <!-- Test Buttons -->
             <GroupBox Header="Test Flag Lighting" Padding="15" Margin="0,0,0,15">

@@ -112,9 +112,10 @@ namespace SimControlCentre.Services
                     return;
                 }
                 
-                Logger.Info("Lighting Service", $"Flag cleared after {timeSinceNone}ms - restoring profile lighting");
+                Logger.Info("Lighting Service", $"Flag cleared after {timeSinceNone}ms - turning off LEDs during session");
                 _currentFlag = FlagStatus.None;
-                await RestoreAllDevicesAsync();
+                // During a session, just turn off LEDs (don't restore profile)
+                await ClearAllDevicesAsync();
                 return;
             }
             
@@ -145,6 +146,7 @@ namespace SimControlCentre.Services
             // Apply the flag lighting
             await ApplyFlagLightingAsync(flag);
         }
+
 
 
         private async Task ApplyFlagLightingAsync(FlagStatus flag)
@@ -278,10 +280,29 @@ namespace SimControlCentre.Services
             }
         }
         
+        private async Task ClearAllDevicesAsync()
+        {
+            Logger.Info("Lighting Service", "Clearing all devices (turning off LEDs)");
+            
+            foreach (var device in _devices.Where(d => d.IsConnected))
+            {
+                try
+                {
+                    await device.StopFlashingAsync();
+                    await device.SetColorAsync(SimControlCentre.Contracts.LightingColor.Off);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Lighting Service", $"Error clearing {device.DeviceName}", ex);
+                }
+            }
+        }
+        
         /// <summary>
         /// Restore profile lighting (called when telemetry disconnects)
         /// </summary>
         public async Task RestoreProfileLightingAsync()
+
         {
             Logger.Info("Lighting Service", "Restoring profile lighting after session end");
             

@@ -116,14 +116,37 @@ namespace SimControlCentre.Views.Tabs
             // Session Info
             SessionTypeText.Text = data.SessionType;
             SessionStateText.Text = GetSessionStateName(data.SessionState);
-            LapText.Text = data.TotalLaps > 0 
-                ? $"{data.CurrentLap} / {data.TotalLaps}" 
-                : data.CurrentLap.ToString();
-            PositionText.Text = data.TotalDrivers > 0 
-                ? $"{data.Position} / {data.TotalDrivers}" 
-                : data.Position.ToString();
-            TotalDriversText.Text = data.TotalDrivers.ToString();
+            
+            // Lap display - handle timed races (TotalLaps = 32767 or 0)
+            if (data.TotalLaps > 0 && data.TotalLaps < 999)
+            {
+                // Lap-based race
+                LapText.Text = $"{data.CurrentLap} / {data.TotalLaps}";
+            }
+            else
+            {
+                // Timed race or unknown - just show current lap
+                LapText.Text = data.CurrentLap.ToString();
+            }
+            
+            // Position display - handle invalid driver counts
+            if (data.TotalDrivers > 1)
+            {
+                PositionText.Text = $"P{data.Position} / {data.TotalDrivers}";
+            }
+            else if (data.Position > 0)
+            {
+                // Have position but not driver count
+                PositionText.Text = $"P{data.Position}";
+            }
+            else
+            {
+                PositionText.Text = "-";
+            }
+            
+            TotalDriversText.Text = data.TotalDrivers > 0 ? data.TotalDrivers.ToString() : "-";
             TrackText.Text = data.TrackName;
+
 
             // Car Data
             CarText.Text = data.CarName;
