@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -7,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using SimControlCentre.Models;
 using SimControlCentre.Services;
+
 
 namespace SimControlCentre.Views.Tabs
 {
@@ -119,14 +122,17 @@ namespace SimControlCentre.Views.Tabs
             PositionText.Text = data.TotalDrivers > 0 
                 ? $"{data.Position} / {data.TotalDrivers}" 
                 : data.Position.ToString();
+            TotalDriversText.Text = data.TotalDrivers.ToString();
             TrackText.Text = data.TrackName;
 
             // Car Data
+            CarText.Text = data.CarName;
             SpeedText.Text = $"{data.Speed:F1} km/h";
             RpmText.Text = data.Rpm.ToString("F0");
             GearText.Text = data.Gear.ToString();
             PitsText.Text = data.IsInPits ? "Yes" : "No";
         }
+
 
         private void LogRawData(TelemetryData data)
         {
@@ -179,12 +185,14 @@ namespace SimControlCentre.Views.Tabs
                 0 => "Invalid",
                 1 => "Get In Car",
                 2 => "Warmup",
-                3 => "Racing",
-                4 => "Checkered",
-                5 => "Cool Down",
+                3 => "Parade Laps",
+                4 => "Racing",
+                5 => "Checkered",
+                6 => "Cool Down",
                 _ => $"Unknown ({state})"
             };
         }
+
 
         // Recording/Playback Methods
         
@@ -375,9 +383,11 @@ namespace SimControlCentre.Views.Tabs
             _playbackProvider.Start();
             
             PlayButton.IsEnabled = false;
+            PauseButton.IsEnabled = true;
             StopPlaybackButton.IsEnabled = true;
             PlaybackStatusText.Text = $"Playing: {recording.Metadata.Description}";
             PlaybackStatusText.Foreground = Brushes.Green;
+
             
             // Start timer to update playback status and timeline
             _playbackTimer = new DispatcherTimer
@@ -418,6 +428,7 @@ namespace SimControlCentre.Views.Tabs
             
             PlayButton.IsEnabled = RecordingsComboBox.SelectedItem != null;
             StopPlaybackButton.IsEnabled = false;
+            PauseButton.IsEnabled = false;
             PlaybackStatusText.Text = "Stopped";
             PlaybackStatusText.Foreground = Brushes.Gray;
             
@@ -425,6 +436,53 @@ namespace SimControlCentre.Views.Tabs
             AddRawLogEntry("PLAYBACK STOPPED");
             AddRawLogEntry("========================================");
         }
+        
+        private void Pause_Click(object sender, RoutedEventArgs e)
+        {
+            if (_playbackProvider == null) return;
+            
+            _playbackTimer?.Stop();
+            
+            PlayButton.IsEnabled = true;
+            PauseButton.IsEnabled = false;
+            PlaybackStatusText.Text = "Paused";
+            PlaybackStatusText.Foreground = Brushes.Orange;
+            
+            AddRawLogEntry("========================================");
+            AddRawLogEntry("PLAYBACK PAUSED");
+            AddRawLogEntry("========================================");
+        }
+        
+        private void OpenFolder_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var recordingsPath = _telemetryService.Recorder.RecordingsDirectory;
+                
+                // Create directory if it doesn't exist
+                if (!Directory.Exists(recordingsPath))
+                {
+                    Directory.CreateDirectory(recordingsPath);
+                }
+                
+                // Open in Explorer
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = recordingsPath,
+                    UseShellExecute = true,
+                    Verb = "open"
+                });
+                
+                Logger.Info("Telemetry Debug", $"Opened recordings folder: {recordingsPath}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Telemetry Debug", "Failed to open recordings folder", ex);
+                MessageBox.Show($"Failed to open recordings folder:\n\n{ex.Message}", "Error", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
 
         private void DeleteRecording_Click(object sender, RoutedEventArgs e)
         {

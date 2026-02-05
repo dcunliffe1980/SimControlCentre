@@ -77,6 +77,13 @@
                                 Padding="5"
                                 Margin="0,0,5,0"
                                 IsEnabled="False"/>
+                        <Button x:Name="PauseButton" 
+                                Content="Pause" 
+                                Click="Pause_Click"
+                                Width="70"
+                                Padding="5"
+                                Margin="0,0,5,0"
+                                IsEnabled="False"/>
                         <Button x:Name="StopPlaybackButton" 
                                 Content="Stop" 
                                 Click="StopPlayback_Click"
@@ -89,8 +96,16 @@
                                 Click="DeleteRecording_Click"
                                 Width="70"
                                 Padding="5"
+                                Margin="0,0,5,0"
                                 IsEnabled="False"/>
+                        <Button x:Name="OpenFolderButton" 
+                                Content="Open Folder" 
+                                Click="OpenFolder_Click"
+                                Width="90"
+                                Padding="5"
+                                ToolTip="Open recordings folder in Explorer"/>
                     </StackPanel>
+
                     
                     <CheckBox x:Name="LoopCheckBox" 
                               Content="Loop playback"
@@ -204,6 +219,7 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="Session Type:" FontWeight="Bold" Margin="0,5"/>
@@ -218,10 +234,14 @@
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="Position:" FontWeight="Bold" Margin="0,5"/>
                         <TextBlock Grid.Row="3" Grid.Column="1" x:Name="PositionText" Text="-" Margin="0,5"/>
                         
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Track:" FontWeight="Bold" Margin="0,5"/>
-                        <TextBlock Grid.Row="4" Grid.Column="1" x:Name="TrackText" Text="-" Margin="0,5"/>
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Total Drivers:" FontWeight="Bold" Margin="0,5"/>
+                        <TextBlock Grid.Row="4" Grid.Column="1" x:Name="TotalDriversText" Text="-" Margin="0,5"/>
+                        
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="Track:" FontWeight="Bold" Margin="0,5"/>
+                        <TextBlock Grid.Row="5" Grid.Column="1" x:Name="TrackText" Text="-" Margin="0,5"/>
                     </Grid>
                 </GroupBox>
+
 
                 <!-- Car Data -->
                 <GroupBox Header="Car Data" Padding="10" Margin="0,0,0,15">
@@ -235,21 +255,26 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Speed:" FontWeight="Bold" Margin="0,5"/>
-                        <TextBlock Grid.Row="0" Grid.Column="1" x:Name="SpeedText" Text="-" Margin="0,5"/>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Car:" FontWeight="Bold" Margin="0,5"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" x:Name="CarText" Text="-" Margin="0,5"/>
                         
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="RPM:" FontWeight="Bold" Margin="0,5"/>
-                        <TextBlock Grid.Row="1" Grid.Column="1" x:Name="RpmText" Text="-" Margin="0,5"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Speed:" FontWeight="Bold" Margin="0,5"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" x:Name="SpeedText" Text="-" Margin="0,5"/>
                         
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Gear:" FontWeight="Bold" Margin="0,5"/>
-                        <TextBlock Grid.Row="2" Grid.Column="1" x:Name="GearText" Text="-" Margin="0,5"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="RPM:" FontWeight="Bold" Margin="0,5"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" x:Name="RpmText" Text="-" Margin="0,5"/>
                         
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="In Pits:" FontWeight="Bold" Margin="0,5"/>
-                        <TextBlock Grid.Row="3" Grid.Column="1" x:Name="PitsText" Text="-" Margin="0,5"/>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Gear:" FontWeight="Bold" Margin="0,5"/>
+                        <TextBlock Grid.Row="3" Grid.Column="1" x:Name="GearText" Text="-" Margin="0,5"/>
+                        
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="In Pits:" FontWeight="Bold" Margin="0,5"/>
+                        <TextBlock Grid.Row="4" Grid.Column="1" x:Name="PitsText" Text="-" Margin="0,5"/>
                     </Grid>
                 </GroupBox>
+
 
                 <!-- Raw Data -->
                 <GroupBox Header="Raw Data (Last 20 Updates)" Padding="10">

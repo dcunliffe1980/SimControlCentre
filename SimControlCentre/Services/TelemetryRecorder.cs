@@ -23,9 +23,11 @@ namespace SimControlCentre.Services
 
         public bool IsRecording => _isRecording;
         public int SnapshotCount => _snapshots.Count;
+        public string RecordingsDirectory => _recordingsPath;
         public TimeSpan RecordingDuration => _isRecording 
             ? DateTime.Now - _recordingStartTime 
             : TimeSpan.Zero;
+
 
         public TelemetryRecorder()
         {

@@ -21,8 +21,10 @@ namespace SimControlCentre.Services
         private bool _hasValidData; // True when we've received actual session data
         private TelemetryData? _latestData;
         private bool _isDisposed;
+        private int _lastSessionInfoUpdate = -1; // Track when SessionInfo changes
 
         public string ProviderName => "iRacing";
+
         public bool IsConnected => _isConnected && _hasValidData; // Only connected if we have valid data
 
         public event EventHandler<TelemetryUpdatedEventArgs>? TelemetryUpdated;
@@ -338,6 +340,7 @@ namespace SimControlCentre.Services
                 }
 
                 // Read SessionInfo YAML for session type and other session data
+                int sessionInfoUpdate = BitConverter.ToInt32(headerBytes, 12);
                 int sessionInfoLen = BitConverter.ToInt32(headerBytes, 16);
                 int sessionInfoOffset = BitConverter.ToInt32(headerBytes, 20);
                 
@@ -345,8 +348,13 @@ namespace SimControlCentre.Services
                 string? trackName = null;
                 string? carName = null;
                 
-                if (sessionInfoLen > 0 && sessionInfoOffset > 0)
+                // Only re-read YAML if it has been updated (session change)
+                bool shouldReadYaml = _lastSessionInfoUpdate != sessionInfoUpdate;
+                
+                if (shouldReadYaml && sessionInfoLen > 0 && sessionInfoOffset > 0)
                 {
+                    _lastSessionInfoUpdate = sessionInfoUpdate;
+                    
                     byte[] sessionInfoBytes = new byte[sessionInfoLen];
                     accessor.ReadArray(sessionInfoOffset, sessionInfoBytes, 0, sessionInfoLen);
                     string sessionInfoYaml = System.Text.Encoding.ASCII.GetString(sessionInfoBytes).TrimEnd('\0');
@@ -360,18 +368,21 @@ namespace SimControlCentre.Services
                     var driversSection = sessionInfoYaml.IndexOf("DriverInfo:");
                     if (driversSection >= 0)
                     {
-                        var driversCountMatch = System.Text.RegularExpressions.Regex.Match(
-                            sessionInfoYaml.Substring(driversSection, Math.Min(500, sessionInfoYaml.Length - driversSection)),
-                            @"DriverCarIdx:\s*(\d+)");
-                        
-                        if (driversCountMatch.Success)
-                        {
-                            // Count all driver entries
-                            var matches = System.Text.RegularExpressions.Regex.Matches(sessionInfoYaml, @"DriverCarIdx:");
-                            totalDrivers = matches.Count;
-                        }
+                        var matches = System.Text.RegularExpressions.Regex.Matches(sessionInfoYaml, @"DriverCarIdx:");
+                        totalDrivers = matches.Count;
                     }
+                    
+                    Logger.Info("iRacing Telemetry", $"SessionInfo updated: Type={sessionType}, Track={trackName}, Car={carName}, Drivers={totalDrivers}");
                 }
+                else if (_latestData != null)
+                {
+                    // Use cached values from previous read
+                    sessionType = _latestData.SessionType;
+                    trackName = _latestData.TrackName;
+                    carName = _latestData.CarName;
+                    totalDrivers = _latestData.TotalDrivers > 0 ? _latestData.TotalDrivers : null;
+                }
+
 
                 // Create telemetry data
                 var data = new TelemetryData
