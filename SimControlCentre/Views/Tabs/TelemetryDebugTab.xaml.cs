@@ -486,7 +486,12 @@ namespace SimControlCentre.Views.Tabs
             _playbackTimer?.Stop();
             _playbackTimer = null;
             
-            _playbackProvider?.Stop();
+            if (_playbackProvider != null)
+            {
+                _playbackProvider.Stop();
+                // Clear provider so Play will create a fresh one
+                _playbackProvider = null;
+            }
             
             PlayButton.IsEnabled = RecordingsComboBox.SelectedItem != null;
             StopPlaybackButton.IsEnabled = false;
@@ -498,6 +503,8 @@ namespace SimControlCentre.Views.Tabs
             AddRawLogEntry("PLAYBACK STOPPED");
             AddRawLogEntry("========================================");
         }
+
+
         
         private void Pause_Click(object sender, RoutedEventArgs e)
         {
