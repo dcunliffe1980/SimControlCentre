@@ -21,7 +21,9 @@ namespace SimControlCentre.Services
         public string ProviderName => "Playback";
         public bool IsConnected => _isPlaying;
         public bool IsPlaying => _isPlaying;
+        public bool IsLoaded => _recording != null;
         public float PlaybackSpeed
+
         {
             get => _playbackSpeed;
             set => _playbackSpeed = Math.Max(0.1f, Math.Min(10.0f, value));

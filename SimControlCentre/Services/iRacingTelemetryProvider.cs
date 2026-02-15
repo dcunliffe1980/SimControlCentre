@@ -22,6 +22,8 @@ namespace SimControlCentre.Services
         private TelemetryData? _latestData;
         private bool _isDisposed;
         private int _lastSessionInfoUpdate = -1; // Track when SessionInfo changes
+        private int _lastSessionNum = -1; // Track session number changes (more reliable)
+
 
         public string ProviderName => "iRacing";
 
@@ -224,12 +226,14 @@ namespace SimControlCentre.Services
                 // Find SessionFlags variable and other telemetry
                 const int VAR_HEADER_SIZE = 144;
                 uint? sessionFlags = null;
+                int? sessionNum = null;
                 int? sessionState = null;
                 float? speed = null;
                 float? rpm = null;
                 int? gear = null;
                 double? sessionTime = null;
                 double? sessionTimeRemaining = null;
+
                 int? currentLap = null;
                 int? totalLaps = null;
                 int? position = null;
@@ -276,9 +280,13 @@ namespace SimControlCentre.Services
                         case "SessionFlags":
                             sessionFlags = BitConverter.ToUInt32(valueBytes, 0);
                             break;
+                        case "SessionNum":
+                            sessionNum = BitConverter.ToInt32(valueBytes, 0);
+                            break;
                         case "SessionState":
                             sessionState = BitConverter.ToInt32(valueBytes, 0);
                             break;
+
                         case "SessionTime":
                             sessionTime = BitConverter.ToDouble(valueBytes, 0);
                             break;
@@ -286,11 +294,12 @@ namespace SimControlCentre.Services
                             sessionTimeRemaining = BitConverter.ToDouble(valueBytes, 0);
                             break;
                         case "Lap":
-                            currentLap = BitConverter.ToInt32(valueBytes, 0);
+                            currentLap = BitConverter.ToInt32(valueBytes, 0) + 1; // Lap is 0-based, add 1
                             break;
                         case "LapCompleted":
-                            currentLap = BitConverter.ToInt32(valueBytes, 0);
+                            currentLap = BitConverter.ToInt32(valueBytes, 0) + 1; // LapCompleted is 0-based, add 1
                             break;
+
                         case "SessionLapsTotal":
                             totalLaps = BitConverter.ToInt32(valueBytes, 0);
                             break;
@@ -358,10 +367,25 @@ namespace SimControlCentre.Services
                     Logger.Info("iRacing Telemetry", $"SessionInfoUpdate CHANGED: {_lastSessionInfoUpdate} ? {sessionInfoUpdate} (SESSION CHANGE DETECTED!)");
                 }
                 
-                // Only re-read YAML if it has been updated (session change)
+                // Check if SessionNum changed (more reliable than SessionInfoUpdate)
                 bool shouldReadYaml = _lastSessionInfoUpdate != sessionInfoUpdate;
                 
+                if (sessionNum.HasValue && _lastSessionNum != -1 && _lastSessionNum != sessionNum.Value)
+                {
+                    Logger.Info("iRacing Telemetry", $"========================================");
+                    Logger.Info("iRacing Telemetry", $"SESSION CHANGE DETECTED via SessionNum!");
+                    Logger.Info("iRacing Telemetry", $"SessionNum: {_lastSessionNum} ? {sessionNum.Value}");
+                    Logger.Info("iRacing Telemetry", $"========================================");
+                    shouldReadYaml = true; // Force YAML re-read
+                }
+                
+                if (sessionNum.HasValue)
+                {
+                    _lastSessionNum = sessionNum.Value;
+                }
+                
                 if (shouldReadYaml && sessionInfoLen > 0 && sessionInfoOffset > 0)
+
                 {
                     _lastSessionInfoUpdate = sessionInfoUpdate;
                     
@@ -378,21 +402,44 @@ namespace SimControlCentre.Services
                     sessionType = ParseYamlValue(sessionInfoYaml, "SessionType:");
                     trackName = ParseYamlValue(sessionInfoYaml, "TrackDisplayName:");
                     
-                    // Car name - try multiple locations
-                    // First try: CarScreenName from first driver (player)
-                    carName = ParseYamlValue(sessionInfoYaml, "CarScreenName:");
-                    if (string.IsNullOrEmpty(carName))
+                    // Car name - find the PLAYER'S car, not pace car!
+                    // First get the player's CarIdx from DriverInfo
+                    var playerCarIdx = ParseYamlValue(sessionInfoYaml, "DriverCarIdx:");
+                    
+                    if (!string.IsNullOrEmpty(playerCarIdx))
                     {
-                        // Fallback: Try CarPath and clean it up
-                        var carPath = ParseYamlValue(sessionInfoYaml, "CarPath:");
-                        if (!string.IsNullOrEmpty(carPath))
+                        // Find the driver entry with matching CarIdx
+                        var driverSection = $"CarIdx: {playerCarIdx}";
+                        var driverStart = sessionInfoYaml.IndexOf(driverSection);
+                        
+                        if (driverStart >= 0)
                         {
-                            // CarPath is like "bmwm4gt3" - try to make it readable
-                            carName = carPath;
+                            // Look for CarScreenName after this CarIdx
+                            var searchSection = sessionInfoYaml.Substring(driverStart, Math.Min(500, sessionInfoYaml.Length - driverStart));
+                            var carScreenName = ParseYamlValueInSection(searchSection, "CarScreenName:");
+                            
+                            if (!string.IsNullOrEmpty(carScreenName))
+                            {
+                                carName = carScreenName;
+                                Logger.Info("iRacing Telemetry", $"Found player car via CarIdx {playerCarIdx}: {carName}");
+                            }
                         }
                     }
                     
+                    // Fallback if we couldn't find it
+                    if (string.IsNullOrEmpty(carName))
+                    {
+                        carName = ParseYamlValue(sessionInfoYaml, "CarScreenName:");
+                        if (string.IsNullOrEmpty(carName))
+                        {
+                            var carPath = ParseYamlValue(sessionInfoYaml, "CarPath:");
+                            carName = carPath ?? "Unknown";
+                        }
+                        Logger.Warning("iRacing Telemetry", $"Could not find player car specifically, using fallback: {carName}");
+                    }
+                    
                     // Count drivers - try multiple methods
+
                     // Method 1: NumStarters from WeekendOptions
                     var numStarters = ParseYamlValue(sessionInfoYaml, "NumStarters:");
                     if (!string.IsNullOrEmpty(numStarters) && int.TryParse(numStarters, out int starters) && starters > 0)
@@ -539,8 +586,15 @@ namespace SimControlCentre.Services
                 return null;
             }
         }
+        
+        private string? ParseYamlValueInSection(string section, string key)
+        {
+            // Same as ParseYamlValue but works on a substring
+            return ParseYamlValue(section, key);
+        }
 
         public void Dispose()
+
 
         {
             if (_isDisposed)

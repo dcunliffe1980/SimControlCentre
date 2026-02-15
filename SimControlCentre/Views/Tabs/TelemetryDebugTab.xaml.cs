@@ -381,6 +381,44 @@ namespace SimControlCentre.Views.Tabs
 
         private void Play_Click(object sender, RoutedEventArgs e)
         {
+            // If we already have a playback provider, we're resuming from pause
+            if (_playbackProvider != null && _playbackProvider.IsLoaded)
+            {
+                // Resume playback from current position
+                PlayButton.IsEnabled = false;
+                PauseButton.IsEnabled = true;
+                StopPlaybackButton.IsEnabled = true;
+                PlaybackStatusText.Text = "Playing (resumed)";
+                PlaybackStatusText.Foreground = Brushes.Green;
+                
+                // Restart the UI update timer
+                if (_playbackTimer == null)
+                {
+                    _playbackTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+                    _playbackTimer.Tick += (s, args) =>
+                    {
+                        if (_playbackProvider != null)
+                        {
+                            var progress = _playbackProvider.Progress * 100;
+                            PlaybackStatusText.Text = $"Playing: {progress:F0}%";
+                            UpdateTimelineUI();
+                            
+                            if (!_playbackProvider.IsPlaying && !_playbackProvider.Loop)
+                            {
+                                StopPlayback_Click(this, new RoutedEventArgs());
+                            }
+                        }
+                    };
+                }
+                _playbackTimer.Start();
+                
+                AddRawLogEntry("========================================");
+                AddRawLogEntry("PLAYBACK RESUMED");
+                AddRawLogEntry("========================================");
+                return;
+            }
+            
+            // Starting fresh playback
             if (RecordingsComboBox.SelectedItem is not ComboBoxItem item) return;
             
             var filePath = item.Tag as string;
@@ -441,6 +479,7 @@ namespace SimControlCentre.Views.Tabs
             AddRawLogEntry($"Duration: {recording.Metadata.DurationSeconds:F1}s, Snapshots: {recording.Metadata.SnapshotCount}");
             AddRawLogEntry("========================================");
         }
+
 
         private void StopPlayback_Click(object sender, RoutedEventArgs e)
         {
