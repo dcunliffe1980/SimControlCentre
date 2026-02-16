@@ -179,10 +179,67 @@ namespace SimControlCentre.Views.Tabs
             {
                 _rawDataLog.RemoveAt(0);
             }
-
-            // Update text
-            RawDataText.Text = string.Join("\n", _rawDataLog);
+            
+            // Apply filtering before display
+            UpdateFilteredLog();
         }
+        
+        private void UpdateFilteredLog()
+        {
+            // Filter logs based on checkboxes
+            var filteredLogs = _rawDataLog.Where(entry => ShouldShowLogEntry(entry)).ToList();
+            
+            // Update text
+            RawDataText.Text = string.Join("\n", filteredLogs);
+        }
+        
+        private bool ShouldShowLogEntry(string entry)
+        {
+            // Check which component this log is from
+            if (entry.Contains("[iRacing Telemetry]") && LogFilter_iRacingTelemetry.IsChecked != true)
+                return false;
+            
+            if (entry.Contains("[Lighting Service]") && LogFilter_LightingService.IsChecked != true)
+                return false;
+            
+            if (entry.Contains("[GoXLR Service]") && LogFilter_GoXLRService.IsChecked != true)
+                return false;
+            
+            if (entry.Contains("[Telemetry Service]") && LogFilter_TelemetryService.IsChecked != true)
+                return false;
+            
+            if (entry.Contains("[Telemetry Debug]") && LogFilter_TelemetryDebug.IsChecked != true)
+                return false;
+            
+            if (entry.Contains("[Telemetry Recorder]") && LogFilter_TelemetryRecorder.IsChecked != true)
+                return false;
+            
+            // Check if it's "Other" (no specific component tag)
+            bool hasComponentTag = entry.Contains("[iRacing Telemetry]") ||
+                                  entry.Contains("[Lighting Service]") ||
+                                  entry.Contains("[GoXLR Service]") ||
+                                  entry.Contains("[Telemetry Service]") ||
+                                  entry.Contains("[Telemetry Debug]") ||
+                                  entry.Contains("[Telemetry Recorder]");
+            
+            if (!hasComponentTag && LogFilter_Other.IsChecked != true)
+                return false;
+            
+            return true;
+        }
+        
+        private void LogFilter_Changed(object sender, RoutedEventArgs e)
+        {
+            // Refresh the displayed logs
+            UpdateFilteredLog();
+        }
+        
+        private void ClearLog_Click(object sender, RoutedEventArgs e)
+        {
+            _rawDataLog.Clear();
+            RawDataText.Text = "Log cleared.";
+        }
+
 
         private Brush GetFlagColor(FlagStatus flag)
         {
@@ -385,6 +442,8 @@ namespace SimControlCentre.Views.Tabs
             if (_playbackProvider != null && _playbackProvider.IsLoaded)
             {
                 // Resume playback from current position
+                _playbackProvider.Start(); // Restart the provider
+                
                 PlayButton.IsEnabled = false;
                 PauseButton.IsEnabled = true;
                 StopPlaybackButton.IsEnabled = true;
@@ -417,6 +476,7 @@ namespace SimControlCentre.Views.Tabs
                 AddRawLogEntry("========================================");
                 return;
             }
+
             
             // Starting fresh playback
             if (RecordingsComboBox.SelectedItem is not ComboBoxItem item) return;
@@ -510,6 +570,10 @@ namespace SimControlCentre.Views.Tabs
         {
             if (_playbackProvider == null) return;
             
+            // Stop the playback provider (not just the UI timer!)
+            _playbackProvider.Stop();
+            
+            // Stop UI updates
             _playbackTimer?.Stop();
             
             PlayButton.IsEnabled = true;
@@ -521,6 +585,7 @@ namespace SimControlCentre.Views.Tabs
             AddRawLogEntry("PLAYBACK PAUSED");
             AddRawLogEntry("========================================");
         }
+
         
         private void OpenFolder_Click(object sender, RoutedEventArgs e)
         {

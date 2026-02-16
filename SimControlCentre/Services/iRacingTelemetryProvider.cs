@@ -408,20 +408,44 @@ namespace SimControlCentre.Services
                     
                     if (!string.IsNullOrEmpty(playerCarIdx))
                     {
-                        // Find the driver entry with matching CarIdx
-                        var driverSection = $"CarIdx: {playerCarIdx}";
-                        var driverStart = sessionInfoYaml.IndexOf(driverSection);
-                        
-                        if (driverStart >= 0)
+                        // Find the Drivers section
+                        var driversStart = sessionInfoYaml.IndexOf("Drivers:");
+                        if (driversStart >= 0)
                         {
-                            // Look for CarScreenName after this CarIdx
-                            var searchSection = sessionInfoYaml.Substring(driverStart, Math.Min(500, sessionInfoYaml.Length - driverStart));
-                            var carScreenName = ParseYamlValueInSection(searchSection, "CarScreenName:");
+                            var driversSection = sessionInfoYaml.Substring(driversStart);
                             
-                            if (!string.IsNullOrEmpty(carScreenName))
+                            // Look for the player's car entry by finding "CarIdx: X" in Drivers section
+                            var carIdxPattern = $" CarIdx: {playerCarIdx}";
+                            var playerCarStart = driversSection.IndexOf(carIdxPattern);
+                            
+                            if (playerCarStart >= 0)
                             {
-                                carName = carScreenName;
-                                Logger.Info("iRacing Telemetry", $"Found player car via CarIdx {playerCarIdx}: {carName}");
+                                // Get the next 500 chars after finding the player's CarIdx
+                                var playerSection = driversSection.Substring(playerCarStart, Math.Min(500, driversSection.Length - playerCarStart));
+                                
+                                // Look for CarScreenName in this specific driver's section (before the next "- CarIdx:")
+                                var nextDriver = playerSection.IndexOf("- CarIdx:", 10); // Skip the current one
+                                if (nextDriver > 0)
+                                {
+                                    playerSection = playerSection.Substring(0, nextDriver);
+                                }
+                                
+                                carName = ParseYamlValueInSection(playerSection, "CarScreenName:");
+                                
+                                if (!string.IsNullOrEmpty(carName))
+                                {
+                                    Logger.Info("iRacing Telemetry", $"Found player car via CarIdx {playerCarIdx}: {carName}");
+                                }
+                                else
+                                {
+                                    // Try CarPath as fallback
+                                    var carPath = ParseYamlValueInSection(playerSection, "CarPath:");
+                                    if (!string.IsNullOrEmpty(carPath))
+                                    {
+                                        carName = carPath;
+                                        Logger.Info("iRacing Telemetry", $"Found player car path via CarIdx {playerCarIdx}: {carName}");
+                                    }
+                                }
                             }
                         }
                     }
@@ -429,14 +453,10 @@ namespace SimControlCentre.Services
                     // Fallback if we couldn't find it
                     if (string.IsNullOrEmpty(carName))
                     {
-                        carName = ParseYamlValue(sessionInfoYaml, "CarScreenName:");
-                        if (string.IsNullOrEmpty(carName))
-                        {
-                            var carPath = ParseYamlValue(sessionInfoYaml, "CarPath:");
-                            carName = carPath ?? "Unknown";
-                        }
-                        Logger.Warning("iRacing Telemetry", $"Could not find player car specifically, using fallback: {carName}");
+                        carName = "Unknown";
+                        Logger.Warning("iRacing Telemetry", $"Could not find player car specifically (CarIdx: {playerCarIdx})");
                     }
+
                     
                     // Count drivers - try multiple methods
 
