@@ -186,6 +186,10 @@ namespace SimControlCentre.Views.Tabs
         
         private void UpdateFilteredLog()
         {
+            // Don't run if not fully initialized
+            if (_rawDataLog == null || RawDataText == null)
+                return;
+            
             // Filter logs based on checkboxes
             var filteredLogs = _rawDataLog.Where(entry => ShouldShowLogEntry(entry)).ToList();
             
@@ -195,6 +199,10 @@ namespace SimControlCentre.Views.Tabs
         
         private bool ShouldShowLogEntry(string entry)
         {
+            // Don't run if checkboxes not initialized
+            if (LogFilter_iRacingTelemetry == null)
+                return true;
+            
             // Check which component this log is from
             if (entry.Contains("[iRacing Telemetry]") && LogFilter_iRacingTelemetry.IsChecked != true)
                 return false;
@@ -230,9 +238,10 @@ namespace SimControlCentre.Views.Tabs
         
         private void LogFilter_Changed(object sender, RoutedEventArgs e)
         {
-            // Refresh the displayed logs
+            // Refresh the displayed logs (with null checks)
             UpdateFilteredLog();
         }
+
         
         private void ClearLog_Click(object sender, RoutedEventArgs e)
         {
