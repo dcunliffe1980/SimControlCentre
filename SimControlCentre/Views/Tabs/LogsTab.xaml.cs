@@ -97,6 +97,10 @@ namespace SimControlCentre.Views.Tabs
 
         private void UpdateFilteredLog()
         {
+            // Don't run if not fully initialized
+            if (_allLogEntries == null || LogText == null || LogFilter_iRacingTelemetry == null)
+                return;
+            
             if (_allLogEntries.Count == 0)
             {
                 LogText.Text = "No log entries yet...";
@@ -113,9 +117,10 @@ namespace SimControlCentre.Views.Tabs
 
         private bool ShouldShowLogEntry(string entry)
         {
-            // Safety check
+            // Safety check - don't run if checkboxes not initialized
             if (LogFilter_iRacingTelemetry == null)
                 return true;
+
 
             // Check which component this log is from
             if (entry.Contains("[iRacing Telemetry]") && LogFilter_iRacingTelemetry.IsChecked != true)
