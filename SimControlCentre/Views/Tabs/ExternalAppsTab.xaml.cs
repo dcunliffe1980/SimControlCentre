@@ -197,5 +197,26 @@ namespace SimControlCentre.Views.Tabs
                     MessageBoxImage.Error);
             }
         }
+        
+        private void EnableStartWithSim_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_iRacingMonitor == null) return;
+            
+            bool isEnabled = EnableStartWithSimCheckBox.IsChecked ?? true;
+            _iRacingMonitor.EnableStartWithSim = isEnabled;
+            
+            Logger.Info("External Apps", $"Start with Sim: {(isEnabled ? "Enabled" : "Disabled")}");
+        }
+        
+        private void EnableStopWithSim_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_iRacingMonitor == null) return;
+            
+            bool isEnabled = EnableStopWithSimCheckBox.IsChecked ?? true;
+            _iRacingMonitor.EnableStopWithSim = isEnabled;
+            
+            Logger.Info("External Apps", $"Stop with Sim: {(isEnabled ? "Enabled" : "Disabled")}");
+        }
     }
+
 }

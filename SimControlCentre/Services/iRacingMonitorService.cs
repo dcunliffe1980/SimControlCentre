@@ -29,6 +29,11 @@ namespace SimControlCentre.Services
         private const int SW_MINIMIZE = 6;
 
         public event EventHandler<iRacingStateChangedEventArgs>? iRacingStateChanged;
+        
+        // Enable/disable start and stop behaviors independently
+        public bool EnableStartWithSim { get; set; } = true;
+        public bool EnableStopWithSim { get; set; } = true;
+
 
         public iRacingMonitorService(AppSettings settings)
         {
@@ -83,35 +88,50 @@ namespace SimControlCentre.Services
                     
                     iRacingStateChanged?.Invoke(this, new iRacingStateChangedEventArgs { IsRunning = true });
                     
-                    // Stop running apps that should stop when iRacing starts
-                    _ = Task.Run(async () => 
+                    // Stop running apps that should stop when iRacing starts (if enabled)
+                    if (EnableStopWithSim)
                     {
-                        try
+                        _ = Task.Run(async () => 
                         {
-                            await StopRunningAppsForRacing();
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Error("iRacingMonitor", "ERROR stopping apps for racing", ex);
-                        }
-                    });
+                            try
+                            {
+                                await StopRunningAppsForRacing();
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.Error("iRacingMonitor", "ERROR stopping apps for racing", ex);
+                            }
+                        });
+                    }
+                    else
+                    {
+                        Logger.Info("iRacingMonitor", "Stop with Sim is disabled - skipping app stops");
+                    }
                     
-                    // Start external apps (async, don't block timer)
-                    Logger.Debug("iRacingMonitor", "Launching Task.Run to start apps...");
-                    _ = Task.Run(async () => 
+                    // Start external apps (async, don't block timer) if enabled
+                    if (EnableStartWithSim)
                     {
-                        try
+                        Logger.Debug("iRacingMonitor", "Launching Task.Run to start apps...");
+                        _ = Task.Run(async () => 
                         {
-                            await StartExternalApps(disconnected: false);
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Error("iRacingMonitor", "ERROR in Task.Run", ex);
-                        }
-                    });
+                            try
+                            {
+                                await StartExternalApps(disconnected: false);
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.Error("iRacingMonitor", "ERROR in Task.Run", ex);
+                            }
+                        });
+                    }
+                    else
+                    {
+                        Logger.Info("iRacingMonitor", "Start with Sim is disabled - skipping app starts");
+                    }
                 }
                 // State changed: iRacing stopped
                 else if (!isRunning && _iRacingWasRunning)
+
                 {
                     Logger.Info("iRacingMonitor", "========================================");
                     Logger.Info("iRacingMonitor", "iRacing STOPPED");
@@ -120,46 +140,58 @@ namespace SimControlCentre.Services
                     
                     iRacingStateChanged?.Invoke(this, new iRacingStateChangedEventArgs { IsRunning = false });
                     
-                    // Create cancellation token for stop operation
-                    _stopAppsCancellation = new CancellationTokenSource();
-                    var cancellationToken = _stopAppsCancellation.Token;
-                    
-                    // Stop external apps with delay (async, don't block timer)
-                    _ = Task.Run(async () => 
+                    // Only stop apps if enabled
+                    if (EnableStopWithSim)
                     {
-                        try
+                        // Create cancellation token for stop operation
+                        _stopAppsCancellation = new CancellationTokenSource();
+                        var cancellationToken = _stopAppsCancellation.Token;
+                        
+                        // Stop external apps with delay (async, don't block timer)
+                        _ = Task.Run(async () => 
                         {
-                            // Wait 5 seconds before stopping (in case of session transition)
-                            Logger.Info("iRacingMonitor", "Waiting 5 seconds before stopping apps (session transition protection)...");
-                            await Task.Delay(5000, cancellationToken);
-                            
-                            // If we get here, delay completed without cancellation
-                            Logger.Info("iRacingMonitor", "Delay completed, proceeding with app shutdown");
-                            await StopExternalApps();
-                        }
-                        catch (TaskCanceledException)
-                        {
-                            Logger.Info("iRacingMonitor", "Stop operation cancelled - iRacing restarted (session transition)");
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Error("iRacingMonitor", "ERROR in Task.Run (stop)", ex);
-                        }
-                    });
-                    
-                    // Restart apps that were stopped when iRacing started
-                    _ = Task.Run(async () => 
+                            try
+                            {
+                                // Wait 5 seconds before stopping (in case of session transition)
+                                Logger.Info("iRacingMonitor", "Waiting 5 seconds before stopping apps (session transition protection)...");
+                                await Task.Delay(5000, cancellationToken);
+                                
+                                // If we get here, delay completed without cancellation
+                                Logger.Info("iRacingMonitor", "Delay completed, proceeding with app shutdown");
+                                await StopExternalApps();
+                            }
+                            catch (TaskCanceledException)
+                            {
+                                Logger.Info("iRacingMonitor", "Stop operation cancelled - iRacing restarted (session transition)");
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.Error("iRacingMonitor", "ERROR in Task.Run (stop)", ex);
+                            }
+                        });
+                    }
+                    else
                     {
-                        try
+                        Logger.Info("iRacingMonitor", "Stop with Sim is disabled - skipping delayed app stops on iRacing exit");
+                    }
+                    
+                    // Restart apps that were stopped when iRacing started (if they were stopped)
+                    if (EnableStopWithSim)
+                    {
+                        _ = Task.Run(async () => 
                         {
-                            await RestartStoppedApps();
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Error("iRacingMonitor", "ERROR restarting stopped apps", ex);
-                        }
-                    });
+                            try
+                            {
+                                await RestartStoppedApps();
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.Error("iRacingMonitor", "ERROR restarting stopped apps", ex);
+                            }
+                        });
+                    }
                 }
+
             }
             catch (Exception ex)
             {
