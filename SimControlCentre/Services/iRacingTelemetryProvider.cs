@@ -422,8 +422,8 @@ namespace SimControlCentre.Services
                         {
                             var driversSection = sessionInfoYaml.Substring(driversStart);
                             
-                            // Look for the player's car entry by finding "CarIdx: X" in Drivers section
-                            var carIdxPattern = $" CarIdx: {playerCarIdx}";
+                            // Look for the player's car entry - use "- CarIdx: X" pattern (note the dash!)
+                            var carIdxPattern = $"- CarIdx: {playerCarIdx}";
                             var playerCarStart = driversSection.IndexOf(carIdxPattern);
                             
                             Logger.Info("iRacing Telemetry", $"Searching for pattern: '{carIdxPattern}'");
@@ -460,8 +460,13 @@ namespace SimControlCentre.Services
                                     }
                                 }
                             }
+                            else
+                            {
+                                Logger.Warning("iRacing Telemetry", $"Pattern '{carIdxPattern}' not found in Drivers section");
+                            }
                         }
                     }
+
                     
                     // Fallback if we couldn't find it
                     if (string.IsNullOrEmpty(carName))
