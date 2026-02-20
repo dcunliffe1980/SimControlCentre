@@ -276,65 +276,9 @@
                 </GroupBox>
 
 
-                <!-- Log Filters -->
-                <GroupBox Header="Log Filters" Padding="10" Margin="0,0,0,15">
-                    <StackPanel>
-                        <TextBlock Text="Show logs from:" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                        <WrapPanel>
-                            <CheckBox x:Name="LogFilter_iRacingTelemetry" 
-                                      Content="iRacing Telemetry" 
-                                      IsChecked="True" 
-                                      Margin="0,0,15,5"
-                                      Checked="LogFilter_Changed"
-                                      Unchecked="LogFilter_Changed"/>
-                            <CheckBox x:Name="LogFilter_LightingService" 
-                                      Content="Lighting Service" 
-                                      IsChecked="True" 
-                                      Margin="0,0,15,5"
-                                      Checked="LogFilter_Changed"
-                                      Unchecked="LogFilter_Changed"/>
-                            <CheckBox x:Name="LogFilter_GoXLRService" 
-                                      Content="GoXLR Service" 
-                                      IsChecked="True" 
-                                      Margin="0,0,15,5"
-                                      Checked="LogFilter_Changed"
-                                      Unchecked="LogFilter_Changed"/>
-                            <CheckBox x:Name="LogFilter_TelemetryService" 
-                                      Content="Telemetry Service" 
-                                      IsChecked="True" 
-                                      Margin="0,0,15,5"
-                                      Checked="LogFilter_Changed"
-                                      Unchecked="LogFilter_Changed"/>
-                            <CheckBox x:Name="LogFilter_TelemetryDebug" 
-                                      Content="Telemetry Debug" 
-                                      IsChecked="True" 
-                                      Margin="0,0,15,5"
-                                      Checked="LogFilter_Changed"
-                                      Unchecked="LogFilter_Changed"/>
-                            <CheckBox x:Name="LogFilter_TelemetryRecorder" 
-                                      Content="Telemetry Recorder" 
-                                      IsChecked="False" 
-                                      Margin="0,0,15,5"
-                                      Checked="LogFilter_Changed"
-                                      Unchecked="LogFilter_Changed"/>
-                            <CheckBox x:Name="LogFilter_Other" 
-                                      Content="Other" 
-                                      IsChecked="True" 
-                                      Margin="0,0,15,5"
-                                      Checked="LogFilter_Changed"
-                                      Unchecked="LogFilter_Changed"/>
-                        </WrapPanel>
-                        <Button Content="Clear Log" 
-                                Click="ClearLog_Click" 
-                                Width="80" 
-                                Padding="3"
-                                Margin="0,5,0,0"
-                                HorizontalAlignment="Left"/>
-                    </StackPanel>
-                </GroupBox>
-                
                 <!-- Raw Data -->
                 <GroupBox Header="Raw Data (Last 20 Updates)" Padding="10">
+
 
                     <ScrollViewer Height="200" VerticalScrollBarVisibility="Auto">
                         <TextBlock x:Name="RawDataText" 

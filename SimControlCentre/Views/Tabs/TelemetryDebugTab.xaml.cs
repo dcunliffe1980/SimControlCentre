@@ -180,74 +180,10 @@ namespace SimControlCentre.Views.Tabs
                 _rawDataLog.RemoveAt(0);
             }
             
-            // Apply filtering before display
-            UpdateFilteredLog();
-        }
-        
-        private void UpdateFilteredLog()
-        {
-            // Don't run if not fully initialized
-            if (_rawDataLog == null || RawDataText == null)
-                return;
-            
-            // Filter logs based on checkboxes
-            var filteredLogs = _rawDataLog.Where(entry => ShouldShowLogEntry(entry)).ToList();
-            
             // Update text
-            RawDataText.Text = string.Join("\n", filteredLogs);
-        }
-        
-        private bool ShouldShowLogEntry(string entry)
-        {
-            // Don't run if checkboxes not initialized
-            if (LogFilter_iRacingTelemetry == null)
-                return true;
-            
-            // Check which component this log is from
-            if (entry.Contains("[iRacing Telemetry]") && LogFilter_iRacingTelemetry.IsChecked != true)
-                return false;
-            
-            if (entry.Contains("[Lighting Service]") && LogFilter_LightingService.IsChecked != true)
-                return false;
-            
-            if (entry.Contains("[GoXLR Service]") && LogFilter_GoXLRService.IsChecked != true)
-                return false;
-            
-            if (entry.Contains("[Telemetry Service]") && LogFilter_TelemetryService.IsChecked != true)
-                return false;
-            
-            if (entry.Contains("[Telemetry Debug]") && LogFilter_TelemetryDebug.IsChecked != true)
-                return false;
-            
-            if (entry.Contains("[Telemetry Recorder]") && LogFilter_TelemetryRecorder.IsChecked != true)
-                return false;
-            
-            // Check if it's "Other" (no specific component tag)
-            bool hasComponentTag = entry.Contains("[iRacing Telemetry]") ||
-                                  entry.Contains("[Lighting Service]") ||
-                                  entry.Contains("[GoXLR Service]") ||
-                                  entry.Contains("[Telemetry Service]") ||
-                                  entry.Contains("[Telemetry Debug]") ||
-                                  entry.Contains("[Telemetry Recorder]");
-            
-            if (!hasComponentTag && LogFilter_Other.IsChecked != true)
-                return false;
-            
-            return true;
-        }
-        
-        private void LogFilter_Changed(object sender, RoutedEventArgs e)
-        {
-            // Refresh the displayed logs (with null checks)
-            UpdateFilteredLog();
+            RawDataText.Text = string.Join("\n", _rawDataLog);
         }
 
-        
-        private void ClearLog_Click(object sender, RoutedEventArgs e)
-        {
-            _rawDataLog.Clear();
-            RawDataText.Text = "Log cleared.";
-        }
 
 
         private Brush GetFlagColor(FlagStatus flag)
