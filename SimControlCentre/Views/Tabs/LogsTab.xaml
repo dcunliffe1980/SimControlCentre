@@ -1,0 +1,115 @@
+<UserControl x:Class="SimControlCentre.Views.Tabs.LogsTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" 
+                   Text="Logs" 
+                   FontSize="24" 
+                   FontWeight="Bold" 
+                   Margin="0,0,0,20"/>
+
+        <!-- Log Filters -->
+        <GroupBox Grid.Row="1" Header="Log Filters" Padding="10" Margin="0,0,0,15">
+            <StackPanel>
+                <TextBlock Text="Show logs from:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                <WrapPanel Margin="0,0,0,10">
+                    <CheckBox x:Name="LogFilter_iRacingTelemetry" 
+                              Content="iRacing Telemetry" 
+                              IsChecked="True" 
+                              Margin="0,0,15,5"
+                              Checked="LogFilter_Changed"
+                              Unchecked="LogFilter_Changed"/>
+                    <CheckBox x:Name="LogFilter_LightingService" 
+                              Content="Lighting Service" 
+                              IsChecked="True" 
+                              Margin="0,0,15,5"
+                              Checked="LogFilter_Changed"
+                              Unchecked="LogFilter_Changed"/>
+                    <CheckBox x:Name="LogFilter_GoXLRService" 
+                              Content="GoXLR Service" 
+                              IsChecked="True" 
+                              Margin="0,0,15,5"
+                              Checked="LogFilter_Changed"
+                              Unchecked="LogFilter_Changed"/>
+                    <CheckBox x:Name="LogFilter_TelemetryService" 
+                              Content="Telemetry Service" 
+                              IsChecked="True" 
+                              Margin="0,0,15,5"
+                              Checked="LogFilter_Changed"
+                              Unchecked="LogFilter_Changed"/>
+                    <CheckBox x:Name="LogFilter_TelemetryDebug" 
+                              Content="Telemetry Debug" 
+                              IsChecked="True" 
+                              Margin="0,0,15,5"
+                              Checked="LogFilter_Changed"
+                              Unchecked="LogFilter_Changed"/>
+                    <CheckBox x:Name="LogFilter_TelemetryRecorder" 
+                              Content="Telemetry Recorder" 
+                              IsChecked="False" 
+                              Margin="0,0,15,5"
+                              Checked="LogFilter_Changed"
+                              Unchecked="LogFilter_Changed"/>
+                    <CheckBox x:Name="LogFilter_iRacingMonitor" 
+                              Content="iRacing Monitor" 
+                              IsChecked="True" 
+                              Margin="0,0,15,5"
+                              Checked="LogFilter_Changed"
+                              Unchecked="LogFilter_Changed"/>
+                    <CheckBox x:Name="LogFilter_ExternalApps" 
+                              Content="External Apps" 
+                              IsChecked="True" 
+                              Margin="0,0,15,5"
+                              Checked="LogFilter_Changed"
+                              Unchecked="LogFilter_Changed"/>
+                    <CheckBox x:Name="LogFilter_App" 
+                              Content="App" 
+                              IsChecked="True" 
+                              Margin="0,0,15,5"
+                              Checked="LogFilter_Changed"
+                              Unchecked="LogFilter_Changed"/>
+                    <CheckBox x:Name="LogFilter_Other" 
+                              Content="Other" 
+                              IsChecked="True" 
+                              Margin="0,0,15,5"
+                              Checked="LogFilter_Changed"
+                              Unchecked="LogFilter_Changed"/>
+                </WrapPanel>
+                
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Clear Log View" 
+                            Click="ClearLog_Click" 
+                            Width="100" 
+                            Padding="5"
+                            Margin="0,0,10,0"/>
+                    <Button Content="Refresh from File" 
+                            Click="RefreshLog_Click" 
+                            Width="120" 
+                            Padding="5"
+                            Margin="0,0,10,0"/>
+                    <Button Content="Open Log Folder" 
+                            Click="OpenLogFolder_Click" 
+                            Width="120" 
+                            Padding="5"/>
+                </StackPanel>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Log Display -->
+        <GroupBox Grid.Row="2" Header="Log Entries" Padding="10">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <TextBlock x:Name="LogText" 
+                           FontFamily="Consolas" 
+                           FontSize="10" 
+                           TextWrapping="Wrap"
+                           Text="Loading logs..."/>
+            </ScrollViewer>
+        </GroupBox>
+    </Grid>
+</UserControl>
