@@ -1,10 +1,15 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using SimControlCentre.Models;
 using SimControlCentre.Services;
+
 
 namespace SimControlCentre.Views.Tabs
 {
@@ -558,7 +563,211 @@ namespace SimControlCentre.Views.Tabs
                 }
             };
             SettingsContent.Children.Add(openLogsButton);
+            
+            // Add log viewer with filtering
+            var logViewerGroup = new GroupBox
+            {
+                Header = "Log Viewer",
+                Margin = new Thickness(0, 20, 0, 0),
+                Padding = new Thickness(10)
+            };
+            
+            var logViewerStack = new StackPanel();
+            
+            // Filter checkboxes
+            var filterLabel = new TextBlock
+            {
+                Text = "Show logs from:",
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 5)
+            };
+            logViewerStack.Children.Add(filterLabel);
+            
+            var filterPanel = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
+            
+            var filters = new Dictionary<string, CheckBox>();
+            var filterNames = new[] { "iRacing Telemetry", "Lighting Service", "GoXLR Service", 
+                "Telemetry Service", "Telemetry Debug", "Telemetry Recorder", 
+                "iRacing Monitor", "External Apps", "App", "Other" };
+            
+            foreach (var name in filterNames)
+            {
+                var cb = new CheckBox
+                {
+                    Content = name,
+                    IsChecked = name != "Telemetry Recorder", // Telemetry Recorder off by default
+                    Margin = new Thickness(0, 0, 15, 5)
+                };
+                filters[name] = cb;
+                filterPanel.Children.Add(cb);
+            }
+            logViewerStack.Children.Add(filterPanel);
+            
+            // Buttons
+            var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 10) };
+            
+            var clearButton = new Button
+            {
+                Content = "Clear View",
+                Padding = new Thickness(10, 5, 10, 5),
+                Margin = new Thickness(0, 0, 10, 0)
+            };
+            buttonPanel.Children.Add(clearButton);
+            
+            var refreshButton = new Button
+            {
+                Content = "Refresh from File",
+                Padding = new Thickness(10, 5, 10, 5)
+            };
+            buttonPanel.Children.Add(refreshButton);
+            
+            logViewerStack.Children.Add(buttonPanel);
+            
+            // Log display
+            var logScroller = new ScrollViewer
+            {
+                Height = 400,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+            };
+            
+            var logText = new TextBlock
+            {
+                FontFamily = new System.Windows.Media.FontFamily("Consolas"),
+                FontSize = 10,
+                TextWrapping = TextWrapping.Wrap,
+                Text = "Loading logs..."
+            };
+            logScroller.Content = logText;
+            logViewerStack.Children.Add(logScroller);
+            
+            logViewerGroup.Content = logViewerStack;
+            SettingsContent.Children.Add(logViewerGroup);
+            
+            // Set up log viewer functionality
+            var allLogs = new List<string>();
+            var refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            string? currentLogFile = null;
+            long lastFilePosition = 0;
+            
+            Action updateFilteredLog = () =>
+            {
+                if (allLogs.Count == 0)
+                {
+                    logText.Text = "No log entries yet...";
+                    return;
+                }
+                
+                var filtered = allLogs.Where(entry =>
+                {
+                    if (entry.Contains("[iRacing Telemetry]") && filters["iRacing Telemetry"].IsChecked != true) return false;
+                    if (entry.Contains("[Lighting Service]") && filters["Lighting Service"].IsChecked != true) return false;
+                    if (entry.Contains("[GoXLR Service]") && filters["GoXLR Service"].IsChecked != true) return false;
+                    if (entry.Contains("[Telemetry Service]") && filters["Telemetry Service"].IsChecked != true) return false;
+                    if (entry.Contains("[Telemetry Debug]") && filters["Telemetry Debug"].IsChecked != true) return false;
+                    if (entry.Contains("[Telemetry Recorder]") && filters["Telemetry Recorder"].IsChecked != true) return false;
+                    if (entry.Contains("[iRacingMonitor]") && filters["iRacing Monitor"].IsChecked != true) return false;
+                    if (entry.Contains("[External Apps]") && filters["External Apps"].IsChecked != true) return false;
+                    if (entry.Contains("[App]") && filters["App"].IsChecked != true) return false;
+                    
+                    bool hasTag = entry.Contains("[iRacing Telemetry]") || entry.Contains("[Lighting Service]") ||
+                                 entry.Contains("[GoXLR Service]") || entry.Contains("[Telemetry Service]") ||
+                                 entry.Contains("[Telemetry Debug]") || entry.Contains("[Telemetry Recorder]") ||
+                                 entry.Contains("[iRacingMonitor]") || entry.Contains("[External Apps]") || entry.Contains("[App]");
+                    
+                    if (!hasTag && filters["Other"].IsChecked != true) return false;
+                    
+                    return true;
+                }).ToList();
+                
+                var display = filtered.Skip(Math.Max(0, filtered.Count - 500)).ToList();
+                logText.Text = string.Join("\n", display);
+            };
+            
+            Action refreshFromFile = () =>
+            {
+                try
+                {
+                    var logsPath = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                        "SimControlCentre", "logs");
+                    
+                    if (!Directory.Exists(logsPath))
+                    {
+                        logText.Text = $"Logs directory not found: {logsPath}";
+                        return;
+                    }
+                    
+                    var todayFile = Path.Combine(logsPath, $"SimControlCentre_{DateTime.Now:yyyy-MM-dd}.log");
+                    
+                    if (!File.Exists(todayFile))
+                    {
+                        logText.Text = $"No log file for today";
+                        return;
+                    }
+                    
+                    if (currentLogFile != todayFile)
+                    {
+                        currentLogFile = todayFile;
+                        lastFilePosition = 0;
+                        allLogs.Clear();
+                    }
+                    
+                    using var fileStream = new FileStream(todayFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    
+                    if (fileStream.Length > lastFilePosition)
+                    {
+                        fileStream.Seek(lastFilePosition, SeekOrigin.Begin);
+                        
+                        using var reader = new StreamReader(fileStream);
+                        string? line;
+                        while ((line = reader.ReadLine()) != null)
+                        {
+                            allLogs.Add(line);
+                        }
+                        
+                        lastFilePosition = fileStream.Position;
+                        
+                        while (allLogs.Count > 1000)
+                        {
+                            allLogs.RemoveAt(0);
+                        }
+                        
+                        updateFilteredLog();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logText.Text = $"Error reading log file: {ex.Message}";
+                }
+            };
+            
+            // Wire up events
+            foreach (var filter in filters.Values)
+            {
+                filter.Checked += (s, e) => updateFilteredLog();
+                filter.Unchecked += (s, e) => updateFilteredLog();
+            }
+            
+            clearButton.Click += (s, e) =>
+            {
+                allLogs.Clear();
+                logText.Text = "Log view cleared. New entries will appear as they are logged.";
+            };
+            
+            refreshButton.Click += (s, e) =>
+            {
+                lastFilePosition = 0;
+                allLogs.Clear();
+                refreshFromFile();
+            };
+            
+            refreshTimer.Tick += (s, e) => refreshFromFile();
+            refreshTimer.Start();
+            
+            // Initial load
+            refreshFromFile();
         }
+
 
         private void LoadTelemetryDebug()
         {

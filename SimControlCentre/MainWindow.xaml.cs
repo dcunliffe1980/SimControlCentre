@@ -68,11 +68,8 @@ namespace SimControlCentre
                 _lightingTab = new LightingTab(lightingService, telemetryService);
                 LightingTabItem.Content = _lightingTab;
             }
-            
-            // Create Logs Tab
-            var logsTab = new LogsTab();
-            LogsTabItem.Content = logsTab;
         }
+
 
 
         public void InitializeControllersTab(DirectInputService directInputService)

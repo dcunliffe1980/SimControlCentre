@@ -21,10 +21,8 @@
             
             <!-- Lighting Tab -->
             <TabItem Header="Lighting" x:Name="LightingTabItem"/>
-            
-            <!-- Logs Tab -->
-            <TabItem Header="Logs" x:Name="LogsTabItem"/>
         </TabControl>
     </Grid>
+
 
 </Window>
