@@ -470,73 +470,13 @@ namespace SimControlCentre.Views.Tabs
             };
             SettingsContent.Children.Add(description);
 
-            // Application Logging
-            var appLoggingCheck = new CheckBox
-            {
-                Content = "Enable Application Logging",
-                IsChecked = _settings.General.EnableApplicationLogging,
-                Margin = new Thickness(0, 0, 0, 5)
-            };
-            appLoggingCheck.Checked += (s, e) =>
-            {
-                _settings.General.EnableApplicationLogging = true;
-                _configService.Save(_settings);
-            };
-            appLoggingCheck.Unchecked += (s, e) =>
-            {
-                _settings.General.EnableApplicationLogging = false;
-                _configService.Save(_settings);
-            };
-            SettingsContent.Children.Add(appLoggingCheck);
-
-            var appLoggingDesc = new TextBlock
-            {
-                Text = "Logs general application events, errors, and iRacing integration activities",
-                FontSize = 11,
-                Foreground = System.Windows.Media.Brushes.Gray,
-                Margin = new Thickness(20, 0, 0, 15),
-                TextWrapping = TextWrapping.Wrap
-            };
-            SettingsContent.Children.Add(appLoggingDesc);
-
-            // GoXLR Diagnostics
-            var goxlrDiagCheck = new CheckBox
-            {
-                Content = "Enable GoXLR Diagnostics",
-                IsChecked = _settings.General.EnableGoXLRDiagnostics,
-                Margin = new Thickness(0, 0, 0, 5)
-            };
-            goxlrDiagCheck.Checked += (s, e) =>
-            {
-                _settings.General.EnableGoXLRDiagnostics = true;
-                _configService.Save(_settings);
-                // Logger.SetEnabled(true);
-            };
-            goxlrDiagCheck.Unchecked += (s, e) =>
-            {
-                _settings.General.EnableGoXLRDiagnostics = false;
-                _configService.Save(_settings);
-                // Logger.SetEnabled(false);
-            };
-            SettingsContent.Children.Add(goxlrDiagCheck);
-
-            var goxlrDiagDesc = new TextBlock
-            {
-                Text = "Detailed connection timing, warmup attempts, and API responses for troubleshooting GoXLR issues",
-                FontSize = 11,
-                Foreground = System.Windows.Media.Brushes.Gray,
-                Margin = new Thickness(20, 0, 0, 20),
-                TextWrapping = TextWrapping.Wrap
-            };
-            SettingsContent.Children.Add(goxlrDiagDesc);
-
-            // Open Logs Folder Button
+            // Open Logs Folder Button (moved to top for quick access)
             var openLogsButton = new Button
             {
                 Content = "Open Logs Folder",
                 Padding = new Thickness(15, 8, 15, 8),
                 HorizontalAlignment = HorizontalAlignment.Left,
-                Margin = new Thickness(0, 10, 0, 0)
+                Margin = new Thickness(0, 10, 0, 20)
             };
             openLogsButton.Click += (s, e) =>
             {
@@ -690,54 +630,68 @@ namespace SimControlCentre.Views.Tabs
                     var logsPath = Path.Combine(
                         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                         "SimControlCentre", "logs");
-                    
+
                     if (!Directory.Exists(logsPath))
                     {
                         logText.Text = $"Logs directory not found: {logsPath}";
                         return;
                     }
-                    
+
                     var todayFile = Path.Combine(logsPath, $"SimControlCentre_{DateTime.Now:yyyy-MM-dd}.log");
-                    
+
                     if (!File.Exists(todayFile))
                     {
                         logText.Text = $"No log file for today";
                         return;
                     }
-                    
+
                     if (currentLogFile != todayFile)
                     {
                         currentLogFile = todayFile;
                         lastFilePosition = 0;
                         allLogs.Clear();
                     }
-                    
+
+                    var fileInfo = new FileInfo(todayFile);
+
+                    // Safety check: If file is huge, only read last 1MB
+                    if (fileInfo.Length > 10 * 1024 * 1024) // 10MB
+                    {
+                        logText.Text = $"Log file is very large ({fileInfo.Length / 1024 / 1024}MB). Only showing recent entries.\nConsider opening in text editor for full history.";
+
+                        // Start from last 1MB
+                        lastFilePosition = Math.Max(0, fileInfo.Length - (1024 * 1024));
+                    }
+
                     using var fileStream = new FileStream(todayFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                    
+
                     if (fileStream.Length > lastFilePosition)
                     {
                         fileStream.Seek(lastFilePosition, SeekOrigin.Begin);
-                        
+
                         using var reader = new StreamReader(fileStream);
                         string? line;
-                        while ((line = reader.ReadLine()) != null)
+                        int linesRead = 0;
+                        while ((line = reader.ReadLine()) != null && linesRead < 1000) // Max 1000 lines per refresh
                         {
                             allLogs.Add(line);
+                            linesRead++;
                         }
-                        
+
                         lastFilePosition = fileStream.Position;
-                        
+
                         while (allLogs.Count > 1000)
                         {
                             allLogs.RemoveAt(0);
                         }
-                        
+
                         updateFilteredLog();
                     }
                 }
                 catch (Exception ex)
                 {
-                    logText.Text = $"Error reading log file: {ex.Message}";
+                    logText.Text = $"Error reading log file: {ex.Message}\n\nIf log file is corrupted, try closing the app and deleting old logs.";
+                    Logger.Error("Settings", "Error reading log file for viewer", ex);
                 }
             };
             

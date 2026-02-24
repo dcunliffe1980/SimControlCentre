@@ -202,10 +202,26 @@ public partial class App : Application
             // Subscribe to telemetry connection changes to restore profile lighting on disconnect
             _telemetryService.ConnectionChanged += async (s, isConnected) =>
             {
+                Logger.Info("App", $"========================================");
+                Logger.Info("App", $"Telemetry connection changed: {isConnected}");
+                Logger.Info("App", $"========================================");
+
                 if (!isConnected && _lightingService.Devices.Any())
                 {
                     Logger.Info("App", "Telemetry disconnected - restoring profile lighting");
-                    await _lightingService.RestoreProfileLightingAsync();
+                    try
+                    {
+                        await _lightingService.RestoreProfileLightingAsync();
+                        Logger.Info("App", "Profile lighting restored successfully");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error("App", "Failed to restore profile lighting", ex);
+                    }
+                }
+                else if (!isConnected)
+                {
+                    Logger.Warning("App", "Telemetry disconnected but no lighting devices available");
                 }
             };
             
